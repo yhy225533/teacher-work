@@ -2418,7 +2418,7 @@ button:disabled {
 .period-block { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: #f8fafc; }
 .period-block > header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); padding: 9px 11px; }
 .period-block > header strong { color: var(--color-text-strong); font-size: 13px; }
-.period-toggle { display: inline-flex; min-width: 0; align-items: center; gap: 7px; border: 0; padding: 0; color: var(--color-text-strong); background: transparent; cursor: pointer; text-align: left; }
+.period-toggle { display: flex; flex: 1; min-width: 0; align-items: center; gap: 7px; border: 0; padding: 0; color: var(--color-text-strong); background: transparent; cursor: pointer; text-align: left; }
 .period-toggle:hover { color: var(--color-primary-active); }
 .period-toggle > span { width: 14px; color: var(--color-text-muted); font-size: 12px; }
 .lesson-row-list { display: grid; gap: 2px; padding: 5px; }
@@ -3358,6 +3358,7 @@ button.quick-status { cursor: pointer; }
 }
 
 /* V17-D：题库自动选题与双版输出 */
+/* V17-fix：目标题数 select 纳入统一表单视觉（边框、白底、圆角），勾选框统一 indigo accent */
 .prep-bank-toggle {
   display: flex;
   flex-wrap: wrap;
@@ -3399,9 +3400,17 @@ button.quick-status { cursor: pointer; }
 }
 
 .prep-bank-options select {
+  width: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 3px 8px;
+  background: #fff;
+  color: var(--color-text-strong);
   font-size: 12px;
-  padding: 2px 4px;
-  margin-left: 4px;
+}
+
+.prep-bank-toggle input[type='checkbox'] {
+  accent-color: #4f46e5;
 }
 
 .improve-bank-section {

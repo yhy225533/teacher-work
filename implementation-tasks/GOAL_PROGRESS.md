@@ -1303,3 +1303,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 **反馈 2：教学内容 → “从外部资料添加”后不选文件没有返回键，只能手动切回教学内容。** 根因：外部资料页 picker 模式（有 prepContext）未提供任何返回入口（素材库 picker 有 onCancel，外部资料漏了）。修复：`ExternalLibraryPanel` 增可选 `onCancel` prop，picker 模式下工具栏加“← 返回备课”按钮；App 接线 `onCancel={returnToPrep}`（与素材库一致，返回后落回教学内容备课分区）。
 
 门禁：全量 76 files / 362 tests（1 skipped）、typecheck、lint 通过。钉测新增 2 例（新建模式开关位置/两步生成提示/候选卡独立渲染；外部 picker 返回按钮）。
+
+## 2026-09-03 · 产品负责人 UI 反馈修复（目标题数控件视觉 + 阶段行展开热区）
+
+**反馈 1：左侧“目标题数”控件与整体 UI 不搭。** 根因：V17-D 的 `.prep-bank-options select` 用了 `padding: 2px 4px` 的裸样式，既不遵循全局 select 的浅灰边框/白底/圆角视觉，也与应用内其他小号 select（如 md-editor 工具栏）不一致。修复：纯 CSS——select 补 `1px #cbd5e1` 边框、`var(--radius-md)` 圆角、白底、统一文字色与字号；勾选框补 `accent-color: #4f46e5`（与 prep-scope-file-list 一致的 indigo accent），取消其内部左 margin（label 自带 gap）。
+
+**反馈 2：课程页“阶段与课次”必须点中文字才能展开。** 根因：`.period-toggle` 是 `inline-flex`，按钮宽度收缩到内容，header 行右侧大片空白不响应点击。修复：纯 CSS——`display: flex; flex: 1`，让按钮占满 header 剩余宽度（“+ 新建课次”按钮仍靠右），整行可点击展开/收起。
+
+门禁：相关 3 测试文件 28 例（v1.2-course-ui / static-render-v156-d / v17-d-bank-selection）、typecheck、lint 全部通过。两处均为 styles.css 等值视觉修正，未触碰任何契约类名或结构。
