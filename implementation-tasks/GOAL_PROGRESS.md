@@ -1311,3 +1311,9 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 **反馈 2：课程页“阶段与课次”必须点中文字才能展开。** 根因：`.period-toggle` 是 `inline-flex`，按钮宽度收缩到内容，header 行右侧大片空白不响应点击。修复：纯 CSS——`display: flex; flex: 1`，让按钮占满 header 剩余宽度（“+ 新建课次”按钮仍靠右），整行可点击展开/收起。
 
 门禁：相关 3 测试文件 28 例（v1.2-course-ui / static-render-v156-d / v17-d-bank-selection）、typecheck、lint 全部通过。两处均为 styles.css 等值视觉修正，未触碰任何契约类名或结构。
+
+## 2026-09-03 · 产品负责人 UI 反馈修复二轮（阶段头热区铺满整行）
+
+**反馈：上一轮 `flex: 1` 后可点范围仍偏窄，要求尽量与边框一致。** 根因：`.period-block > header` 自带 `padding: 9px 11px`，按钮变宽只解决了水平方向，上下 9px 与左右 11px 的 header 内边距区仍在按钮外——点边框附近仍无效。修复（纯 CSS，styles.css `.period-block > header` / `.period-toggle`）：header `padding` 移到 `0`，内边距下沉进按钮自身——toggle `padding: 9px 11px` 并 `flex: 1` 占满剩余宽度（左/上/下均贴到卡片边框），右侧「+ 新建课次」`.link-button` 同步 `padding: 9px 11px` 保持 11px 右留白；toggle hover 增加浅 indigo 底（`--color-primary-soft`）作可点提示，圆角 `9px 0 0 9px` 贴合 10px 卡片内圈不溢出。`<strong>` 在按钮内部、后代选择器 `.period-block > header strong` 不受影响，零标记改动。
+
+门禁：v1.2-course-ui（4 例）+ static-render-v156-d（11 例）钉测、typecheck、lint 通过。
