@@ -175,3 +175,14 @@
 | V17-E 最终回归与版本验收 | 自动门 DONE / 真实自测待产品负责人 | 全量 76 files / 360 tests、typecheck、lint、production build、diff check 通过；中继式验收（计划容错/候选注入/剔除集直达 prompt/双版编排/编辑保存命名/学生版独立版本链）；隔离 Windows 冒烟（4 进程存活、schema 1–17、notes CHECK 含 manual_edit、search schemaVersion=2、stderr 无错误、进程全终止 + 临时目录清理）；`docs/v1.7-acceptance.md` 已建；DeepSeek 真实自测清单（预估 ≤ ¥3）与最终体验确认交产品负责人，通过后才创建 `checkpoint-V1.7-pass` | 全量测试、typecheck、lint、production build、diff check；中继式验收（计划解析/候选注入/双版编排/编辑保存命名）；隔离 Windows 冒烟；DeepSeek 真实自测（预估 ≤ ¥3）；`docs/v1.7-acceptance.md` |
 
 基线 `checkpoint-V1.6-pass`（已创建）；设计基准 `docs/v1.7-md-editing-and-bank-integration-plan.md`，决策 D27–D32（`implementation-tasks/V1_7_DECISIONS.md`）；按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`；不运行 portable/installer；里程碑提交后 push（产品负责人已授权 GitHub 同步）。
+
+## V1.7.2 已立项（备课工作台结构重排）
+
+基线：V1.7 链 V17-A–V17-E 自动门已过（`checkpoint-V1.7-pass` 待产品负责人真实自测确认）。方案 `docs/v1.7.2-prep-workspace-restructure-plan.md`，决策 D33/D34（`implementation-tasks/V1_7_DECISIONS.md`）；任务链 `implementation-tasks/v1.7.2-tasks/`，按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`；只动 `draft-panel.tsx` 展示层与 `styles.css`，零逻辑/合同/依赖变化；不运行 portable/installer。
+
+| 里程碑 | 状态 | 计划内容 |
+|---|---|---|
+| V172-A 工作台骨架与左轨 | TODO | 工作台重排为 250px 修改记录左轨 + 主区（生成器卡/成果卡）；范围行（single 目标卡+更换、lesson 自动徽标）；删除 prep-ref-panel/prep-work-panel/prep-scope-strip 及旧节头；新 state targetPickerOpen/generatorOpen 与收起态条；grid/媒体查询改写 |
+| V172-B 参考行与题库迁移 | TODO | 参考行 chips（✕ 移除）+ ＋本课资料/外部资料/素材库入口 + 参考题库 CSS switch 行；new 冷启动两张添加卡；预算行 meter + 文案拼接规则；题库"目标题数/学生版"迁移到候选区头部；§8 文案对照全量落地 |
+| V172-C 收起态与空态引导 | TODO | 收起态摘要三模式规则与"调整要求"展开；选中自动收起/取消强制展开；主区空态分模式文案卡片化；improve-review-card 独立成卡核查；1100px 堆叠走查 |
+| V172-D 最终门禁与验收 | TODO | 全量测试、typecheck、lint、production build、diff check；隔离 Windows 冒烟三模式走查（fake provider，不要求真实 DeepSeek）；`docs/v1.7.2-acceptance.md`；产品负责人 §11 走查确认后创建 `checkpoint-V1.7.2-pass` |

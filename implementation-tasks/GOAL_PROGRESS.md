@@ -1317,3 +1317,9 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 **反馈：上一轮 `flex: 1` 后可点范围仍偏窄，要求尽量与边框一致。** 根因：`.period-block > header` 自带 `padding: 9px 11px`，按钮变宽只解决了水平方向，上下 9px 与左右 11px 的 header 内边距区仍在按钮外——点边框附近仍无效。修复（纯 CSS，styles.css `.period-block > header` / `.period-toggle`）：header `padding` 移到 `0`，内边距下沉进按钮自身——toggle `padding: 9px 11px` 并 `flex: 1` 占满剩余宽度（左/上/下均贴到卡片边框），右侧「+ 新建课次」`.link-button` 同步 `padding: 9px 11px` 保持 11px 右留白；toggle hover 增加浅 indigo 底（`--color-primary-soft`）作可点提示，圆角 `9px 0 0 9px` 贴合 10px 卡片内圈不溢出。`<strong>` 在按钮内部、后代选择器 `.period-block > header strong` 不受影响，零标记改动。
 
 门禁：v1.2-course-ui（4 例）+ static-render-v156-d（11 例）钉测、typecheck、lint 通过。
+
+## 2026-09-04 · V1.7.2 立项（备课工作台结构重排）
+
+- 产品负责人 2026-09-03 反馈备课工作台左栏 UI 不可接受，2026-09-04 确认"结构肯定要重排"并逐屏确认新结构（静态示意 `tmp/mockups/prep-workspace-structure.html`，本地参照不入库）。
+- 方案落地：`docs/v1.7.2-prep-workspace-restructure-plan.md`（面向纯文字实施模型的完整规格：to-be DOM、CSS 全值、文案对照表、状态规则、任务链、测试与验收清单）；决策 D33/D34 追加至 `V1_7_DECISIONS.md`；`VERSION_CONTROL.md` 补记 V1.7 与 V1.7.2 协议行；任务链 `implementation-tasks/v1.7.2-tasks/`（V172-A/B/C/D）骨架建立，STATUS 置 TODO。
+- 范围裁定：只动 `draft-panel.tsx` 展示层 + `styles.css`；生成/修改/题库/预算/发布逻辑、合同、IPC、Main 零改动；零新依赖、无 migration；V172-D 为唯一全量验收点，`checkpoint-V1.7.2-pass` 待产品负责人走查确认。
