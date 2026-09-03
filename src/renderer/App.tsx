@@ -191,6 +191,7 @@ function AppContent(): React.JSX.Element {
           <ExternalLibraryPanel
             prepContext={externalPickerOpen ? prepContext : null}
             onAddedToLesson={returnToPrep}
+            onCancel={returnToPrep}
           />
         ) : activeItem === '学生' ? (
           <StudentsPage

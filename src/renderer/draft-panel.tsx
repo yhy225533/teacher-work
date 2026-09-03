@@ -489,10 +489,24 @@ export default function DraftPanel({
     }
     setBusyAction(kind)
     const requestId = globalThis.crypto.randomUUID()
-    setMessage(`正在生成${kindLabels[kind]}…`)
     setError('')
-    beginStreaming(requestId)
     try {
+      // D30/V17-D：新建备课同样有过目步——开关开启且尚无候选时先出检索计划与候选列表，
+      // 老师过目（可剔除/调整重选）后再点一次生成按钮执行。
+      if (bankEnabled && bankPlan === null) {
+        const ready = await runBankSelection(requestId)
+        if (!ready) return
+        setBusyAction('')
+        setMessage('题库候选已列出，请过目（可剔除或调整后重新选题），再点一次生成按钮执行。')
+        return
+      }
+      if (bankEnabled && bankPlan !== null && keptBankCandidates.length === 0) {
+        setError('候选题已被全部剔除，请保留至少一道候选题或关闭参考题库。')
+        return
+      }
+      const bankActive = bankEnabled && bankPlan !== null
+      setMessage(`正在生成${kindLabels[kind]}…`)
+      beginStreaming(requestId)
       const result = await window.teacherWorkbench.drafts.generate({
         requestId,
         kind,
@@ -500,6 +514,11 @@ export default function DraftPanel({
         ...(context.studentId === undefined ? {} : { studentId: context.studentId }),
         ...(selectedSkillId === '' ? {} : { skillId: selectedSkillId }),
         ...(requirement.trim() === '' ? {} : { requirement: requirement.trim() }),
+        ...(bankActive ? {
+          bankPlan: bankPlan,
+          bankQuestionIds: keptBankCandidates.map((item) => item.id),
+        } : {}),
+        ...(bankActive && dualVersionEnabled ? { dualVersion: true } : {}),
         sources: selectedFiles.map((file) => ({ fileId: file.id })),
         maxChars: DRAFT_DEFAULT_MAX_CHARS,
         maxTokens: DRAFT_DEFAULT_MAX_TOKENS,
@@ -510,7 +529,8 @@ export default function DraftPanel({
       setRestoreNoticeVisible(false)
       setEditing(false)
       setEditBody('')
-      setMessage(`已生成，可在修改记录中查看。`)
+      clearBankSelection()
+      setMessage(`已生成，可在修改记录中查看。${result.studentNoteId !== undefined ? '学生版已一并生成，见修改记录。' : ''}`)
     } catch (generationError) {
       setMessage('')
       setError(toErrorMessage(generationError, '操作失败，请稍后重试。'))
@@ -1054,49 +1074,49 @@ export default function DraftPanel({
                 参考已占用 {referenceCharTotal.toLocaleString('zh-CN')} / {DRAFT_DEFAULT_MAX_CHARS.toLocaleString('zh-CN')} 字（含修改对象共 {scopedCharTotal.toLocaleString('zh-CN')} 字）{referenceFilesFull ? `；已选满 ${DRAFT_MAX_REFERENCE_FILES} 份` : ''}
                 {bankEnabled && keptBankCandidates.length > 0 ? `；题库候选 ${keptBankCandidates.length} 题 · ${bankCandidateChars.toLocaleString('zh-CN')} 字（超预算自动截减）` : ''}
               </p>
-              <div className="prep-bank-toggle">
-                <label className={(bankSummary?.installed ?? false) ? '' : 'is-disabled'}>
-                  <input
-                    type="checkbox"
-                    checked={bankEnabled}
-                    disabled={!(bankSummary?.installed ?? false) || busyAction !== '' || improveBusy}
-                    onChange={toggleBankEnabled}
-                  />
-                  参考题库（AI 自动选题）
-                </label>
-                {bankSummary !== null && !bankSummary.installed && (
-                  <small>先在题库页导入 .tqbank</small>
-                )}
-                {bankEnabled && (
-                  <span className="prep-bank-options">
-                    <label>目标题数：
-                      <select
-                        value={bankTargetCount}
-                        disabled={busyAction !== '' || improveBusy}
-                        onChange={(event) => {
-                          setBankTargetCount(Number(event.currentTarget.value))
-                          clearBankSelection()
-                        }}
-                      >
-                        {BANK_TARGET_COUNTS.map((count) => (
-                          <option key={count} value={count}>{count} 题</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={dualVersionEnabled}
-                        disabled={busyAction !== '' || improveBusy}
-                        onChange={(event) => setDualVersionEnabled(event.currentTarget.checked)}
-                      />
-                      同时生成学生版
-                    </label>
-                  </span>
-                )}
-              </div>
             </div>
           )}
+          <div className="prep-bank-toggle">
+            <label className={(bankSummary?.installed ?? false) ? '' : 'is-disabled'}>
+              <input
+                type="checkbox"
+                checked={bankEnabled}
+                disabled={!(bankSummary?.installed ?? false) || busyAction !== '' || improveBusy}
+                onChange={toggleBankEnabled}
+              />
+              参考题库（AI 自动选题）
+            </label>
+            {bankSummary !== null && !bankSummary.installed && (
+              <small>先在题库页导入 .tqbank</small>
+            )}
+            {bankEnabled && (
+              <span className="prep-bank-options">
+                <label>目标题数：
+                  <select
+                    value={bankTargetCount}
+                    disabled={busyAction !== '' || improveBusy}
+                    onChange={(event) => {
+                      setBankTargetCount(Number(event.currentTarget.value))
+                      clearBankSelection()
+                    }}
+                  >
+                    {BANK_TARGET_COUNTS.map((count) => (
+                      <option key={count} value={count}>{count} 题</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={dualVersionEnabled}
+                    disabled={busyAction !== '' || improveBusy}
+                    onChange={(event) => setDualVersionEnabled(event.currentTarget.checked)}
+                  />
+                  同时生成学生版
+                </label>
+              </span>
+            )}
+          </div>
           <div className="prep-source-actions">
             <button className="secondary-button" type="button" onClick={onBrowseExternal}>从外部资料添加</button>
             <button className="secondary-button" type="button" onClick={onBrowseMaterials}>从素材库添加</button>
@@ -1175,8 +1195,10 @@ export default function DraftPanel({
             <div className="improve-review-card">
               <div className="card-heading"><div><p className="section-kicker">改进流程</p><h2>修改方案（先审阅，再生成）</h2></div></div>
               <div className="improve-plan-body"><MarkdownDocument body={improvePlan} files={[]} /></div>
-              {bankEnabled && (
-                <div className="improve-bank-section" aria-label="题库候选题过目">
+            </div>
+          )}
+          {bankEnabled && (
+            <div className="improve-bank-section" aria-label="题库候选题过目">
                   <div className="card-heading"><div><p className="section-kicker">AI 自动选题</p><h2>题库候选（先过目，再生成）</h2></div>{bankPlanBusy ? <span className="count-label">正在选题…</span> : null}</div>
                   {bankPlan === null ? (
                     <p className="inline-notice" role="status">
@@ -1228,9 +1250,10 @@ export default function DraftPanel({
                       </p>
                     </>
                   )}
-                </div>
-              )}
-              <div className="improve-review-actions">
+          </div>
+          )}
+          {improvePhase === 'review' && (
+            <div className="improve-review-actions">
                 {prepMode === 'new' && <label className="improve-kind-label">生成类型
                   <select value={improveKind} onChange={(event) => setImproveKind(event.target.value as DraftKind)} disabled={improveBusy}>
                     <option value="lecture">讲义</option>
@@ -1241,7 +1264,6 @@ export default function DraftPanel({
                 <button className="primary-button" type="button" onClick={() => void confirmPlanAndGenerate(plannedDraftKind)} disabled={improveBusy}>{improveBusy ? '生成中…' : prepMode === 'lesson' ? '确认并生成完整新版本' : '确认方案并生成'}</button>
                 <button className="secondary-button" type="button" onClick={() => void startImprovePlan()} disabled={improveBusy}>重新出方案</button>
                 <button className="secondary-button" type="button" onClick={abandonImprove} disabled={improveBusy}>放弃改进</button>
-              </div>
             </div>
           )}
           {selectedNote === undefined ? (

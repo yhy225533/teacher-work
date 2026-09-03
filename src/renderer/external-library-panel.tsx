@@ -13,9 +13,12 @@ type EntryMap = Record<string, readonly ExternalEntry[]>
 export default function ExternalLibraryPanel({
   prepContext = null,
   onAddedToLesson,
+  onCancel,
 }: {
   readonly prepContext?: LessonPrepContext | null
   readonly onAddedToLesson?: (file: ManagedFileRecord) => void
+  /** 备课跳转模式下的“返回备课”出口；未提供时不显示返回按钮。 */
+  readonly onCancel?: () => void
 }): React.JSX.Element {
   const [root, setRoot] = useState<ExternalRootSummary | null>(null)
   const [entriesByFolder, setEntriesByFolder] = useState<EntryMap>({})
@@ -266,6 +269,15 @@ export default function ExternalLibraryPanel({
                 onClick={() => setTreeCollapsed(false)}
               >
                 打开资料树
+              </button>
+            )}
+            {prepContext !== null && onCancel !== undefined && (
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={onCancel}
+              >
+                ← 返回备课
               </button>
             )}
             <span className="selection-label">

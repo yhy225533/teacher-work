@@ -1295,3 +1295,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 中继式验收（测试库内）：检索计划 JSON 容错、候选注入与预算截减、剔除集直达 prompt（零检索）、双版两次请求 studentNoteId 关联与 variant 落库、编辑保存版本链/编辑版命名原件不动、学生版独立版本链发布命名、无 bankPlan 零变化钉测。
 - 验收文档 `docs/v1.7-acceptance.md`：含 DeepSeek 真实自测清单（人工编辑器/AI 二改放宽/题库选题+双版/回归抽查，费用预估 ≤ ¥3）与通过标准；真实自测与最终体验确认由产品负责人执行，通过后才创建 `checkpoint-V1.7-pass`。
 - Git：本地提交 `v1.7(V17-E): final regression gates, isolated smoke and acceptance record`。
+
+## 2026-09-03 · 产品负责人真实自测反馈修复（两处缺陷）
+
+**反馈 1：新建备课界面与题库连接不上。** 根因：V17-D 把“参考题库（AI 自动选题）”开关渲染在 `prepMode !== 'new'` 的补充参考区内，且 `generate(kind)`（新建模式直生成路径）未接 bankPlan/dualVersion/过目步——题库只在修改模式可用。修复：开关块移出模式门（三种模式共用渲染，含目标题数与学生版开关）；`generate()` 接入两步流——开启且无候选时先跑 runBankSelection 出检索计划与候选列表并提示“题库候选已列出，请过目（可剔除或调整后重新选题），再点一次生成按钮执行”，候选就绪后（或已有候选）按剔除集带 `bankPlan + bankQuestionIds + dualVersion` 生成；候选过目卡从修改方案卡（improvePhase 门内）拆出独立渲染，新建模式同样可见可操作。
+
+**反馈 2：教学内容 → “从外部资料添加”后不选文件没有返回键，只能手动切回教学内容。** 根因：外部资料页 picker 模式（有 prepContext）未提供任何返回入口（素材库 picker 有 onCancel，外部资料漏了）。修复：`ExternalLibraryPanel` 增可选 `onCancel` prop，picker 模式下工具栏加“← 返回备课”按钮；App 接线 `onCancel={returnToPrep}`（与素材库一致，返回后落回教学内容备课分区）。
+
+门禁：全量 76 files / 362 tests（1 skipped）、typecheck、lint 通过。钉测新增 2 例（新建模式开关位置/两步生成提示/候选卡独立渲染；外部 picker 返回按钮）。

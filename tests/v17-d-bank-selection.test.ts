@@ -365,6 +365,32 @@ describe('V17-D Renderer 钉测：开关 / 过目卡 / 徽标 / 预算列名', (
     expect(panel).toContain("is-${entry.note.aiMetadata.variant}")
   })
 
+  it('covers the new-prep mode: toggle outside the mode gate and two-step generate', () => {
+    const panel = source('../src/renderer/draft-panel.tsx')
+    // 开关块已移出 prepMode !== 'new' 门：新建备课同样显示参考题库开关
+    const referenceGate = panel.indexOf("{prepMode !== 'new' && (")
+    const bankToggle = panel.indexOf('<div className="prep-bank-toggle">')
+    expect(bankToggle).toBeGreaterThan(referenceGate)
+    // generate()：开启且无候选时先出候选并提示二次点击；候选就绪后带 bankPlan/bankQuestionIds/dualVersion
+    expect(panel).toContain('题库候选已列出，请过目（可剔除或调整后重新选题），再点一次生成按钮执行。')
+    expect(panel).toContain('const bankActive = bankEnabled && bankPlan !== null')
+    // 候选过目卡独立于修改方案卡（improvePhase 门外）渲染
+    const reviewCard = panel.indexOf("{improvePhase === 'review' && (")
+    const bankSectionCard = panel.indexOf('<div className="improve-bank-section"')
+    const reviewActions = panel.indexOf('{improvePhase === \'review\' && (', reviewCard + 1)
+    expect(reviewActions).toBeGreaterThan(reviewCard)
+    expect(bankSectionCard).toBeGreaterThan(reviewCard)
+    expect(bankSectionCard).toBeLessThan(reviewActions)
+  })
+
+  it('offers a return-to-prep button on the external library picker mode', () => {
+    const panel = source('../src/renderer/external-library-panel.tsx')
+    const app = source('../src/renderer/App.tsx')
+    expect(panel).toContain('← 返回备课')
+    expect(panel).toContain('readonly onCancel?: () => void')
+    expect(app).toContain('onCancel={returnToPrep}')
+  })
+
   it('reuses ai.requestText + question-bank channels only (zero new IPC for the preview step)', () => {
     const panel = source('../src/renderer/draft-panel.tsx')
     expect(panel).toContain('questionBank.searchQuestions')
