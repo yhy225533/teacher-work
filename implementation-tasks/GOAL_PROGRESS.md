@@ -1287,3 +1287,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Renderer（draft-panel）：参考区“参考题库（AI 自动选题）”开关（未安装置灰 + 提示；目标题数 select 1–20 默认 5；“同时生成学生版”开关）；方案阶段 startImprovePlan 串行 runBankSelection（ai.requestText 出计划 → searchQuestions 检索 → 逐题 getQuestion 算候选块字数），方案确认卡新增过目分区（AI 计划原样展示 tag/年级/难度/题数/关键词、候选列表题干预览+难度+含图+tag、逐题剔除 checkbox、“调整后重新选题”自然语言输入追加进 requirement）；确认生成固化 bankPlan + bankQuestionIds + dualVersion，成功清选题状态；D25 预算弹窗加“题库候选 N 道（按预算部分纳入 M 道）”行，选择区实时“题库候选 N 题 · M 字（超预算自动截减）”；修改记录/内容标题/收件箱教师版/学生版徽标（draft-variant-badge）；切换修改对象/模式清空选题。预览步零新 IPC——复用 ai:request-text + question-bank:search-questions/get-question。
 - 测试：新增 `tests/v17-d-bank-selection.test.ts` 11 例（剔除集直达 prompt 且零检索调用/空集拒绝/双版两次请求与 studentNoteId/variant 落库/单版零变化/学生版独立版本链/开关/过目卡/确认请求字段/预算列名与徽标/零新 IPC 钉测）；全量 76 files / 360 tests、typecheck、lint 通过。
 - Git：本地提交 `v1.7(V17-D): bank-driven selection with review step and dual-version output`。
+
+## 2026-09-03 · V17-E 自动门通过（真实自测待产品负责人）
+
+- 自动门全量复跑：76 files / 360 tests（1 skipped 既有）、typecheck、lint、production build（electron-vite out/main+preload+renderer）、`git diff --check` 全部通过；未运行 portable/installer（按约束）。
+- 隔离 Windows 冒烟：独立 TEACHER_WORKBENCH_L01_SMOKE_APP_DATA + `--user-data-dir` 启动 production Electron，4 进程存活、workspace.db/search.db 创建、schema_migrations 1–17、notes CHECK 含 manual_edit、search schemaVersion=2、stderr 无错误；进程全部终止、临时目录删除；未接触正式工作区与任何 Key。
+- 中继式验收（测试库内）：检索计划 JSON 容错、候选注入与预算截减、剔除集直达 prompt（零检索）、双版两次请求 studentNoteId 关联与 variant 落库、编辑保存版本链/编辑版命名原件不动、学生版独立版本链发布命名、无 bankPlan 零变化钉测。
+- 验收文档 `docs/v1.7-acceptance.md`：含 DeepSeek 真实自测清单（人工编辑器/AI 二改放宽/题库选题+双版/回归抽查，费用预估 ≤ ¥3）与通过标准；真实自测与最终体验确认由产品负责人执行，通过后才创建 `checkpoint-V1.7-pass`。
+- Git：本地提交 `v1.7(V17-E): final regression gates, isolated smoke and acceptance record`。

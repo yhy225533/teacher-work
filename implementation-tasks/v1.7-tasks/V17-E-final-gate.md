@@ -1,6 +1,6 @@
 # V17-E · 最终回归与版本验收
 
-**状态：** `TODO`
+**状态：** `自动门 DONE / 真实自测待产品负责人`（2026-09-03）
 
 ## 范围
 
@@ -23,3 +23,11 @@
 
 - 全部自动门通过 + 真实自测通过 + 产品负责人最终体验确认；
 - 最终确认提交上创建 `checkpoint-V1.7-pass`（标签说明注明基线 `checkpoint-V1.6-pass`）。
+
+## 完成记录（2026-09-03，自动门部分）
+
+- 全量 76 files / 360 tests（1 skipped 既有真实题库冒烟）、typecheck、lint（--max-warnings 0）、production build（electron-vite）、`git diff --check` 全部通过；未运行 portable/installer。
+- 隔离 Windows 冒烟：独立 TEACHER_WORKBENCH_L01_SMOKE_APP_DATA + `--user-data-dir` 启动 out/main/index.js；4 进程存活、workspace.db/search.db 创建；schema_migrations 1–17、notes CHECK 含 manual_edit、search schemaVersion=2；stderr 无错误；进程全部终止、临时目录删除；未接触正式工作区/真实资料/任何 Key。
+- 中继式验收以版本库测试承载（v17-a-draft-bank / v17-a-write-version / v17-c-md-editor / v17-d-bank-selection：计划容错、候选注入与预算截减、剔除集直达 prompt、双版编排、编辑保存命名原件不动、学生版独立版本链、无 bankPlan 零变化）。
+- `docs/v1.7-acceptance.md` 建立：DeepSeek 真实自测清单（≤ ¥3）+ 通过标准 + 安全边界复核。
+- 待产品负责人：真实自测 4 项（人工编辑器 / AI 二改放宽 / 题库选题+双版 / 回归抽查）与最终体验确认；通过后创建 `checkpoint-V1.7-pass`。
