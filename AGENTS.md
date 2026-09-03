@@ -14,7 +14,7 @@ V1.5（增量 V1.5.1）至 V1.5.6 已分别冻结在 `checkpoint-V1.5-pass`、`c
 6. 编辑器零新依赖（受控 textarea + 工具栏 + 分屏 KaTeX 预览）；`files:write-version` 永远写新文件（临时文件 + 原子重命名），绝不 UPDATE 目标行，外部根目录资料不可编辑；题库只读（仅 search/getQuestion），题库定位为 AI 生成知识源但不演变为自动组卷、错题本、成绩分析、多快照换版或题库沉淀写路径；
 7. V17-A–V17-D 分别运行相关测试、typecheck、lint，并按风险补充必要 build 或本地 smoke；只有 V17-E 运行全量测试、production build、`git diff --check`、隔离 Windows 冒烟和 DeepSeek 真实自测（预估 ≤ ¥3）；
 8. V1.7 不运行 `package:portable`，不生成 portable、installer 或对外交付包；
-9. 完成每个节点后更新 `implementation-tasks/STATUS.md` 与 `implementation-tasks/GOAL_PROGRESS.md`，并按版本控制协议创建当前里程碑的本地提交（`v1.7(V17-XX): <摘要>`）；产品负责人已授权里程碑提交后 push 到 GitHub（远程 `Yanghy861/teacher-work`），推送前确保无秘密与真实教学资料入库；
+9. 完成每个节点后更新 `implementation-tasks/STATUS.md` 与 `implementation-tasks/GOAL_PROGRESS.md`，并按版本控制协议创建当前里程碑的本地提交（`v1.7(V17-XX): <摘要>`）；产品负责人已授权里程碑提交后 push 到 GitHub（远程自 2026-09-03 起迁至 `yhy225533/teacher-work`，历史远程 `Yanghy861/teacher-work` 待归档，仅保留历史参考），推送前确保无秘密与真实教学资料入库；
 10. V1.7 只有 V17-E 一个最终验收点；未完成任务验收或未获得产品负责人的最终体验确认时，不得创建 `checkpoint-V1.7-pass`；
 11. 只有核心 happy path 无法实现、存在资料损坏/路径越界/Key 泄漏风险、缺少必需权限或凭据、或需要产品负责人改变方向时，才可标为 `BLOCKED`。
 
