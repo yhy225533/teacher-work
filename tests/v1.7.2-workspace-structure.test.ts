@@ -124,4 +124,16 @@ describe('V172-A 工作台骨架：左轨 / 生成器范围行 / 收起态', () 
     expect(draft).toContain('min={DRAFT_BANK_PLAN_MIN_TARGET_COUNT}')
     expect(draft).toContain('max={DRAFT_BANK_PLAN_MAX_TARGET_COUNT}')
   })
+
+  it('V172-fix: new-prep mode keeps external and materials add entries wired', () => {
+    const draft = source('../src/renderer/draft-panel.tsx')
+
+    // 三种模式都必须能进入外部资料/素材库 picker：single/lesson 参考行 + new 生成依据行（V172-A 遗漏回归的防再犯钉）
+    expect(draft.match(/onClick=\{onBrowseExternal\}/g)).toHaveLength(2)
+    expect(draft.match(/onClick=\{onBrowseMaterials\}/g)).toHaveLength(2)
+    // new 模式入口不依赖课内资料存在（冷启动课次无文件时仍可添加）
+    const newRow = draft.slice(draft.indexOf("{prepMode === 'new' && ("), draft.indexOf('<div className="prep-gen-req">'))
+    expect(newRow).toContain('＋ 外部资料')
+    expect(newRow).toContain('＋ 素材库')
+  })
 })

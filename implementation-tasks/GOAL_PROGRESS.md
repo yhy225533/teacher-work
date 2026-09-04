@@ -1341,3 +1341,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - UI 层：抽出 `PrepBankOptions` 组件（两处模式共用），目标题数改 number input + datalist 快捷项（1..10,12,15,20,30,40,50,80）；输入实时镜像 DOM、失焦统一收口（超限钳 80、清空/非法回退已提交值，不误回默认）；同步替换 single/lesson 参考行与 new 生成依据行两处旧 select 块；`.prep-bank-count-input` 样式（76px 窄宽、tabular-nums）。
 - 测试：v17-a 边界钉测演进（正例 80、反例 21→81、常量=80）；v1.7.2-workspace-structure 新增 D35 控件断言（组件抽取/钳制逻辑/合同边界/min-max 属性）。
 - 方案 §5.8 与 V172-B 任务文件同步 D35 修订备注（迁移候选区头部时组件整体搬移）。
+
+## 2026-09-04 · 产品负责人反馈修复：新建备课模式丢失外部资料/素材库入口（V172-A 回归）
+
+- **反馈：**"在 AI 生成新课的时候，无法选择外部资料或素材库。"
+- **根因：**V172-A 删除左栏 `prep-source-actions`（从外部资料添加/从素材库添加）大按钮时，single/lesson 参考行补上了 `＋ 外部资料/＋ 素材库` mini 入口，但 new（新建备课）生成依据行只放了"＋ 从本课资料选择"（还要求课内已有资料才渲染）与题库开关——外部/素材入口在 new 模式彻底消失，冷启动新课次没有任何加资料途径。接线链（DraftPanel → teaching-content-page → App picker）经排查完好，问题纯在 JSX 遗漏。
+- **修复：**new 生成依据行补回两个 `prep-add-mini` 入口（不受 `files`/候选数门控，冷启动即可见），与 single/lesson 参考行同款。
+- **防再犯钉测：**static-render-v156-d new 模式初始态 markup 必含 `＋ 外部资料/＋ 素材库`；v1.7.2-workspace-structure 源码断言 `onBrowseExternal/onBrowseMaterials` 各出现 2 次（两处模式行）且 new 行片段包含两入口。
+- 门禁：全量 78 files / 371 tests（1 skipped 既有）、typecheck、lint 通过。
+- Git：本地提交 `v1.7.2(V172-fix): restore external and materials add entries in new-prep mode`。

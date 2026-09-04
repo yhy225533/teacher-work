@@ -344,6 +344,9 @@ describe('V156-D static render upgrades (additive)', () => {
       expect(markup).toContain('<b>修改记录</b>')
       expect(markup).toContain('生成依据')
       expect(markup).toContain('正在读取本次资料…')
+      // V172-fix：新建备课模式必须保有外部资料/素材库添加入口（V172-A 删除左栏大按钮时遗漏导致冷启动无法加资料）
+      expect(markup).toContain('＋ 外部资料')
+      expect(markup).toContain('＋ 素材库')
     })
   })
 

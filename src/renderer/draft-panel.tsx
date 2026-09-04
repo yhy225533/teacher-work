@@ -1180,6 +1180,9 @@ export default function DraftPanel({
                     {refPickerOpen && (
                       <ScopeFileList files={referenceCandidates} selection="checkbox" selectedIds={selectedReferenceFileIds} onSelect={toggleReferenceFile} currentVersionId={classifiedFiles.currentVersion?.id} charCounts={referenceCharCounts} emptyText="本课没有可作生成依据的课内资料。" />
                     )}
+                    {/* V172-fix：新建备课模式必须保有外部/素材入口（V172-A 删除左栏大按钮时此处遗漏，冷启动无法加资料） */}
+                    <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={onBrowseExternal}>＋ 外部资料</button>
+                    <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={onBrowseMaterials}>＋ 素材库</button>
                     <span className="prep-gen-note">已选 {selectedReferenceFiles.length} 份 · 也可以只靠要求直接生成</span>
                     <label className={`prep-switch-row${(bankSummary?.installed ?? false) ? '' : ' is-disabled'}`} title={(bankSummary?.installed ?? false) ? undefined : '先在题库页导入 .tqbank'}>
                       参考题库
