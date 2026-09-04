@@ -136,4 +136,19 @@ describe('V172-A 工作台骨架：左轨 / 生成器范围行 / 收起态', () 
     expect(newRow).toContain('＋ 外部资料')
     expect(newRow).toContain('＋ 素材库')
   })
+
+  it('V1.7.2: scope file rows render a source badge from lessonFileSourceLabel', () => {
+    const draft = source('../src/renderer/draft-panel.tsx')
+    const context = source('../src/renderer/lesson-prep-context.ts')
+    const styles = source('../src/renderer/styles.css')
+
+    // ScopeFileList 行内末尾来源小标签（生成依据/补充参考/更换列表三处共用）
+    expect(draft).toContain('lessonFileSourceLabel(file) !== null')
+    expect(draft).toContain('prep-source-badge')
+    expect(context).toContain("export type LessonFileSourceLabel = '外部资料' | '素材库'")
+    expect(context).toContain('originFileId === null ? \'外部资料\' : \'素材库\'')
+    // AI 版本链（含学生版）与编辑版命名不标来源
+    expect(context).toContain('appGeneratedNamePattern')
+    expect(styles).toContain('.prep-source-badge {')
+  })
 })

@@ -8,6 +8,7 @@ import {
   createLessonPrepContext,
   filterLessonMaterialFiles,
   isSelectableLessonPrepFile,
+  lessonFileSourceLabel,
   listLessonPrepFiles,
   reconcileSelectedLessonFileIds,
 } from '../src/renderer/lesson-prep-context'
@@ -193,5 +194,18 @@ describe('V11-02 lesson prep renderer state', () => {
       sourceLecture.id,
       image.id,
     ])
+  })
+})
+
+describe('V1.7.2 lesson file source label', () => {
+  it('labels external-library and material-library copies and skips app-generated names', () => {
+    expect(lessonFileSourceLabel(file('ext-1', '二次根式加减法.md', 'text/markdown'))).toBe('外部资料')
+    expect(lessonFileSourceLabel(file('ext-2', '期中试卷.docx'))).toBe('外部资料')
+    expect(lessonFileSourceLabel({ ...file('mat-1', '因式分解速记.md', 'text/markdown'), originFileId: 'material-source' })).toBe('素材库')
+
+    // 工作台产物按命名排除：AI 版本链（含学生版）与人工编辑版不标来源
+    expect(lessonFileSourceLabel(file('pub-1', '有理数 · 第 1 版.md', 'text/markdown'))).toBe(null)
+    expect(lessonFileSourceLabel(file('pub-2', '有理数 · 第 2 版 · 学生版.md', 'text/markdown'))).toBe(null)
+    expect(lessonFileSourceLabel(file('edit-1', '二次根式加减法（编辑版）.md', 'text/markdown'))).toBe(null)
   })
 })

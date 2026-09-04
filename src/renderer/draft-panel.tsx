@@ -42,6 +42,7 @@ import {
   classifyLessonCoursewareFiles,
   isAiEditableFile,
   isAppGeneratedCoursewareFile,
+  lessonFileSourceLabel,
   orderAiEditableFiles,
   isSelectableLessonPrepFile,
   filterLessonMaterialFiles,
@@ -1494,6 +1495,9 @@ function ScopeFileList({ files, selection, selectedIds, onSelect, currentVersion
               <span className="prep-scope-file-name">{file.originalName}</span>
               {chars !== undefined && <span className="prep-scope-file-chars">{chars.toLocaleString('zh-CN')} 字</span>}
               {file.id === currentVersionId && <span className="prep-current-badge">当前</span>}
+              {lessonFileSourceLabel(file) !== null && (
+                <span className="prep-source-badge">{lessonFileSourceLabel(file)}</span>
+              )}
             </label>
           </li>
         )

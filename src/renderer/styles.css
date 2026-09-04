@@ -3374,7 +3374,7 @@ button.quick-status { cursor: pointer; }
 
 .prep-scope-file-list label {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 7px;
   min-height: 34px;
@@ -3412,6 +3412,18 @@ button.quick-status { cursor: pointer; }
   color: #15803d;
   font-size: 9px;
   font-weight: 700;
+}
+
+/* V1.7.2：文件来源小标签（外部资料/素材库），中性灰与"当前"徽标并排 */
+.prep-source-badge {
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .prep-scope-empty {

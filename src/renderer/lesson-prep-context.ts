@@ -81,6 +81,24 @@ export function isSelectableLessonPrepFile(file: ManagedFileRecord): boolean {
   return !file.mimeType.startsWith('image/')
 }
 
+/** V1.7.2：课次文件来源小标签（生成依据/参考候选列表用）。 */
+export type LessonFileSourceLabel = '外部资料' | '素材库'
+
+const appGeneratedNamePattern = /(?: · 第 \d+ 版(?: · 学生版)?|（编辑版）)\.md$/u
+
+/**
+ * V1.7.2 来源判定（数据层实证，见 managed-file-service）：
+ * - 素材库复制（files:copy-to-lesson）必留 originFileId = 源文件 id → 「素材库」；
+ * - 工作台 AI 发布（` · 第 N 版.md`，含学生版）与人工编辑保存（`（编辑版）.md`）按命名排除，不标来源；
+ * - 其余一律标「外部资料」——外部资料 picker（external:copy-to-lesson → importToLesson）的
+ *   originFileId 为 null；题库题目复制（importToLesson 同路径）与历史课程包脚本导入同特征，
+ *   实质都是"工作台外进来的资料"，统一按外部资料展示（准确来源需迁移新增列，超出展示层范围）。
+ */
+export function lessonFileSourceLabel(file: ManagedFileRecord): LessonFileSourceLabel | null {
+  if (appGeneratedNamePattern.test(file.originalName)) return null
+  return file.originFileId === null ? '外部资料' : '素材库'
+}
+
 /** D27（V17-B）：任意 text/markdown managed 文件均可作 AI 修改对象（含外部导入 md）；office/pdf/图片/纯文本不在其列。 */
 export function isAiEditableFile(file: ManagedFileRecord): boolean {
   return file.mimeType === 'text/markdown'

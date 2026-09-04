@@ -1350,3 +1350,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **防再犯钉测：**static-render-v156-d new 模式初始态 markup 必含 `＋ 外部资料/＋ 素材库`；v1.7.2-workspace-structure 源码断言 `onBrowseExternal/onBrowseMaterials` 各出现 2 次（两处模式行）且 new 行片段包含两入口。
 - 门禁：全量 78 files / 371 tests（1 skipped 既有）、typecheck、lint 通过。
 - Git：本地提交 `v1.7.2(V172-fix): restore external and materials add entries in new-prep mode`。
+
+## 2026-09-04 · 产品负责人反馈增强：课次文件来源小标签（外部资料/素材库）
+
+- **需求：**"外部资料选择之后，我希望在生成依据这里最后有个小标签（外部资料）"——生成依据/参考候选列表每行末尾标出资料来源。
+- **数据层实证（managed-file-service）：**素材库复制（files:copy-to-lesson）必留 `originFileId = 源文件 id`；外部资料 picker（external:copy-to-lesson → importToLesson）`originFileId = null`；AI 发布（` · 第 N 版.md` 含学生版）与 V17-C 编辑保存（`（编辑版）.md`）经 createTextObjectAndRegister 亦为 null 但有稳定命名特征。
+- **实现（零迁移/零新 IPC，纯 renderer）：**`lesson-prep-context.ts` 新增纯函数 `lessonFileSourceLabel`（originFileId 非空 → 素材库；版本链/编辑版命名 → 不标；其余 → 外部资料——题库题目复制与历史课程包脚本导入同特征，统一按外部资料展示，准确来源需加列已记入限制）；`draft-panel.tsx` ScopeFileList 行内末尾渲染 `.prep-source-badge` 小徽标（生成依据/补充参考/更换列表三处共用）；styles.css 徽标样式（中性灰 9px 药丸，与"当前"绿徽标并排）+ label grid 扩列。
+- **钉测：**lesson-prep-context.test.ts 新增纯函数 6 例（外部 md/docx、素材库、版本链/学生版/编辑版排除）；v1.7.2-workspace-structure 新增渲染断言（lessonFileSourceLabel 接线、prep-source-badge、判定规则、命名排除锚点）。
+- 门禁：全量 77 files / 373 tests（1 skipped 既有）、typecheck、lint 通过。
+- Git：本地提交 `v1.7.2(V172-fix): lesson file source badges in scope file lists`。
