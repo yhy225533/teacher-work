@@ -339,8 +339,10 @@ describe('V156-D static render upgrades (additive)', () => {
       const context = createLessonPrepContext(course, lesson, [student], '第一阶段')
       const markup = renderToStaticMarkup(createElement(DraftPanel, draftProps(context) as never))
       expect(markup).toContain('lesson-prep-workspace')
-      expect(markup).toContain('新建备课')
-      expect(markup).toContain('选择生成依据')
+      // V172-A（D33）：左栏节头（新建备课/选择生成依据）删除；生成依据为生成器范围行 label，主区空态文案 V172-C 演进
+      expect(markup).toContain('prep-rail')
+      expect(markup).toContain('<b>修改记录</b>')
+      expect(markup).toContain('生成依据')
       expect(markup).toContain('正在读取本次资料…')
     })
   })

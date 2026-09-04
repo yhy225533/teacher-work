@@ -71,7 +71,9 @@ describe('V16-B modification scope and reference budget UX (candidates widened b
 
     expect(draft).toContain('charCounts={referenceCharCounts}')
     expect(draft).toContain('DRAFT_MAX_REFERENCE_FILES} 份')
-    expect(draft).toContain('参考已占用 {referenceCharTotal.toLocaleString')
+    // V172-A（D33）：预算提示从长句改为生成器内预算行（meter + 已用/上限/参考份数）
+    expect(draft).toContain('已用 {scopedCharTotal.toLocaleString')
+    expect(draft).toContain('referenceBudgetExceeded ? \' is-over\'')
     expect(draft).toContain(`current.length >= DRAFT_MAX_REFERENCE_FILES`)
     expect(draft).toContain(`补充参考最多选择 ${'${DRAFT_MAX_REFERENCE_FILES}'} 份`)
   })

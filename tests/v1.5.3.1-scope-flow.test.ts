@@ -25,20 +25,22 @@ describe('V1.5.3.1 scoped AI modification contract', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
 
     expect(draft).toContain('修改对象')
-    expect(draft).toContain('选择一份课件版本')
-    expect(draft).toContain('本课全部内容')
+    // V172-A（D33）：修改对象收进主区生成器"范围行"——single 目标卡+更换、lesson 自动徽标；旧左栏节头文案已删除
+    expect(draft).toContain('本课全部课件')
     expect(draft).toContain('补充参考')
     expect(draft).toContain('selection="radio"')
     expect(draft).toContain('selection="checkbox"')
     expect(draft).toContain('修改当前文件')
     expect(draft).toContain('整课重做')
     expect(draft).not.toContain('勾选作为生成依据')
+    expect(draft).not.toContain('选择一份课件版本')
   })
 
   it('keeps quick artifact generation exclusive to new prep', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
+    // V172-A（D33）：三类快捷生成按钮包进生成器卡的 prep-gen-btns 组
     const quickActions = draft.slice(
-      draft.indexOf("{prepMode === 'new' && ([DRAFT_KINDS.lecture"),
+      draft.indexOf("{prepMode === 'new' && ("),
       draft.indexOf("{improveError !== ''"),
     )
 

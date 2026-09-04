@@ -1323,3 +1323,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 产品负责人 2026-09-03 反馈备课工作台左栏 UI 不可接受，2026-09-04 确认"结构肯定要重排"并逐屏确认新结构（静态示意 `tmp/mockups/prep-workspace-structure.html`，本地参照不入库）。
 - 方案落地：`docs/v1.7.2-prep-workspace-restructure-plan.md`（面向纯文字实施模型的完整规格：to-be DOM、CSS 全值、文案对照表、状态规则、任务链、测试与验收清单）；决策 D33/D34 追加至 `V1_7_DECISIONS.md`；`VERSION_CONTROL.md` 补记 V1.7 与 V1.7.2 协议行；任务链 `implementation-tasks/v1.7.2-tasks/`（V172-A/B/C/D）骨架建立，STATUS 置 TODO。
 - 范围裁定：只动 `draft-panel.tsx` 展示层 + `styles.css`；生成/修改/题库/预算/发布逻辑、合同、IPC、Main 零改动；零新依赖、无 migration；V172-D 为唯一全量验收点，`checkpoint-V1.7.2-pass` 待产品负责人走查确认。
+
+## 2026-09-04 · V172-A 完成（工作台骨架与修改记录左轨）
+
+- `draft-panel.tsx` 重排落地：250px 左轨 `prep-rail`（修改记录时间线、空态"还没有修改节点。右侧生成后，每个节点都会出现在这里。"、脚注）+ 主区 `prep-main`（生成器卡、收起摘要条、流式面板、方案审阅、题库候选、成果卡 `prep-doc-card`）；成果区列表项 JSX 原样搬入零逻辑改动。
+- 生成器范围行：single 目标卡（MD 徽标/文件名/字数/当前版/类型 + 「更换」展开 ScopeFileList radio、选中即收起、候选 >1 才显示更换）；lesson 自动徽标"本课全部课件 · N 份 · 自动纳入最新正式版，历史版本不参与" + 输出说明；new 生成依据行。
+- 新 state targetPickerOpen/refPickerOpen/generatorOpen 与方案 §6 规则 1-5；阅读态收起条（三模式前缀 + 要求摘要 18 字 + 参考/题库状态 + 调整要求）。
+- 参考行 chips、题库 CSS switch 行、meter 预算行按方案 §5.5 提前落地为接近 to-be 形态；题库"目标题数/同时生成学生版"作为 V172-A 过渡态暂随开关行内渲染（V172-B 迁往候选区头部）。
+- `styles.css`：grid 250px；骨架/范围行/收起条全套新样式（§7 值）；删除 prep-ref-panel/prep-work-panel/prep-scope-strip 全组/prep-auto-scope/prep-reference-section/prep-reference-hint/draft-prompt-block/draft-prompt-actions；1100px 媒体查询改 .prep-rail 堆叠；`styles.css:1229` 共享选择器行保留。
+- 测试：新增 `tests/v1.7.2-workspace-structure.test.ts` 7 例；演进 5 处钉测（v1.5.3.1 ×2、v1.2、v1.6、v17-D、static-render-v156-d——静态渲染失败输出完整验证目标 DOM 后演进断言）。门禁：全量 77 files / 369 tests（1 skipped 既有）、typecheck、lint 通过。
+- Git：本地提交 `v1.7.2(V172-A): rail skeleton and scope row`。

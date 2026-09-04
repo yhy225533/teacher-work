@@ -326,7 +326,8 @@ describe('V17-D 发布命名：学生版独立版本链', () => {
 describe('V17-D Renderer 钉测：开关 / 过目卡 / 徽标 / 预算列名', () => {
   it('renders the bank toggle with grayed-out hint when uninstalled and target/dual options', () => {
     const panel = source('../src/renderer/draft-panel.tsx')
-    expect(panel).toContain('参考题库（AI 自动选题）')
+    // V172-A（D33）：开关收成生成器参考行内的 switch 行；未安装 title 提示
+    expect(panel).toContain('参考题库')
     expect(panel).toContain('先在题库页导入 .tqbank')
     expect(panel).toContain('目标题数')
     expect(panel).toContain('同时生成学生版')
@@ -368,9 +369,11 @@ describe('V17-D Renderer 钉测：开关 / 过目卡 / 徽标 / 预算列名', (
   it('covers the new-prep mode: toggle outside the mode gate and two-step generate', () => {
     const panel = source('../src/renderer/draft-panel.tsx')
     // 开关块已移出 prepMode !== 'new' 门：新建备课同样显示参考题库开关
+    // V172-A（D33）：开关块由 prep-bank-toggle 大块改为参考行/生成依据行内的 switch 行
     const referenceGate = panel.indexOf("{prepMode !== 'new' && (")
-    const bankToggle = panel.indexOf('<div className="prep-bank-toggle">')
-    expect(bankToggle).toBeGreaterThan(referenceGate)
+    const bankToggle = panel.indexOf("className={`prep-switch-row${(bankSummary?.installed ?? false) ? '' : ' is-disabled'}`}")
+    expect(bankToggle).toBeGreaterThan(0)
+    expect(panel.indexOf("className={`prep-switch-row${(bankSummary?.installed ?? false) ? '' : ' is-disabled'}`}", bankToggle + 1)).toBeGreaterThan(referenceGate)
     // generate()：开启且无候选时先出候选并提示二次点击；候选就绪后带 bankPlan/bankQuestionIds/dualVersion
     expect(panel).toContain('题库候选已列出，请过目（可剔除或调整后重新选题），再点一次生成按钮执行。')
     expect(panel).toContain('const bankActive = bankEnabled && bankPlan !== null')
