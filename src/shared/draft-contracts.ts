@@ -21,7 +21,8 @@ export const DRAFT_MAX_REFERENCE_FILES = 10
 export const DRAFT_MAX_SOURCE_FILES = 32
 
 export const DRAFT_BANK_PLAN_MIN_TARGET_COUNT = 1
-export const DRAFT_BANK_PLAN_MAX_TARGET_COUNT = 20
+// D35（V1.7.2）：产品负责人 2026-09-04 将目标题数上限从 20 放宽到 80；控件同步改为可选可填写。
+export const DRAFT_BANK_PLAN_MAX_TARGET_COUNT = 80
 export const DRAFT_BANK_PLAN_DEFAULT_TARGET_COUNT = 5
 
 export interface DraftSourceSelection {

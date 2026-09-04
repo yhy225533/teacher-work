@@ -49,9 +49,11 @@ const selection: DraftBankSelection = {
 }
 
 describe('V17-A DraftBankPlan contract guard', () => {
-  it('accepts a valid bank plan and full range targetCount 1..20', () => {
+  it('accepts a valid bank plan and full range targetCount 1..80', () => {
     expect(isDraftBankPlan({ targetCount: 1 })).toBe(true)
     expect(isDraftBankPlan({ targetCount: 20 })).toBe(true)
+    // D35（V1.7.2）：上限 20 → 80
+    expect(isDraftBankPlan({ targetCount: 80 })).toBe(true)
     expect(isDraftBankPlan({
       text: '一次函数', tags: ['一次函数', '待定系数法'], grade: '八年级',
       type: 'essay', difficultyMin: 0, difficultyMax: 100, targetCount: 5,
@@ -60,7 +62,7 @@ describe('V17-A DraftBankPlan contract guard', () => {
 
   it('rejects invalid plans: targetCount bounds, unknown keys, bad fields', () => {
     expect(isDraftBankPlan({ targetCount: 0 })).toBe(false)
-    expect(isDraftBankPlan({ targetCount: 21 })).toBe(false)
+    expect(isDraftBankPlan({ targetCount: 81 })).toBe(false)
     expect(isDraftBankPlan({ targetCount: 5.5 })).toBe(false)
     expect(isDraftBankPlan({ targetCount: '5' })).toBe(false)
     expect(isDraftBankPlan({ targetCount: 5, examType: '月考' })).toBe(false)
@@ -94,7 +96,7 @@ describe('V17-A DraftBankPlan contract guard', () => {
     const metadata = metadataWithBankSelection(selection)
     expect(isDraftNoteMetadata(metadata)).toBe(true)
     expect(isDraftNoteMetadata({ ...metadata, bankSelection: { ...selection, sentCount: 'x' } })).toBe(false)
-    expect(isDraftNoteMetadata({ ...metadata, bankSelection: { ...selection, plan: { targetCount: 21 } } })).toBe(false)
+    expect(isDraftNoteMetadata({ ...metadata, bankSelection: { ...selection, plan: { targetCount: 81 } } })).toBe(false)
 
     const baseResult = {
       noteId: 'note-1',
@@ -194,6 +196,7 @@ describe('V17-A bank plan prompt and parsing', () => {
 
   it('keeps the phase-one request a short non-streaming budget', () => {
     expect(DRAFT_BANK_PLAN_MAX_TOKENS).toBeLessThan(5_000)
-    expect(DRAFT_BANK_PLAN_MAX_TARGET_COUNT).toBe(20)
+    // D35（V1.7.2）：目标题数上限 20 → 80
+    expect(DRAFT_BANK_PLAN_MAX_TARGET_COUNT).toBe(80)
   })
 })

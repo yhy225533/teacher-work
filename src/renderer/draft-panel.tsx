@@ -10,6 +10,8 @@ import {
   DRAFT_MAX_REFERENCE_FILES,
   DRAFT_REQUIREMENT_MAX_CHARS,
   DRAFT_BANK_PLAN_DEFAULT_TARGET_COUNT,
+  DRAFT_BANK_PLAN_MAX_TARGET_COUNT,
+  DRAFT_BANK_PLAN_MIN_TARGET_COUNT,
   type DraftBankPlan,
   type DraftKind,
 } from '../shared/draft-contracts'
@@ -698,9 +700,6 @@ export default function DraftPanel({
     }
   }
 
-  /** D30：目标题数 1..20（合同钉测同范围）。 */
-  const BANK_TARGET_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20]
-
   /** D30 过目步反馈：自然语言调整追加进 requirement，重新出检索计划并重检索。 */
   async function reselectBank(): Promise<void> {
     const adjustment = bankAdjustment.trim()
@@ -1157,31 +1156,16 @@ export default function DraftPanel({
                       <span className="prep-switch" aria-hidden="true" />
                     </label>
                     {bankEnabled && (
-                      <span className="prep-bank-options">
-                        <label>目标题数：
-                          <select
-                            value={bankTargetCount}
-                            disabled={busyAction !== '' || improveBusy}
-                            onChange={(event) => {
-                              setBankTargetCount(Number(event.currentTarget.value))
-                              clearBankSelection()
-                            }}
-                          >
-                            {BANK_TARGET_COUNTS.map((count) => (
-                              <option key={count} value={count}>{count} 题</option>
-                            ))}
-                          </select>
-                        </label>
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={dualVersionEnabled}
-                            disabled={busyAction !== '' || improveBusy}
-                            onChange={(event) => setDualVersionEnabled(event.currentTarget.checked)}
-                          />
-                          同时生成学生版
-                        </label>
-                      </span>
+                      <PrepBankOptions
+                        bankTargetCount={bankTargetCount}
+                        onTargetCountChange={(count) => {
+                          setBankTargetCount(count)
+                          clearBankSelection()
+                        }}
+                        dualVersionEnabled={dualVersionEnabled}
+                        onDualVersionChange={setDualVersionEnabled}
+                        disabled={busyAction !== '' || improveBusy}
+                      />
                     )}
                   </div>
                 </div>
@@ -1209,31 +1193,16 @@ export default function DraftPanel({
                       <span className="prep-switch" aria-hidden="true" />
                     </label>
                     {bankEnabled && (
-                      <span className="prep-bank-options">
-                        <label>目标题数：
-                          <select
-                            value={bankTargetCount}
-                            disabled={busyAction !== '' || improveBusy}
-                            onChange={(event) => {
-                              setBankTargetCount(Number(event.currentTarget.value))
-                              clearBankSelection()
-                            }}
-                          >
-                            {BANK_TARGET_COUNTS.map((count) => (
-                              <option key={count} value={count}>{count} 题</option>
-                            ))}
-                          </select>
-                        </label>
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={dualVersionEnabled}
-                            disabled={busyAction !== '' || improveBusy}
-                            onChange={(event) => setDualVersionEnabled(event.currentTarget.checked)}
-                          />
-                          同时生成学生版
-                        </label>
-                      </span>
+                      <PrepBankOptions
+                        bankTargetCount={bankTargetCount}
+                        onTargetCountChange={(count) => {
+                          setBankTargetCount(count)
+                          clearBankSelection()
+                        }}
+                        dualVersionEnabled={dualVersionEnabled}
+                        onDualVersionChange={setDualVersionEnabled}
+                        disabled={busyAction !== '' || improveBusy}
+                      />
                     )}
                   </div>
                 </div>
@@ -1425,6 +1394,72 @@ export default function DraftPanel({
         </section>
       </div>
     </section>
+  )
+}
+
+/**
+ * D35（V1.7.2）：目标题数可选可填写（datalist 快捷 + 自由输入），
+ * 边界与合同一致 1..80——输入实时镜像 DOM，失焦统一收口：超限钳到 80、清空/非法回退已提交值。
+ */
+const BANK_TARGET_COUNT_PRESETS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 30, 40, 50, 80]
+
+function PrepBankOptions({ bankTargetCount, onTargetCountChange, dualVersionEnabled, onDualVersionChange, disabled }: {
+  readonly bankTargetCount: number
+  readonly onTargetCountChange: (count: number) => void
+  readonly dualVersionEnabled: boolean
+  readonly onDualVersionChange: (enabled: boolean) => void
+  readonly disabled: boolean
+}): React.JSX.Element {
+  const [rawCount, setRawCount] = useState(String(bankTargetCount))
+  useEffect(() => { setRawCount(String(bankTargetCount)) }, [bankTargetCount])
+
+  function commitFromRaw(raw: string): void {
+    const parsed = Number(raw)
+    const valid = raw !== '' && Number.isInteger(parsed) && parsed >= DRAFT_BANK_PLAN_MIN_TARGET_COUNT
+    const final = valid ? Math.min(parsed, DRAFT_BANK_PLAN_MAX_TARGET_COUNT) : bankTargetCount
+    if (final !== bankTargetCount) onTargetCountChange(final)
+    if (String(final) !== raw) setRawCount(String(final))
+  }
+
+  return (
+    <span className="prep-bank-options">
+      <label>目标题数：
+        <input
+          className="prep-bank-count-input"
+          type="number"
+          list="prep-bank-count-presets"
+          min={DRAFT_BANK_PLAN_MIN_TARGET_COUNT}
+          max={DRAFT_BANK_PLAN_MAX_TARGET_COUNT}
+          step={1}
+          value={rawCount}
+          disabled={disabled}
+          onChange={(event) => {
+            const raw = event.currentTarget.value
+            setRawCount(raw)
+            const parsed = Number(raw)
+            if (raw !== '' && Number.isInteger(parsed) && parsed >= DRAFT_BANK_PLAN_MIN_TARGET_COUNT) {
+              const clamped = Math.min(parsed, DRAFT_BANK_PLAN_MAX_TARGET_COUNT)
+              if (clamped !== bankTargetCount) onTargetCountChange(clamped)
+            }
+          }}
+          onBlur={(event) => commitFromRaw(event.currentTarget.value)}
+        />
+        <datalist id="prep-bank-count-presets">
+          {BANK_TARGET_COUNT_PRESETS.map((count) => (
+            <option key={count} value={count} />
+          ))}
+        </datalist>
+      </label>
+      <label>
+        <input
+          type="checkbox"
+          checked={dualVersionEnabled}
+          disabled={disabled}
+          onChange={(event) => onDualVersionChange(event.currentTarget.checked)}
+        />
+        同时生成学生版
+      </label>
+    </span>
   )
 }
 

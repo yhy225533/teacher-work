@@ -3639,14 +3639,16 @@ button.quick-status { cursor: pointer; }
   font-weight: 400;
 }
 
-.prep-bank-options select {
-  width: auto;
+/* D35（V1.7.2）：目标题数由 select 改为可填写的 number input + datalist 快捷项 */
+.prep-bank-count-input {
+  width: 76px;
   border: 1px solid #cbd5e1;
   border-radius: var(--radius-md);
   padding: 3px 8px;
   background: #fff;
   color: var(--color-text-strong);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .prep-bank-toggle input[type='checkbox'] {

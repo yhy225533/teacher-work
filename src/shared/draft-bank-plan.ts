@@ -1,5 +1,7 @@
 import {
   DRAFT_BANK_PLAN_DEFAULT_TARGET_COUNT,
+  DRAFT_BANK_PLAN_MAX_TARGET_COUNT,
+  DRAFT_BANK_PLAN_MIN_TARGET_COUNT,
   isDraftBankPlan,
   type DraftBankPlan,
 } from './draft-contracts'
@@ -119,7 +121,12 @@ function sanitizeBankPlan(candidate: Record<string, unknown>, fallback: DraftBan
 }
 
 function isFallbackTargetCount(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 20
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= DRAFT_BANK_PLAN_MIN_TARGET_COUNT &&
+    value <= DRAFT_BANK_PLAN_MAX_TARGET_COUNT
+  )
 }
 
 function isDifficulty(value: unknown): value is number {
@@ -127,7 +134,7 @@ function isDifficulty(value: unknown): value is number {
 }
 
 function normalizeTargetCount(value: number): number {
-  return Number.isInteger(value) && value >= 1 && value <= 20 ? value : DRAFT_BANK_PLAN_DEFAULT_TARGET_COUNT
+  return isFallbackTargetCount(value) ? value : DRAFT_BANK_PLAN_DEFAULT_TARGET_COUNT
 }
 
 function renderSummaryFacets(summary: QuestionBankSummary): string {

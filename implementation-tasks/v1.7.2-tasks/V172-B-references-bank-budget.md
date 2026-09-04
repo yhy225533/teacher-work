@@ -22,3 +22,8 @@
 - `tests/v1.7.2-workspace-structure.test.ts` 补 §10.4/5/6/7 断言；四文件钉测演进后全绿；`tests/draft-scope.test.ts`、`tests/v17-b-widen-scope.test.ts` 零改动通过；
 - 开发窗口四态走查：new（0 选中/有选中）× 题库开/关 + single + lesson；
 - typecheck、lint；更新 STATUS/GOAL_PROGRESS；提交 `v1.7.2(V172-B): reference chips, bank switch row and control migration`。
+
+## D35 备注（2026-09-04，V172-A 同步落地）
+
+- 产品负责人于 V172-A 验收同日新增 D35：目标题数可选可填写、上限 80。已在 V172-A 提交内同步落地：合同 `DRAFT_BANK_PLAN_MAX_TARGET_COUNT` 20→80（`normalizeTargetCount`/`isFallbackTargetCount` 改用常量）；UI 抽出 `PrepBankOptions` 组件（number input + datalist 快捷项，失焦收口：超限钳 80、清空/非法回退已提交值），过渡态暂渲染于参考行/生成依据行内。
+- 本任务（V172-B）执行 §5.8 时把 `PrepBankOptions` 整体迁往候选区头部 `.prep-bank-controls`，组件本身不再改动；`prep-bank-toggle` CSS 删除清单相应扩大（含 `.prep-bank-count-input` 保留、`.prep-bank-options` 随组件走）。钉测见 `tests/v1.7.2-workspace-structure.test.ts` D35 断言。

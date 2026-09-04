@@ -105,4 +105,23 @@ describe('V172-A 工作台骨架：左轨 / 生成器范围行 / 收起态', () 
     expect(draft).toContain("'生成要求'")
     expect(draft).not.toContain('单文件修改要求')
   })
+
+  it('D35: target count is a free-fill number input clamped to the 1..80 contract bound', () => {
+    const draft = source('../src/renderer/draft-panel.tsx')
+    const contracts = source('../src/shared/draft-contracts.ts')
+
+    // 控件：number input + datalist 快捷项（可选可填），两处模式共用 PrepBankOptions 组件
+    expect(draft).toContain('function PrepBankOptions(')
+    expect(draft).toContain('prep-bank-count-input')
+    expect(draft).toContain('prep-bank-count-presets')
+    expect(draft).toContain('BANK_TARGET_COUNT_PRESETS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 30, 40, 50, 80]')
+    expect(draft).not.toContain('BANK_TARGET_COUNTS.map((count) => (\n                      <option')
+    // 钳制：超限 Math.min 到 80；清空/非法回退已提交值（不误回默认）
+    expect(draft).toContain('Math.min(parsed, DRAFT_BANK_PLAN_MAX_TARGET_COUNT)')
+    expect(draft).toContain(': bankTargetCount')
+    // 合同边界 1..80
+    expect(contracts).toContain('DRAFT_BANK_PLAN_MAX_TARGET_COUNT = 80')
+    expect(draft).toContain('min={DRAFT_BANK_PLAN_MIN_TARGET_COUNT}')
+    expect(draft).toContain('max={DRAFT_BANK_PLAN_MAX_TARGET_COUNT}')
+  })
 })

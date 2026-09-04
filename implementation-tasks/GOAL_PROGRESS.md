@@ -1333,3 +1333,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - `styles.css`：grid 250px；骨架/范围行/收起条全套新样式（§7 值）；删除 prep-ref-panel/prep-work-panel/prep-scope-strip 全组/prep-auto-scope/prep-reference-section/prep-reference-hint/draft-prompt-block/draft-prompt-actions；1100px 媒体查询改 .prep-rail 堆叠；`styles.css:1229` 共享选择器行保留。
 - 测试：新增 `tests/v1.7.2-workspace-structure.test.ts` 7 例；演进 5 处钉测（v1.5.3.1 ×2、v1.2、v1.6、v17-D、static-render-v156-d——静态渲染失败输出完整验证目标 DOM 后演进断言）。门禁：全量 77 files / 369 tests（1 skipped 既有）、typecheck、lint 通过。
 - Git：本地提交 `v1.7.2(V172-A): rail skeleton and scope row`。
+
+## 2026-09-04 · D35 落地：题库目标题数可选可填、上限 80（随 V172-A 验收同日）
+
+- 产品负责人指示："目标题数改成可以选也可以自己填写的，最高不超过80题。"记为 D35 追加至 `V1_7_DECISIONS.md`（修订 D30 的 1..20 范围）。
+- 合同层：`DRAFT_BANK_PLAN_MAX_TARGET_COUNT` 20→80；`draft-bank-plan.ts` 的 `isFallbackTargetCount`/`normalizeTargetCount` 由硬编码 20 改为复用合同常量（AI 检索计划解析同范围容错）。
+- UI 层：抽出 `PrepBankOptions` 组件（两处模式共用），目标题数改 number input + datalist 快捷项（1..10,12,15,20,30,40,50,80）；输入实时镜像 DOM、失焦统一收口（超限钳 80、清空/非法回退已提交值，不误回默认）；同步替换 single/lesson 参考行与 new 生成依据行两处旧 select 块；`.prep-bank-count-input` 样式（76px 窄宽、tabular-nums）。
+- 测试：v17-a 边界钉测演进（正例 80、反例 21→81、常量=80）；v1.7.2-workspace-structure 新增 D35 控件断言（组件抽取/钳制逻辑/合同边界/min-max 属性）。
+- 方案 §5.8 与 V172-B 任务文件同步 D35 修订备注（迁移候选区头部时组件整体搬移）。
