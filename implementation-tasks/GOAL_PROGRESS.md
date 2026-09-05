@@ -1381,3 +1381,10 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Ctrl/Cmd+M 块级公式、Ctrl/Cmd+Shift+M 行内公式（选中包裹），与工具栏按钮共用 insertTemplate。
 - 门禁：v1.7.3-formula-ux 14 例、typecheck、lint 通过。
 - Git：本地提交 `v1.7.3(V173-B): slash command menu and formula hotkeys`。
+
+## 2026-09-05 · V173-C 完成：三视图、可拖分栏与同步滚动
+
+- ✎编辑 / ◫分屏（默认）/ 👁预览三视图分段控件，按文件 localStorage 记忆、非法回退 split；分栏 0.25–0.80 钳制、pointer 拖动（拖动期间禁 textarea 捕获）、pointerup 持久化。
+- 行比例单向同步滚动（编辑→预览），预览侧滚动后 800ms 抑制反向；单视图/非 split 态不触发。
+- 门禁：v1.7.3-formula-ux 17 例、v17-c 回归 12 例、typecheck、lint 通过。
+- Git：本地提交 `v1.7.3(V173-C): view modes, draggable split and sync scroll`。

@@ -196,3 +196,50 @@ describe('V173-B 斜杠命令与快捷键（源码断言）', () => {
     expect(editorSource).toContain('setSlashMenu(null)')
   })
 })
+
+// V173-C 接线：三视图、可拖分栏与同步滚动。
+describe('V173-C 三视图与可拖分栏（源码断言）', () => {
+  it('renders the view segmented control (edit/split/preview) with per-file memory and split default', () => {
+    const editorSource = source('../src/renderer/md-editor.tsx')
+
+    expect(editorSource).toContain('md-editor-view-bar')
+    expect(editorSource).toContain("'edit' | 'split' | 'preview'")
+    expect(editorSource).toContain("useState<'edit' | 'split' | 'preview'>('split')")
+    expect(editorSource).toContain('md-editor-view:${file.id}')
+    // 记忆恢复：非法/缺失回退 split；viewKey 持久化在切换时写入
+    expect(editorSource).toContain("savedView === 'edit' || savedView === 'preview'")
+    expect(editorSource).toContain('window.localStorage.setItem(viewKey, mode)')
+    // 条件渲染：preview 态不渲染 textarea，edit 态不渲染预览
+    expect(editorSource).toContain("viewMode !== 'preview' && (")
+    expect(editorSource).toContain("viewMode !== 'edit' && (")
+  })
+
+  it('drags the splitter with clamped ratio persistence (0.25–0.80) and disables textarea during drag', () => {
+    const editorSource = source('../src/renderer/md-editor.tsx')
+
+    expect(editorSource).toContain('md-editor-split-handle')
+    expect(editorSource).toContain('role="separator"')
+    expect(editorSource).toContain('Math.min(0.8, Math.max(0.25, ratio))')
+    expect(editorSource).toContain('md-editor-split:${file.id}')
+    expect(editorSource).toContain('commitSplitRatio(ratio)')
+    // 拖动期间禁 textarea 捕获避免选中文本
+    expect(editorSource).toContain('textarea.disabled = true')
+    expect(editorSource).toContain('textarea.disabled = wasDisabled')
+    // split 态比例由内联 gridTemplateColumns 接管
+    expect(editorSource).toContain('gridTemplateColumns')
+  })
+
+  it('syncs scroll one-way from editor to preview with an 800ms reverse guard', () => {
+    const editorSource = source('../src/renderer/md-editor.tsx')
+
+    expect(editorSource).toContain('syncPreviewScroll')
+    expect(editorSource).toContain('preview.scrollTop = (textarea.scrollTop / editable) * scrollable')
+    expect(editorSource).toContain('previewScrollArmed')
+    expect(editorSource).toContain('armPreviewScrollGuard')
+    expect(editorSource).toContain('previewScrollArmed.current = true')
+    expect(editorSource).toContain('}, 800)')
+    // 预览侧滚动不反向拉动编辑侧
+    expect(editorSource).toContain('onScroll={armPreviewScrollGuard}')
+    expect(editorSource).toContain('onScroll={syncPreviewScroll}')
+  })
+})

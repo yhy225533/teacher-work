@@ -39,8 +39,15 @@ export default function MdEditor({
   const [mathMode, setMathMode] = useState(false)
   const [slashMenu, setSlashMenu] = useState<{ readonly query: string; readonly activeIndex: number } | null>(null)
   const [imagePickerOpen, setImagePickerOpen] = useState(false)
+  // D37（V1.7.3）：三视图（edit/split/preview）与可拖分栏，按文件记忆（localStorage，非法值回退默认）。
+  const [viewMode, setViewMode] = useState<'edit' | 'split' | 'preview'>('split')
+  const [splitRatio, setSplitRatio] = useState(0.5)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const previewRef = useRef<HTMLDivElement>(null)
+  const previewScrollArmed = useRef(false)
   const draftKey = `md-editor-draft:${file.id}`
+  const viewKey = `md-editor-view:${file.id}`
+  const splitKey = `md-editor-split:${file.id}`
   // 撤销/重做：快照栈（含光标），textarea 原生输入外的工具栏插入走此栈
   const undoStack = useRef<readonly string[]>([])
   const redoStack = useRef<readonly string[]>([])
@@ -104,6 +111,80 @@ export default function MdEditor({
     undoStack.current = [...undoStack.current.slice(-99), snapshot]
     redoStack.current = []
   }, [])
+
+  /** D37：按文件恢复三视图与分栏比例（非法/缺失回退默认 split / 0.5）。 */
+  useEffect(() => {
+    try {
+      const savedView = window.localStorage.getItem(viewKey)
+      if (savedView === 'edit' || savedView === 'preview') setViewMode(savedView)
+      else setViewMode('split')
+      const savedRatio = Number(window.localStorage.getItem(splitKey))
+      setSplitRatio(Number.isFinite(savedRatio) && savedRatio >= 0.25 && savedRatio <= 0.8 ? savedRatio : 0.5)
+    } catch {
+      setViewMode('split')
+      setSplitRatio(0.5)
+    }
+  }, [splitKey, viewKey])
+
+  /** D37：行比例单向同步滚动——编辑侧滚动带动预览；预览侧滚动后 800ms 内忽略编辑侧同步（防抢滚动抖动）。 */
+  function syncPreviewScroll(): void {
+    const textarea = textareaRef.current
+    const preview = previewRef.current
+    if (textarea === null || preview === null || viewMode !== 'split' || previewScrollArmed.current) return
+    const editable = textarea.scrollHeight - textarea.clientHeight
+    const scrollable = preview.scrollHeight - preview.clientHeight
+    if (editable <= 0 || scrollable <= 0) return
+    preview.scrollTop = (textarea.scrollTop / editable) * scrollable
+  }
+
+  function armPreviewScrollGuard(): void {
+    previewScrollArmed.current = true
+    window.setTimeout(() => { previewScrollArmed.current = false }, 800)
+  }
+
+  /** D37：拖动分隔条——pointer 事件，比例钳制 0.25–0.80，拖动期间禁 textarea 捕获避免选中文本。 */
+  function startSplitDrag(event: React.PointerEvent<HTMLDivElement>): void {
+    if (viewMode !== 'split') return
+    const container = event.currentTarget.parentElement
+    if (container === null) return
+    event.preventDefault()
+    const textarea = textareaRef.current
+    const wasDisabled = textarea?.disabled ?? false
+    if (textarea !== null) textarea.disabled = true
+    const move = (moveEvent: PointerEvent): void => {
+      const rect = container.getBoundingClientRect()
+      const ratio = (moveEvent.clientX - rect.left) / rect.width
+      setSplitRatio(Math.min(0.8, Math.max(0.25, ratio)))
+    }
+    const finish = (): void => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', finish)
+      if (textarea !== null) textarea.disabled = wasDisabled
+      setSplitRatio((ratio) => {
+        commitSplitRatio(ratio)
+        return ratio
+      })
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', finish)
+  }
+
+  function selectViewMode(mode: 'edit' | 'split' | 'preview'): void {
+    setViewMode(mode)
+    try {
+      window.localStorage.setItem(viewKey, mode)
+    } catch {
+      // 记忆失败静默：仅本会话生效
+    }
+  }
+
+  function commitSplitRatio(ratio: number): void {
+    try {
+      window.localStorage.setItem(splitKey, String(ratio))
+    } catch {
+      // 静默
+    }
+  }
 
   function undo(): void {
     const stack = undoStack.current
@@ -461,26 +542,67 @@ export default function MdEditor({
           ))}
         </div>
       )}
-      <div className="md-editor-split">
-        <textarea
-          ref={textareaRef}
-          className="md-editor-textarea"
-          value={body}
-          disabled={loading || saving}
-          spellCheck={false}
-          aria-label={`${file.originalName} 正文编辑`}
-          onChange={(event) => {
-            setBody(event.currentTarget.value)
-            syncMathMode()
-          }}
-          onKeyDown={handleEditorKeyDown}
-          onClick={syncMathMode}
-          onSelect={syncMathMode}
-          onBlur={() => { window.setTimeout(() => setSlashMenu(null), 120) }}
-        />
-        <div className="md-editor-preview" aria-label="实时预览（KaTeX 渲染）">
-          <MarkdownDocument body={body === '' ? '（空文档）' : body} files={files} />
-        </div>
+      <div className="md-editor-view-bar" role="group" aria-label="编辑器视图">
+        {([
+          { mode: 'edit' as const, title: '纯编辑（单栏源码）', text: '✎ 编辑' },
+          { mode: 'split' as const, title: '分屏（源码 + 实时预览，可拖分隔条）', text: '◫ 分屏' },
+          { mode: 'preview' as const, title: '纯预览（只读渲染）', text: '👁 预览' },
+        ]).map((option) => (
+          <button
+            key={option.mode}
+            type="button"
+            title={option.title}
+            aria-pressed={viewMode === option.mode}
+            className={viewMode === option.mode ? 'md-editor-view-button is-active' : 'md-editor-view-button'}
+            onClick={() => selectViewMode(option.mode)}
+          >
+            {option.text}
+          </button>
+        ))}
+      </div>
+      <div
+        className={viewMode === 'split' ? 'md-editor-split is-split' : 'md-editor-split'}
+        style={viewMode === 'split' ? { gridTemplateColumns: `${(splitRatio * 100).toFixed(2)}fr ${(100 - splitRatio * 100).toFixed(2)}fr` } : undefined}
+      >
+        {viewMode !== 'preview' && (
+          <textarea
+            ref={textareaRef}
+            className="md-editor-textarea"
+            value={body}
+            disabled={loading || saving}
+            spellCheck={false}
+            aria-label={`${file.originalName} 正文编辑`}
+            onChange={(event) => {
+              setBody(event.currentTarget.value)
+              syncMathMode()
+            }}
+            onKeyDown={handleEditorKeyDown}
+            onClick={syncMathMode}
+            onSelect={syncMathMode}
+            onBlur={() => { window.setTimeout(() => setSlashMenu(null), 120) }}
+            onScroll={syncPreviewScroll}
+          />
+        )}
+        {viewMode === 'split' && (
+          <div
+            className="md-editor-split-handle"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="拖动调整分栏比例"
+            title="拖动调整分栏比例"
+            onPointerDown={startSplitDrag}
+          />
+        )}
+        {viewMode !== 'edit' && (
+          <div
+            ref={previewRef}
+            className="md-editor-preview"
+            aria-label="实时预览（KaTeX 渲染）"
+            onScroll={armPreviewScrollGuard}
+          >
+            <MarkdownDocument body={body === '' ? '（空文档）' : body} files={files} />
+          </div>
+        )}
       </div>
       <footer className="md-editor-actions">
         <span className="md-editor-hint">保存为**新版本**：旧版保留在历史版本，原件永不被改写。公式内输入缩写（frac、sum、int…）+ 空格自动展开；x 紧跟 / 自动分式；Tab 跳槽位；空行输入 / 唤出模板菜单。</span>

@@ -3695,8 +3695,67 @@ button.quick-status { cursor: pointer; }
 .md-editor-split {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
+  gap: 0;
   min-height: 320px;
+}
+
+/* V1.7.3（D37）：三视图与可拖分栏——split 态由内联 gridTemplateColumns 接管比例；单视图态单列。 */
+.md-editor-split.is-split {
+  gap: 0;
+}
+
+.md-editor-view-bar {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  background: #f1f5f9;
+  width: fit-content;
+  margin-bottom: 8px;
+}
+
+.md-editor-view-button {
+  border: 0;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.md-editor-view-button.is-active {
+  background: #ffffff;
+  color: var(--color-primary);
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 10%);
+}
+
+.md-editor-split-handle {
+  cursor: col-resize;
+  background: transparent;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  position: relative;
+  margin: 0 -5px;
+  z-index: 5;
+}
+
+.md-editor-split-handle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: #cbd5e1;
+}
+
+.md-editor-split-handle:hover::after,
+.md-editor-split-handle:active::after {
+  background: var(--color-primary);
 }
 
 .md-editor-textarea {
@@ -3708,17 +3767,38 @@ button.quick-status { cursor: pointer; }
   line-height: 1.7;
   border: 1px solid #cbd5e1;
   border-radius: var(--radius-md);
+  border-right-width: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
   box-sizing: border-box;
-  resize: vertical;
+  resize: none;
+  overflow-y: auto;
+}
+
+/* 单视图（纯编辑/纯预览）时恢复完整边框 */
+.md-editor-split:not(.is-split) .md-editor-textarea {
+  border-right-width: 1px;
+  border-top-right-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
 }
 
 .md-editor-preview {
   border: 1px solid #cbd5e1;
   border-radius: var(--radius-md);
+  border-left-width: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
   padding: 10px 14px;
   background: #ffffff;
   overflow: auto;
   max-height: 60vh;
+  min-height: 320px;
+}
+
+.md-editor-split:not(.is-split) .md-editor-preview {
+  border-left-width: 1px;
+  border-top-left-radius: var(--radius-md);
+  border-bottom-left-radius: var(--radius-md);
 }
 
 .md-editor-palette {
