@@ -1373,3 +1373,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 编辑器接线：数学模式内空格展开缩写、`/` 自动分式、Tab 跳槽位（`isComposing` 期间全不拦截，仅无选区时触发）；数学态符号条 32 chips；速查面板退役并入缩写表。
 - 门禁：全量 78 files / 384 tests（1 skipped 既有）、typecheck、lint 通过。
 - Git：本地提交 `v1.7.3(V173-A): math mode engine and symbol bar`。
+
+## 2026-09-05 · V173-B 完成：斜杠命令菜单与公式快捷键
+
+- 空行 `/`（或中文顿号 `、` 改写为 `/`）唤出 12 项块模板菜单：拼音缩写/中文/英文 startsWith 过滤，↑↓ 循环 + Enter 插入 + Esc/blur 关闭；菜单光标行跟随查询（离行/超长自动关闭），菜单打开期间空格不被缩写引擎拦截。
+- `insertSlashItem` 从 `/` 到光标整段替换模板，占位符剥除后光标落槽位，pushUndo 入栈。
+- Ctrl/Cmd+M 块级公式、Ctrl/Cmd+Shift+M 行内公式（选中包裹），与工具栏按钮共用 insertTemplate。
+- 门禁：v1.7.3-formula-ux 14 例、typecheck、lint 通过。
+- Git：本地提交 `v1.7.3(V173-B): slash command menu and formula hotkeys`。

@@ -3,12 +3,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ManagedFileRecord } from '../shared/file-contracts'
 import {
   expansionCaretOffset,
+  filterSlashItems,
   inMathMode,
+  isSlashLineStart,
   matchFractionAtom,
   matchMathSnippet,
   MATH_SNIPPETS,
   fractionReplacement,
   nextSlotOffset,
+  resolveSlashInsert,
+  SLASH_CURSOR,
 } from './math-input'
 import { MarkdownDocument } from './lesson-material-reader'
 import { toErrorMessage } from './ui-utils'
@@ -33,6 +37,7 @@ export default function MdEditor({
   const [draftRecovered, setDraftRecovered] = useState(false)
   const [recoverPrompt, setRecoverPrompt] = useState(false)
   const [mathMode, setMathMode] = useState(false)
+  const [slashMenu, setSlashMenu] = useState<{ readonly query: string; readonly activeIndex: number } | null>(null)
   const [imagePickerOpen, setImagePickerOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const draftKey = `md-editor-draft:${file.id}`
@@ -118,11 +123,22 @@ export default function MdEditor({
     setBody(next)
   }
 
-  /** D36：光标位置变化 → 推导数学模式（$…$ / $$…$$ 内亮符号条）。 */
+  /** D36：光标位置变化 → 推导数学模式（$…$ / $$…$$ 内亮符号条）+ 斜杠菜单跟随光标行查询。 */
   const syncMathMode = useCallback((): void => {
     const textarea = textareaRef.current
     if (textarea === null) return
     setMathMode(inMathMode(textarea.value.slice(0, textarea.selectionStart)))
+    setSlashMenu((menu) => {
+      if (menu === null) return null
+      const pos = textarea.selectionStart
+      const lineStart = Math.max(textarea.value.lastIndexOf('\n', pos - 1) + 1, 0)
+      const seg = textarea.value.slice(lineStart, pos)
+      const slashIndex = seg.lastIndexOf('/')
+      if (slashIndex === -1) return null
+      const query = seg.slice(slashIndex + 1)
+      if (query.includes('\n') || /\s{2,}/u.test(query) || query.length > 12) return null
+      return { query, activeIndex: 0 }
+    })
   }, [])
 
   useEffect(() => {
@@ -153,12 +169,71 @@ export default function MdEditor({
     })
   }
 
-  /** D36：textarea keydown——数学模式内空格展开缩写、`/` 自动分式、Tab 槽位跳转。输入法组合期全不拦截。 */
+  /** D36：斜杠命令插入——从 `/` 起到光标整段替换为模板文本，光标落占位符处（其后空 {} 优先）。 */
+  function insertSlashItem(template: string): void {
+    const textarea = textareaRef.current
+    if (textarea === null) return
+    pushUndo(textarea.value)
+    const pos = textarea.selectionStart
+    const lineStart = Math.max(textarea.value.lastIndexOf('\n', pos - 1) + 1, 0)
+    const slashIndex = textarea.value.lastIndexOf('/', pos - 1)
+    const from = slashIndex >= lineStart ? slashIndex : lineStart
+    const { text, caret } = resolveSlashInsert(template)
+    const next = `${textarea.value.slice(0, from)}${text}${textarea.value.slice(textarea.selectionEnd)}`
+    setBody(next)
+    setSlashMenu(null)
+    requestAnimationFrame(() => {
+      const target = from + caret
+      textarea.focus()
+      textarea.setSelectionRange(target, target)
+    })
+  }
+
+  /** D36：textarea keydown——数学模式内空格展开缩写、`/` 自动分式、Tab 槽位跳转；空行 `/`/`、` 唤出斜杠菜单；Ctrl+M 公式快捷键。输入法组合期全不拦截。 */
   function handleEditorKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>): void {
     if (event.nativeEvent.isComposing) return
     const textarea = textareaRef.current
     if (textarea === null) return
     const before = textarea.value.slice(0, textarea.selectionStart)
+
+    // 斜杠菜单导航：菜单打开时接管 ↑↓/Enter/Esc，且空格不被缩写引擎拦截（菜单优先）
+    if (slashMenu !== null) {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault()
+        const count = filterSlashItems(slashMenu.query).length
+        setSlashMenu((menu) => menu === null ? menu : {
+          ...menu,
+          activeIndex: event.key === 'ArrowDown'
+            ? (menu.activeIndex + 1) % count
+            : (menu.activeIndex - 1 + count) % count,
+        })
+        return
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        const items = filterSlashItems(slashMenu.query)
+        const item = items[slashMenu.activeIndex] ?? items[0]
+        if (item !== undefined) insertSlashItem(item.insert)
+        return
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setSlashMenu(null)
+        return
+      }
+    }
+
+    if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'm') {
+      event.preventDefault()
+      insertTemplate('$$\n', '\n$$', '')
+      return
+    }
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'm') {
+      event.preventDefault()
+      insertTemplate('$', '$', '')
+      return
+    }
+
     if (event.key === ' ' && textarea.selectionStart === textarea.selectionEnd) {
       if (!inMathMode(before)) return
       const snippet = matchMathSnippet(before)
@@ -168,11 +243,32 @@ export default function MdEditor({
       return
     }
     if (event.key === '/' && textarea.selectionStart === textarea.selectionEnd) {
-      if (!inMathMode(before)) return
-      const atom = matchFractionAtom(before)
-      if (atom === null) return
-      event.preventDefault()
-      replaceBefore(atom.cut, fractionReplacement(atom.atom))
+      if (inMathMode(before)) {
+        const atom = matchFractionAtom(before)
+        if (atom !== null) {
+          event.preventDefault()
+          replaceBefore(atom.cut, fractionReplacement(atom.atom))
+        }
+        return
+      }
+      if (isSlashLineStart(before) && slashMenu === null) {
+        setSlashMenu({ query: '', activeIndex: 0 })
+      }
+      return
+    }
+    if (event.key === '、' && textarea.selectionStart === textarea.selectionEnd) {
+      // 中文顿号：空行触发时消费并改写为 `/` 唤出菜单；否则正常输入
+      if (isSlashLineStart(before) && slashMenu === null) {
+        event.preventDefault()
+        const next = `${textarea.value.slice(0, textarea.selectionStart)}/${textarea.value.slice(textarea.selectionEnd)}`
+        setBody(next)
+        requestAnimationFrame(() => {
+          const caret = textarea.selectionStart + 1
+          textarea.focus()
+          textarea.setSelectionRange(caret, caret)
+        })
+        setSlashMenu({ query: '', activeIndex: 0 })
+      }
       return
     }
     if (event.key === 'Tab' && textarea.selectionStart === textarea.selectionEnd) {
@@ -318,6 +414,34 @@ export default function MdEditor({
           <span className="md-editor-math-tip">缩写+空格 自动展开 · x 紧跟 / 自动分式 · Tab 跳槽位</span>
         </div>
       )}
+      {slashMenu !== null && (
+        <div className="md-editor-slash-menu" role="listbox" aria-label="斜杠命令菜单">
+          <div className="md-editor-slash-line">
+            <span>过滤：</span>
+            <b>/{slashMenu.query}</b>
+            <span className="md-editor-slash-cursor" aria-hidden="true" />
+            <span className="md-editor-slash-hint">↑↓ 选择 · Enter 插入 · Esc 关闭</span>
+          </div>
+          <ul>
+            {filterSlashItems(slashMenu.query).map((item, index) => (
+              <li
+                key={item.name}
+                role="option"
+                aria-selected={index === slashMenu.activeIndex}
+                className={index === slashMenu.activeIndex ? 'md-editor-slash-item is-active' : 'md-editor-slash-item'}
+                onMouseDown={(event) => { event.preventDefault(); insertSlashItem(item.insert) }}
+              >
+                <span className="md-editor-slash-name">{item.name}</span>
+                <span className="md-editor-slash-py">{item.keywords[0]}</span>
+                <span className="md-editor-slash-preview">插入 {item.insert.split(SLASH_CURSOR).join('␣').replace(/\n/gu, ' ⏎ ')}</span>
+              </li>
+            ))}
+            {filterSlashItems(slashMenu.query).length === 0 && (
+              <li className="md-editor-slash-empty">无匹配命令（继续输入或 Esc 关闭）</li>
+            )}
+          </ul>
+        </div>
+      )}
       {imagePickerOpen && (
         <div className="md-editor-palette" role="group" aria-label="本课图片">
           {lessonImages.length === 0 && <span className="md-editor-palette-empty">本课还没有图片资料；先从素材库或外部资料复制图片到本课。</span>}
@@ -352,6 +476,7 @@ export default function MdEditor({
           onKeyDown={handleEditorKeyDown}
           onClick={syncMathMode}
           onSelect={syncMathMode}
+          onBlur={() => { window.setTimeout(() => setSlashMenu(null), 120) }}
         />
         <div className="md-editor-preview" aria-label="实时预览（KaTeX 渲染）">
           <MarkdownDocument body={body === '' ? '（空文档）' : body} files={files} />

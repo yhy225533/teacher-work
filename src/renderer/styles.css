@@ -3589,6 +3589,109 @@ button.quick-status { cursor: pointer; }
   color: #92400e;
 }
 
+/* V1.7.3（D36）：斜杠命令菜单——空行 /（或顿号、）唤出，拼音/中文过滤 */
+.md-editor-slash-menu {
+  position: relative;
+  z-index: 20;
+  width: min(340px, 100%);
+  margin: 6px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgb(15 23 42 / 16%);
+  overflow: hidden;
+}
+
+.md-editor-slash-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+}
+
+.md-editor-slash-line b {
+  color: #7c3aed;
+}
+
+.md-editor-slash-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  background: #7c3aed;
+  animation: md-slash-blink 1s step-end infinite;
+}
+
+@keyframes md-slash-blink {
+  50% { opacity: 0; }
+}
+
+.md-editor-slash-hint {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: #94a3b8;
+  font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+.md-editor-slash-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 232px;
+  overflow: auto;
+  display: grid;
+  gap: 1px;
+}
+
+.md-editor-slash-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12.5px;
+}
+
+.md-editor-slash-item.is-active,
+.md-editor-slash-item:hover {
+  background: var(--color-primary-soft);
+}
+
+.md-editor-slash-item.is-active .md-editor-slash-name {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.md-editor-slash-name {
+  color: var(--color-text-strong);
+}
+
+.md-editor-slash-py {
+  color: #94a3b8;
+  font-size: 10.5px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+.md-editor-slash-preview {
+  grid-column: 1 / -1;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.md-editor-slash-empty {
+  padding: 6px 8px;
+  color: #94a3b8;
+  font-size: 11.5px;
+}
+
 .md-editor-split {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

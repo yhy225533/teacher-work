@@ -153,3 +153,46 @@ describe('V173-A md-editor 数学模式接线（源码断言）', () => {
     expect(editorSource).not.toContain('export const LATEX_SNIPPETS')
   })
 })
+
+// V173-B 接线：斜杠命令菜单与公式快捷键。
+describe('V173-B 斜杠命令与快捷键（源码断言）', () => {
+  it('opens the slash menu on empty-line / or 、, with full keyboard navigation and blur close', () => {
+    const editorSource = source('../src/renderer/md-editor.tsx')
+
+    expect(editorSource).toContain('isSlashLineStart')
+    expect(editorSource).toContain('setSlashMenu({ query: \'\', activeIndex: 0 })')
+    // 顿号触发：空行 、 改写为 / 并唤出菜单
+    expect(editorSource).toContain("event.key === '、'")
+    // 菜单导航：↑↓ 循环、Enter 插入选中项、Esc 关闭；菜单优先于缩写空格拦截
+    expect(editorSource).toContain("'ArrowDown'")
+    expect(editorSource).toContain("'ArrowUp'")
+    expect(editorSource).toContain("'Enter'")
+    expect(editorSource).toContain("'Escape'")
+    // 失焦关闭（延迟避开点击竞态）
+    expect(editorSource).toContain('setSlashMenu(null), 120')
+    // 菜单 markup：listbox/option、拼音列、插入预览、空态
+    expect(editorSource).toContain('md-editor-slash-menu')
+    expect(editorSource).toContain('md-editor-slash-item')
+    expect(editorSource).toContain('无匹配命令')
+    expect(editorSource).toContain('filterSlashItems(slashMenu.query).map')
+  })
+
+  it('adds Ctrl+M block formula and Ctrl+Shift+M inline formula hotkeys sharing insertTemplate', () => {
+    const editorSource = source('../src/renderer/md-editor.tsx')
+
+    expect(editorSource).toContain("event.key.toLowerCase() === 'm'")
+    expect(editorSource).toContain(String.raw`insertTemplate('$$\n', '\n$$', '')`)
+    expect(editorSource).toContain("insertTemplate('$', '$', '')")
+    // 选中包裹：行内公式热键不吞选区（insertTemplate 自带包裹语义）
+    expect(editorSource).toContain('event.shiftKey')
+  })
+
+  it('keeps the slash insert path on the undo stack with caret at the placeholder', () => {
+    const editorSource = source('../src/renderer/md-editor.tsx')
+
+    expect(editorSource).toContain('function insertSlashItem')
+    expect(editorSource).toContain('resolveSlashInsert(template)')
+    expect(editorSource).toContain('pushUndo(textarea.value)')
+    expect(editorSource).toContain('setSlashMenu(null)')
+  })
+})
