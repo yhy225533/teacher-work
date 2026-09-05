@@ -37,6 +37,7 @@
 - V1.6 已在 `checkpoint-V1.6-pass` 冻结；V1.7 方案提交使用 `plan(V1.7): <摘要>`，里程碑提交使用 `v1.7(V17-XX): <摘要>`；任务链位于 `implementation-tasks/v1.7-tasks/`；V17-E 完成全部自动门、隔离 Windows 冒烟与 DeepSeek 真实自测（预估 ≤ ¥3）且产品负责人最终体验确认后，才可在最终提交上创建 `checkpoint-V1.7-pass`。
 - V1.7.2（备课工作台结构重排，D33/D34）方案提交使用 `plan(V1.7.2): <摘要>`，里程碑提交使用 `v1.7.2(V172-XX): <摘要>`；任务链位于 `implementation-tasks/v1.7.2-tasks/`；V172-D 为唯一全量验收点（全量测试、typecheck、lint、production build、diff check、隔离 Windows 冒烟，不运行 portable/installer），产品负责人按方案 §11 走查清单确认后创建 `checkpoint-V1.7.2-pass`；与 `checkpoint-V1.7-pass` 互不替代、分别创建。
 - V1.7.3（MD 编辑器公式输入与布局改版，D36–D38）方案提交使用 `plan(V1.7.3): <摘要>`，里程碑提交使用 `v1.7.3(V173-XX): <摘要>`，真实反馈修复使用 `v1.7.3(V173-fix): <摘要>`；任务链位于 `implementation-tasks/v1.7.3-tasks/`；V173-E 为唯一全量验收点（全量测试、typecheck、lint、production build、diff check、隔离 Windows 冒烟，不运行 portable/installer，不要求真实 AI 自测），产品负责人按方案 §9 走查清单确认后创建 `checkpoint-V1.7.3-pass`（与 `checkpoint-V1.7-pass`、`checkpoint-V1.7.2-pass` 互不替代、分别创建）；与 V1.7.2 链并行推进时两链任务与提交保持独立、互不阻塞。
+- V1.8（课后反馈常规化：确认已上内嵌反馈 + 录音/转写 AI 整理，D39–D45）方案提交使用 `plan(V1.8): <摘要>`，里程碑提交使用 `v1.8(V18-XX): <摘要>`，真实反馈修复使用 `v1.8(V18-fix): <摘要>`；任务链位于 `implementation-tasks/v1.8-tasks/`；V18-D 为唯一全量验收点（全量测试、typecheck、lint、production build、diff check、隔离 Windows 冒烟，不运行 portable/installer；DeepSeek 真实自测预估 ≤ ¥1 交产品负责人执行），产品负责人最终体验确认后创建 `checkpoint-V1.8-pass`（与既有 pass 标签互不替代、分别创建）；设计基准 `docs/v1.8-lesson-feedback-plan.md`，决策 `implementation-tasks/V1_8_DECISIONS.md`；零 migration、零新依赖，V1.8 链范围内新 IPC 白名单为 `feedback:read-transcript` / `feedback:generate` 两条（D43）；与 V1.7/V1.7.2/V1.7.3 的待确认标签互不阻塞。
 
 ## 3. 实施里程碑提交
 

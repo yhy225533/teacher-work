@@ -1417,3 +1417,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **修复：**学生页 manual 记录排序键改为 `occurredOn ?? updatedAt`（导入反馈按实际上课日期，新记录按创建时间），再以 id 稳定兜底；`quick-course-wizard.tsx` 学生候选卡的"最近人工记录"同步改为该排序键，且展示 `occurredOn` 而非导入时刻。
 - **验证：**students-view-model 新增 2 例钉测（同刻导入按 occurred_on 排序、无 occurred_on 按 updatedAt 排序）；受影响 6 个测试文件 44 例、typecheck、lint 通过；真实工作库 26 条反馈按 2026-08-12 → 2026-03-20 降序核验。
 - Git：本地提交 `v1.7.3(V173-fix): order student feedback by occurred_on`。
+
+## 2026-09-06 · V1.8 立项：课后反馈常规化（方案冻结）
+
+- 产品负责人 2026-09-05/06 会话逐屏确认交互稿（`tmp/mockups/lesson-feedback-flow.html`，本地不入库）并批准立项（"没问题，写一下方案！v1.8了应该是"）。
+- 方案：`docs/v1.8-lesson-feedback-plan.md`（设计基准）；决策 D39–D45：`implementation-tasks/V1_8_DECISIONS.md`——软强制确认流（D39）、notes 既有行幂等 upsert + occurredOn 自动（D40）、班课每人一条请假可跳过（D41）、徽标/补写可见性（D42）、转写文字主路径 + 材料用完即弃 + 两条新 IPC（D43）、反馈 Skill 驱动 + 默认三段兜底（D44）、非目标含纯录音/.docx/提醒系统/家长分享（D45）。
+- 技术承接已核实：`core:create-note`/`core:update-note`/`core:confirm-lesson-taught` 既有通道零改动；反馈排序 `occurredOn ?? updatedAt` 已由 v1.7.3(V173-fix) 8180b33 修复；Skill CRUD 与注入机制 V1.1 已有；AiGateway 非流式文字通道直接复用。零 migration、零新依赖。
+- 任务链：`implementation-tasks/v1.8-tasks/` V18-A（合同/IPC/Main 服务）→ V18-B（确认流/徽标/补写）→ V18-C（班课/转写转反馈）→ V18-D（唯一全量验收点 + DeepSeek 真实自测 ≤ ¥1）；同一时刻最多一个 `IN_PROGRESS`。
+- 版本控制协议已追加 V1.8 行（`plan(V1.8)` / `v1.8(V18-XX)` / `v1.8(V18-fix)`；`checkpoint-V1.8-pass` 待产品负责人最终确认后创建，与既有 pass 标签互不替代）。
+- 待办提醒：AGENTS.md 活动增量段仍写 V1.7（migration v17 / 三条 IPC 白名单），需产品负责人自行更新为 V1.8 口径（方案 §9 已列明变更要点），以免后续实施会话按旧约束误判。
+- Git：本地提交 `plan(V1.8): lesson feedback as part of confirm-taught, decisions D39-D45 and task chain`。

@@ -198,3 +198,14 @@
 | V173-C 布局方案 A | DONE | ✎/◫/👁 三视图（按文件记忆）+ 0.25–0.80 可拖分栏 + 行比例单向同步滚动 |
 | V173-D 预览管线 | DONE | MathSpan 公式 LRU 缓存（300 条）+ KaTeX 错误红色降级 + 预览 120ms 防抖 |
 | V173-E 最终门禁与验收 | 自动门 DONE / 走查待产品负责人 | 全量测试、typecheck、lint、production build、diff check；隔离 Windows 冒烟（方案 §9 走查 1–8）；`docs/v1.7.3-acceptance.md`；产品负责人确认后创建 `checkpoint-V1.7.3-pass` |
+
+## V1.8 已立项（课后反馈常规化）
+
+基线：V1.7 / V1.7.2 / V1.7.3 自动门均已通过（走查确认与 `checkpoint-*-pass` 待产品负责人，互不阻塞 V1.8）。方案 `docs/v1.8-lesson-feedback-plan.md`，决策 D39–D45（`implementation-tasks/V1_8_DECISIONS.md`）；任务链 `implementation-tasks/v1.8-tasks/`，按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`；零 migration、零新依赖；新 IPC 仅 `feedback:read-transcript` / `feedback:generate` 两条；不运行 portable/installer；里程碑提交后 push（沿用 GitHub 授权）。
+
+| 里程碑 | 状态 | 计划内容 |
+|---|---|---|
+| V18-A 反馈合同与 Main 服务 | TODO | feedback-contracts（常量/四接口/守卫）、read-transcript（选 .txt/.md 读文本，不登记 files/不索引，30k 头截 + truncated）、feedback:generate（skill prompt 或默认三段 + 学生/课程/课次上下文 + 转写文本 → 非流式草稿，不落库，可取消）、ipc-security 通道清单演进；三新测试文件 |
+| V18-B 确认已上内嵌反馈与可见性 | TODO | confirm-lesson-taught-modal 重做（反馈区 + 主按钮软强制 gating + 跳过二次确认 + upsert 编辑态 + 保存编排 note→confirm + 无学生退化）；lessonFeedbackStatus 派生；课次行 已反馈/缺反馈 徽标；Viewed Lesson 黄条/摘要；补写弹窗（共享 LessonFeedbackSection） |
+| V18-C 班课反馈与转写转反馈 | TODO | 班课折叠列表（到课/请假/缺席徽标、待写/已写、N/M 徽章、missing-inline 黄条提醒、请假可跳过）；rec-flow 双路径（A 导入转写文字→AI 整理→草稿落 textarea + 来源标签"AI 草稿→已人工修改"；B 纯录音置灰后续版本）；反馈 Skill select 接线 + aiMetadata 记录 |
+| V18-D 最终门禁与验收 | TODO | 全量测试、typecheck、lint、production build、diff check；隔离 Windows 冒烟（一对一确认/跳过/补写/幂等、班课 3 学生 1 请假、fake provider）；DeepSeek 真实自测（预估 ≤ ¥1，产品负责人执行）；`docs/v1.8-acceptance.md`；确认后创建 `checkpoint-V1.8-pass` |
