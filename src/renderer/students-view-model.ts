@@ -55,13 +55,18 @@ export function buildStudentSummaries(overview: CoreOverview): StudentSummary[] 
             historyReason: studentEnded ? 'student_ended' : courseEnded ? 'course_ended' : null,
           }]
         })
+      // 课后反馈（manual 记录）优先按 occurredOn（反馈实际发生日期）排序：
+      // 批量导入的历史反馈 updatedAt 全是同一导入时刻，按 updatedAt 排会退化成随机序。
       const manualNotes = overview.notes
         .filter((note) =>
           note.studentId === student.id &&
           note.deletedAt === null &&
           (note.noteKind === undefined || note.noteKind === 'manual'),
         )
-        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt) || right.id.localeCompare(left.id))
+        .sort((left, right) =>
+          (right.occurredOn ?? right.updatedAt).localeCompare(left.occurredOn ?? left.updatedAt)
+          || right.id.localeCompare(left.id),
+        )
       return {
         student,
         activeCourses: courses.filter((course) => !course.historical),

@@ -72,6 +72,34 @@ describe('V12-03 students view model', () => {
     expect(summary.latestManualNote?.bodyMd).toBe('新记录')
   })
 
+  it('orders imported feedback with identical updatedAt by occurred_on (V173-fix)', () => {
+    // 高馨云资料首次导入的课后反馈 updated_at 全为同一导入时刻，
+    // 排序必须退化到 occurredOn（反馈实际发生日期）而不是 UUID 随机序。
+    const overview: CoreOverview = {
+      ...fixture(),
+      notes: [
+        { id: 'fb-z', studentId: 'student', lessonId: 'active-lesson', bodyMd: '7 月反馈', createdAt: '2026-08-24T14:22:41.331Z', updatedAt: '2026-08-24T14:22:41.331Z', deletedAt: null, noteKind: 'manual', occurredOn: '2026-07-01' },
+        { id: 'fb-a', studentId: 'student', lessonId: 'active-lesson', bodyMd: '8 月反馈', createdAt: '2026-08-24T14:22:41.331Z', updatedAt: '2026-08-24T14:22:41.331Z', deletedAt: null, noteKind: 'manual', occurredOn: '2026-08-12' },
+        { id: 'fb-m', studentId: 'student', lessonId: 'active-lesson', bodyMd: '3 月反馈', createdAt: '2026-08-24T14:22:41.331Z', updatedAt: '2026-08-24T14:22:41.331Z', deletedAt: null, noteKind: 'manual', occurredOn: '2026-03-20' },
+      ],
+    }
+    const summary = buildStudentSummaries(overview)[0]
+    expect(summary.manualNotes.map((note) => note.bodyMd)).toEqual(['8 月反馈', '7 月反馈', '3 月反馈'])
+    expect(summary.latestManualNote?.occurredOn).toBe('2026-08-12')
+  })
+
+  it('sorts records without occurred_on by updatedAt (V173-fix)', () => {
+    const overview: CoreOverview = {
+      ...fixture(),
+      notes: [
+        { id: 'note-earlier', studentId: 'student', lessonId: null, bodyMd: '手写旧记录', createdAt: stamp, updatedAt: '2026-08-20T00:00:00.000Z', deletedAt: null, noteKind: 'manual' },
+        { id: 'note-later', studentId: 'student', lessonId: null, bodyMd: '手写新记录', createdAt: stamp, updatedAt: '2026-08-25T00:00:00.000Z', deletedAt: null, noteKind: 'manual' },
+      ],
+    }
+    const summary = buildStudentSummaries(overview)[0]
+    expect(summary.manualNotes.map((note) => note.id)).toEqual(['note-later', 'note-earlier'])
+  })
+
   it('offers lessons from both current and historical course relations', () => {
     const overview = fixture()
     const summary = buildStudentSummaries(overview)[0]

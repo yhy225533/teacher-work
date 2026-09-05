@@ -1409,3 +1409,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **验证：**以生产同款 CSS 做静态复现（窄 560px 与宽 1000px 两场景），浏览器实测 textarea/分隔条/预览几何左右并排、顶行对齐，截图确认；修复后三文件测试 39 例、typecheck、lint、build 通过。
 - 钉测：v1.7.3-formula-ux 演进为三列模板断言（`fr auto fr`）。
 - Git：本地提交 `v1.7.3(V173-fix): split grid three columns for handle and preview`。
+
+## 2026-09-05 · 产品负责人反馈修复：学生页课后反馈乱序（V1.2 学生视图回归）
+
+- **反馈：**"学生的那一栏的课后反馈不是按照一课的，甚至不是按照时间排序的，要能关联到学生的。"
+- **根因：**高馨云资料首次导入的 26 条课后反馈（manual note）数据层全部正确关联学生、课次与 `occurred_on`，但 `students-view-model.ts` 按 `updatedAt` 排序——批量导入记录的 `updated_at` 全为同一导入时刻（2026-08-24T14:22:41.331Z），排序退化成按 UUID 随机排列。
+- **修复：**学生页 manual 记录排序键改为 `occurredOn ?? updatedAt`（导入反馈按实际上课日期，新记录按创建时间），再以 id 稳定兜底；`quick-course-wizard.tsx` 学生候选卡的"最近人工记录"同步改为该排序键，且展示 `occurredOn` 而非导入时刻。
+- **验证：**students-view-model 新增 2 例钉测（同刻导入按 occurred_on 排序、无 occurred_on 按 updatedAt 排序）；受影响 6 个测试文件 44 例、typecheck、lint 通过；真实工作库 26 条反馈按 2026-08-12 → 2026-03-20 降序核验。
+- Git：本地提交 `v1.7.3(V173-fix): order student feedback by occurred_on`。

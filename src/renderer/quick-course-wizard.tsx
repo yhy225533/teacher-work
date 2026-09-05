@@ -482,7 +482,8 @@ function StudentCandidateCard({
     .flatMap((link) => courseById.get(link.courseId)?.title ?? [])
   const latestManualNote = overview.notes
     .filter((note) => note.studentId === student.id && (note.noteKind === undefined || note.noteKind === 'manual'))
-    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0]
+    .sort((left, right) =>
+      (right.occurredOn ?? right.updatedAt).localeCompare(left.occurredOn ?? left.updatedAt))[0]
   return (
     <button
       className={`quick-duplicate-candidate${selected ? ' is-selected' : ''}`}
@@ -495,7 +496,7 @@ function StudentCandidateCard({
         <strong>{student.name}</strong>
         <small>在读课程：{activeCourses.join('、') || '无'}</small>
         <small>历史课程：{historicalCourses.join('、') || '无'}</small>
-        <small>最近人工记录：{latestManualNote?.updatedAt.slice(0, 10) ?? '无'}</small>
+        <small>最近人工记录：{latestManualNote?.occurredOn ?? latestManualNote?.updatedAt.slice(0, 10) ?? '无'}</small>
       </span>
       <em>{selected ? '已选择' : '选择'}</em>
     </button>
