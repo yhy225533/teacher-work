@@ -1,6 +1,6 @@
 # V173-E · 最终门禁与验收（V1.7.3 唯一全量点）
 
-**状态：** `TODO`
+**状态：** `IN_PROGRESS`
 
 方案基准：`docs/v1.7.3-md-editor-formula-ux-plan.md` §7、§9、§10、§11。
 
@@ -19,3 +19,10 @@
 
 - 产品负责人按 §9 清单完成真实窗口走查确认后，创建 `checkpoint-V1.7.3-pass`（与 `checkpoint-V1.7-pass`、`checkpoint-V1.7.2-pass` 互不替代、分别创建）；
 - 里程碑提交 `v1.7.3(V173-E): final gate and acceptance`。
+
+## 完成记录（2026-09-05）
+
+- 自动门：全量 79 files / 395 tests（394 passed + 1 skipped 既有）、typecheck、lint、production build（main 420 kB / preload 50 kB / renderer 1.54 MB）、`git diff --check` 全部通过。
+- 隔离 Windows 冒烟：独立 app-data + --user-data-dir 启动 production Electron；4 进程存活、workspace.db 创建、窗口/输入正常、stderr 无错误；冒烟库 schema_migrations 1–17、notes CHECK 含 manual_edit；进程全终止、临时目录已删除。
+- `docs/v1.7.3-acceptance.md` 建立（证据 + 走查清单）；未运行 portable/installer；不要求真实 AI 自测（本版本零 AI 生成改动）。
+- 产品负责人按方案 §9 走查（验收文档第七节清单）确认后创建 `checkpoint-V1.7.3-pass`。

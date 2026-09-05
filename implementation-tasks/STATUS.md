@@ -197,4 +197,4 @@
 | V173-B 斜杠命令与公式快捷键 | DONE | 空行 / 与中文顿号、触发拼音过滤菜单（↑↓/Enter/Esc/blur 全支持、光标行跟随查询、\u0000 占位符剥除落槽位）+ Ctrl+M / Ctrl+Shift+M 共用 insertTemplate；v1.7.3 测试追加 3 例（共 14 例）、typecheck、lint 通过 |
 | V173-C 布局方案 A | DONE | ✎/◫/👁 三视图（按文件记忆）+ 0.25–0.80 可拖分栏 + 行比例单向同步滚动 |
 | V173-D 预览管线 | DONE | MathSpan 公式 LRU 缓存（300 条）+ KaTeX 错误红色降级 + 预览 120ms 防抖 |
-| V173-E 最终门禁与验收 | TODO | 全量测试、typecheck、lint、production build、diff check；隔离 Windows 冒烟（方案 §9 走查 1–8）；`docs/v1.7.3-acceptance.md`；产品负责人确认后创建 `checkpoint-V1.7.3-pass` |
+| V173-E 最终门禁与验收 | 自动门 DONE / 走查待产品负责人 | 全量测试、typecheck、lint、production build、diff check；隔离 Windows 冒烟（方案 §9 走查 1–8）；`docs/v1.7.3-acceptance.md`；产品负责人确认后创建 `checkpoint-V1.7.3-pass` |

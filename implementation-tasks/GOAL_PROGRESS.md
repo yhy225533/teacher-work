@@ -1394,3 +1394,9 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - MathSpan 公式内容 Map LRU 缓存（300 条，display 标记键隔离）；KaTeX throwOnError+try/catch 红色 math-error 降级（⚠ + 错误消息 + title 原串），代替旧整段回源码；预览 120ms 防抖（保存/热保存路径不动）。
 - 门禁：v1.7.3-formula-ux 21 例、lesson-material-reader 回归、typecheck、lint 通过。
 - Git：本地提交 `v1.7.3(V173-D): math cache, error fallback and preview debounce`。
+
+## 2026-09-05 · V173-E 自动门通过：V1.7.3 全量验收（走查待产品负责人）
+
+- 全量 79 files / 395 tests（1 skipped 既有）、typecheck、lint、production build、diff check 通过；隔离 Windows 冒烟（4 进程存活、schema 1–17、stderr 无错误、进程全终止 + 临时目录清理）通过；`docs/v1.7.3-acceptance.md` 建立。
+- 产品负责人按方案 §9 走查（验收文档第七节 8 条清单）确认后创建 `checkpoint-V1.7.3-pass`。
+- Git：本地提交 `v1.7.3(V173-E): final gate and acceptance`。
