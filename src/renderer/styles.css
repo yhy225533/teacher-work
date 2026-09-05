@@ -3539,6 +3539,56 @@ button.quick-status { cursor: pointer; }
   background: #cbd5e1;
 }
 
+/* V1.7.3（D36）：数学模式符号条——光标进入公式内时亮出，缩写提示 + 点选插入 */
+.md-editor-math-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-md);
+  background: #fffbeb;
+}
+
+.md-editor-math-label {
+  flex: none;
+  font-size: 11px;
+  font-weight: 800;
+  color: #92400e;
+}
+
+.md-editor-math-chip {
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: #78350f;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.md-editor-math-chip:hover {
+  border-color: #d97706;
+}
+
+.md-editor-math-hint {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 10px;
+  color: #b45309;
+  opacity: 0.85;
+}
+
+.md-editor-math-tip {
+  margin-left: auto;
+  flex: none;
+  font-size: 11px;
+  color: #92400e;
+}
+
 .md-editor-split {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

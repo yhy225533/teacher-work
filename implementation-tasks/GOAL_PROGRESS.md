@@ -1366,3 +1366,10 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 方案 `docs/v1.7.3-md-editor-formula-ux-plan.md` 冻结；决策 D36–D38 追加至 `V1_7_DECISIONS.md`；任务链 `implementation-tasks/v1.7.3-tasks/`（V173-A–E）建立；VERSION_CONTROL.md 增补 V1.7.3 协议行。
 - 边界：零新依赖/零 IPC/零 migration，全 renderer 层；V17-C 冻结架构与 D29 保存语义不动；明确否决思源式 WYSIWYG 与可执行 snippet；公式悬浮浮窗不排期（预览栏覆盖该职责）；沉浸模式留接口不做。
 - 与 V1.7.2 链并行推进、两链提交独立；V173-E 为唯一全量验收点，产品负责人按方案 §9 走查后创建 `checkpoint-V1.7.3-pass`。
+
+## 2026-09-05 · V173-A 完成：数学模式引擎与符号条
+
+- `math-input.ts` 纯函数引擎落地：块级 `$$` 按单 token 翻转侦测（首版按 `$` 奇偶计数在块公式内误判，测试先行抓出后修正）；最长触发词 + ASCII 词边界匹配；自动分式原子判定；Tab 三级槽位跳转。
+- 编辑器接线：数学模式内空格展开缩写、`/` 自动分式、Tab 跳槽位（`isComposing` 期间全不拦截，仅无选区时触发）；数学态符号条 32 chips；速查面板退役并入缩写表。
+- 门禁：全量 78 files / 384 tests（1 skipped 既有）、typecheck、lint 通过。
+- Git：本地提交 `v1.7.3(V173-A): math mode engine and symbol bar`。

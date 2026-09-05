@@ -130,11 +130,17 @@ describe('V17-C md-editor（D28 零新依赖编辑器）', () => {
   })
 
   it('covers math-high-frequency LaTeX snippets (fractions, roots, angle, triangle, degree, cases)', () => {
+    // V1.7.3（D36）：18 项速查面板退役，片段表并入 math-input.ts 缩写表，符号条承载点选插入
     const editorSource = source('../src/renderer/md-editor.tsx')
-    for (const snippet of ['\\\\frac{a}{b}', '\\\\sqrt{x}', '\\\\angle A', '\\\\triangle ABC', '90^\\\\circ', '\\\\begin{cases}']) {
-      expect(editorSource).toContain(snippet)
+    const mathInputSource = source('../src/renderer/math-input.ts')
+    for (const snippet of ['\\\\frac{}{}', '\\\\sqrt{}', "\\\\angle'", "\\\\triangle'", '\\\\circ', '\\\\begin{cases}']) {
+      expect(mathInputSource).toContain(snippet)
     }
-    expect(editorSource).toContain('LaTeX 公式速查')
+    expect(mathInputSource).toContain("label: '分式 a/b'")
+    expect(mathInputSource).toContain("label: '根号 √'")
+    // 编辑器符号条渲染缩写表 chips（数学模式时）
+    expect(editorSource).toContain('md-editor-math-bar')
+    expect(editorSource).toContain('MATH_SNIPPETS.map')
   })
 
   it('hot-saves to localStorage with 250ms debounce and prompts recovery on re-entry', () => {

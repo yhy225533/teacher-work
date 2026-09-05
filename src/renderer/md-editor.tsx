@@ -1,10 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { ManagedFileRecord } from '../shared/file-contracts'
+import {
+  expansionCaretOffset,
+  inMathMode,
+  matchFractionAtom,
+  matchMathSnippet,
+  MATH_SNIPPETS,
+  fractionReplacement,
+  nextSlotOffset,
+} from './math-input'
 import { MarkdownDocument } from './lesson-material-reader'
 import { toErrorMessage } from './ui-utils'
 
-/** D28/D29（V17-C）：零新依赖 md 编辑器——受控 textarea + 工具栏 + 分屏 KaTeX 预览。 */
+/** D28/D29（V17-C）+ D36（V1.7.3）：零新依赖 md 编辑器——受控 textarea + 分屏 KaTeX 预览 + 数学模式公式引擎。 */
 export default function MdEditor({
   file,
   files,
@@ -23,7 +32,7 @@ export default function MdEditor({
   const [notice, setNotice] = useState('')
   const [draftRecovered, setDraftRecovered] = useState(false)
   const [recoverPrompt, setRecoverPrompt] = useState(false)
-  const [latexPaletteOpen, setLatexPaletteOpen] = useState(false)
+  const [mathMode, setMathMode] = useState(false)
   const [imagePickerOpen, setImagePickerOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const draftKey = `md-editor-draft:${file.id}`
@@ -107,6 +116,72 @@ export default function MdEditor({
     undoStack.current = [...undoStack.current, textareaRef.current.value]
     redoStack.current = stack.slice(0, -1)
     setBody(next)
+  }
+
+  /** D36：光标位置变化 → 推导数学模式（$…$ / $$…$$ 内亮符号条）。 */
+  const syncMathMode = useCallback((): void => {
+    const textarea = textareaRef.current
+    if (textarea === null) return
+    setMathMode(inMathMode(textarea.value.slice(0, textarea.selectionStart)))
+  }, [])
+
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (textarea === null) return
+    const onSelectionChange = (): void => {
+      if (document.activeElement === textarea) syncMathMode()
+    }
+    document.addEventListener('selectionchange', onSelectionChange)
+    return () => document.removeEventListener('selectionchange', onSelectionChange)
+  }, [syncMathMode])
+
+  /**
+   * D36：光标处替换展开（缩写/自动分式共用）——删 before 个字符、插 replacement、
+   * undo 入栈、光标按 expansionCaretOffset 落首个空 {} 槽位。
+   */
+  function replaceBefore(before: number, replacement: string): void {
+    const textarea = textareaRef.current
+    if (textarea === null) return
+    pushUndo(textarea.value)
+    const start = textarea.selectionStart
+    const next = `${textarea.value.slice(0, start - before)}${replacement}${textarea.value.slice(textarea.selectionEnd)}`
+    setBody(next)
+    requestAnimationFrame(() => {
+      const caret = start - before + expansionCaretOffset(replacement)
+      textarea.focus()
+      textarea.setSelectionRange(caret, caret)
+    })
+  }
+
+  /** D36：textarea keydown——数学模式内空格展开缩写、`/` 自动分式、Tab 槽位跳转。输入法组合期全不拦截。 */
+  function handleEditorKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>): void {
+    if (event.nativeEvent.isComposing) return
+    const textarea = textareaRef.current
+    if (textarea === null) return
+    const before = textarea.value.slice(0, textarea.selectionStart)
+    if (event.key === ' ' && textarea.selectionStart === textarea.selectionEnd) {
+      if (!inMathMode(before)) return
+      const snippet = matchMathSnippet(before)
+      if (snippet === null) return
+      event.preventDefault()
+      replaceBefore(snippet.trigger.length, snippet.replacement)
+      return
+    }
+    if (event.key === '/' && textarea.selectionStart === textarea.selectionEnd) {
+      if (!inMathMode(before)) return
+      const atom = matchFractionAtom(before)
+      if (atom === null) return
+      event.preventDefault()
+      replaceBefore(atom.cut, fractionReplacement(atom.atom))
+      return
+    }
+    if (event.key === 'Tab' && textarea.selectionStart === textarea.selectionEnd) {
+      const offset = nextSlotOffset(textarea.value.slice(textarea.selectionStart))
+      if (offset === 0) return
+      event.preventDefault()
+      const caret = textarea.selectionStart + offset
+      textarea.setSelectionRange(caret, caret)
+    }
   }
 
   /** 在光标处插入模板；选中文本存在时包裹（行内语法）或替换为空模板。 */
@@ -218,12 +293,6 @@ export default function MdEditor({
         <button type="button" title="块级公式 $$…$$" onClick={() => insertTemplate('$$\n', '\n$$', '公式')}>$$∑$$</button>
         <button
           type="button"
-          title="LaTeX 片段速查"
-          aria-expanded={latexPaletteOpen}
-          onClick={() => setLatexPaletteOpen((open) => !open)}
-        >ƒ 速查</button>
-        <button
-          type="button"
           title="插入本课图片引用"
           aria-expanded={imagePickerOpen}
           onClick={() => setImagePickerOpen((open) => !open)}
@@ -232,19 +301,21 @@ export default function MdEditor({
         <button type="button" title="撤销" onClick={undo}>↶</button>
         <button type="button" title="重做" onClick={redo}>↷</button>
       </div>
-      {latexPaletteOpen && (
-        <div className="md-editor-palette" role="group" aria-label="LaTeX 公式速查">
-          {LATEX_SNIPPETS.map((snippet) => (
+      {mathMode && (
+        <div className="md-editor-math-bar" role="group" aria-label="数学模式符号条">
+          <span className="md-editor-math-label">ƒx 数学模式</span>
+          {MATH_SNIPPETS.map((snippet) => (
             <button
-              key={snippet.code}
+              key={snippet.trigger}
               type="button"
-              className="md-editor-palette-item"
-              title={snippet.title}
-              onClick={() => insertTemplate(snippet.code, snippet.after ?? '', snippet.placeholder ?? '')}
+              className="md-editor-math-chip"
+              title={`${snippet.label}（输入 ${snippet.trigger} + 空格自动展开）`}
+              onClick={() => replaceBefore(0, snippet.replacement)}
             >
-              {snippet.title}
+              {snippet.label}<span className="md-editor-math-hint">{snippet.trigger}</span>
             </button>
           ))}
+          <span className="md-editor-math-tip">缩写+空格 自动展开 · x 紧跟 / 自动分式 · Tab 跳槽位</span>
         </div>
       )}
       {imagePickerOpen && (
@@ -274,14 +345,20 @@ export default function MdEditor({
           disabled={loading || saving}
           spellCheck={false}
           aria-label={`${file.originalName} 正文编辑`}
-          onChange={(event) => setBody(event.currentTarget.value)}
+          onChange={(event) => {
+            setBody(event.currentTarget.value)
+            syncMathMode()
+          }}
+          onKeyDown={handleEditorKeyDown}
+          onClick={syncMathMode}
+          onSelect={syncMathMode}
         />
         <div className="md-editor-preview" aria-label="实时预览（KaTeX 渲染）">
           <MarkdownDocument body={body === '' ? '（空文档）' : body} files={files} />
         </div>
       </div>
       <footer className="md-editor-actions">
-        <span className="md-editor-hint">保存为**新版本**：旧版保留在历史版本，原件永不被改写。行内公式用 $…$，块级公式用 $$…$$，预览实时渲染。</span>
+        <span className="md-editor-hint">保存为**新版本**：旧版保留在历史版本，原件永不被改写。公式内输入缩写（frac、sum、int…）+ 空格自动展开；x 紧跟 / 自动分式；Tab 跳槽位；空行输入 / 唤出模板菜单。</span>
         <div>
           <button className="secondary-button" type="button" disabled={saving} onClick={onCancel}>取消</button>
           <button
@@ -310,30 +387,3 @@ function readHotDraft(key: string): string | null {
 function displayBaseName(name: string): string {
   return name.replace(/\.[^.]+$/u, '')
 }
-
-/** 数学高频 LaTeX 片段速查（D28：点选插入模板）。 */
-export const LATEX_SNIPPETS: readonly {
-  readonly title: string
-  readonly code: string
-  readonly after?: string
-  readonly placeholder?: string
-}[] = [
-  { title: '分式 a/b', code: '\\frac{a}{b}' },
-  { title: '根号 √x', code: '\\sqrt{x}' },
-  { title: 'n 次根', code: '\\sqrt[n]{x}' },
-  { title: '上标 x²', code: 'x^{2}' },
-  { title: '上标 xⁿ', code: 'x^{n}' },
-  { title: '下标 x₁', code: 'x_{1}' },
-  { title: '角度 ∠A', code: '\\angle A' },
-  { title: '三角形 △ABC', code: '\\triangle ABC' },
-  { title: '全等 ≌', code: '\\cong' },
-  { title: '相似 ∽', code: '\\sim' },
-  { title: '垂直 ⊥', code: '\\perp' },
-  { title: '平行 ∥', code: '\\parallel' },
-  { title: '度 90°', code: '90^\\circ' },
-  { title: '圆 π', code: '\\pi' },
-  { title: '因为/所以', code: '\\because \\; \\therefore' },
-  { title: '求和 ∑', code: '\\sum_{i=1}^{n}' },
-  { title: '括号适配', code: '\\left( \\right)'  , placeholder: '\\left( x \\right)' },
-  { title: '方程组', code: '\\begin{cases}\nx+y=1\\\\\nx-y=3\n\\end{cases}', placeholder: '' },
-]

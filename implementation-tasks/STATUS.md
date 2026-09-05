@@ -193,7 +193,7 @@
 
 | 里程碑 | 状态 | 计划内容 |
 |---|---|---|
-| V173-A 数学模式引擎与符号条 | TODO | inMathMode/缩写/自动分式/槽位纯函数模块 + textarea 事件接线 + 数学态符号条双态工具栏；18 项旧速查并入缩写表，速查面板退役 |
+| V173-A 数学模式引擎与符号条 | DONE | math-input.ts 纯函数引擎（inMathMode $$ token 翻转/最长匹配+词边界/自动分式/三级槽位跳转）+ MATH_SNIPPETS 32 项 + textarea keydown 接线（isComposing 不拦截）+ 数学态符号条双态工具栏；速查面板退役；新增 11 例测试 + v17-c 钉测演进；全量 78 files / 384 tests、typecheck、lint 通过 |
 | V173-B 斜杠命令与公式快捷键 | TODO | SLASH_ITEMS 拼音过滤菜单（/ 与 、 触发、键盘全支持、\u0000 占位符）+ Ctrl+M / Ctrl+Shift+M |
 | V173-C 布局方案 A | TODO | ✎/◫/👁 三视图（按文件记忆）+ 0.25–0.80 可拖分栏 + 行比例单向同步滚动 |
 | V173-D 预览管线 | TODO | MathSpan 公式 LRU 缓存（300 条）+ KaTeX 错误红色降级 + 预览 120ms 防抖 |
