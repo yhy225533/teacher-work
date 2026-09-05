@@ -186,3 +186,15 @@
 | V172-B 参考行与题库迁移 | TODO | 参考行 chips（✕ 移除）+ ＋本课资料/外部资料/素材库入口 + 参考题库 CSS switch 行；new 冷启动两张添加卡；预算行 meter + 文案拼接规则；题库"目标题数/学生版"迁移到候选区头部；§8 文案对照全量落地 |
 | V172-C 收起态与空态引导 | TODO | 收起态摘要三模式规则与"调整要求"展开；选中自动收起/取消强制展开；主区空态分模式文案卡片化；improve-review-card 独立成卡核查；1100px 堆叠走查 |
 | V172-D 最终门禁与验收 | TODO | 全量测试、typecheck、lint、production build、diff check；隔离 Windows 冒烟三模式走查（fake provider，不要求真实 DeepSeek）；`docs/v1.7.2-acceptance.md`；产品负责人 §11 走查确认后创建 `checkpoint-V1.7.2-pass` |
+
+## V1.7.3 已立项（MD 编辑器公式输入与布局改版）
+
+基线：方案 `docs/v1.7.3-md-editor-formula-ux-plan.md`，决策 D36–D38（`implementation-tasks/V1_7_DECISIONS.md`）；任务链 `implementation-tasks/v1.7.3-tasks/`，按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`；与 V1.7.2 链并行推进、互不阻塞；零新依赖/零 IPC/零 migration；不运行 portable/installer。
+
+| 里程碑 | 状态 | 计划内容 |
+|---|---|---|
+| V173-A 数学模式引擎与符号条 | TODO | inMathMode/缩写/自动分式/槽位纯函数模块 + textarea 事件接线 + 数学态符号条双态工具栏；18 项旧速查并入缩写表，速查面板退役 |
+| V173-B 斜杠命令与公式快捷键 | TODO | SLASH_ITEMS 拼音过滤菜单（/ 与 、 触发、键盘全支持、\u0000 占位符）+ Ctrl+M / Ctrl+Shift+M |
+| V173-C 布局方案 A | TODO | ✎/◫/👁 三视图（按文件记忆）+ 0.25–0.80 可拖分栏 + 行比例单向同步滚动 |
+| V173-D 预览管线 | TODO | MathSpan 公式 LRU 缓存（300 条）+ KaTeX 错误红色降级 + 预览 120ms 防抖 |
+| V173-E 最终门禁与验收 | TODO | 全量测试、typecheck、lint、production build、diff check；隔离 Windows 冒烟（方案 §9 走查 1–8）；`docs/v1.7.3-acceptance.md`；产品负责人确认后创建 `checkpoint-V1.7.3-pass` |

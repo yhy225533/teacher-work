@@ -36,6 +36,7 @@
 - V1.5.4 已在 `checkpoint-V1.5.4-pass` 冻结（后续 V1.5.5/V1.5.6 依序冻结于各自 pass 标签）；V1.6 方案提交使用 `plan(V1.6): <摘要>`，里程碑提交使用 `v1.6(V16-XX): <摘要>`；任务链位于 `implementation-tasks/v1.6-tasks/`；V16-E 完成全部自动门、代表性本地 Windows 流程与 DeepSeek/MinerU 两轮真实自测且产品负责人最终体验确认后，才可在最终提交上创建 `checkpoint-V1.6-pass`。
 - V1.6 已在 `checkpoint-V1.6-pass` 冻结；V1.7 方案提交使用 `plan(V1.7): <摘要>`，里程碑提交使用 `v1.7(V17-XX): <摘要>`；任务链位于 `implementation-tasks/v1.7-tasks/`；V17-E 完成全部自动门、隔离 Windows 冒烟与 DeepSeek 真实自测（预估 ≤ ¥3）且产品负责人最终体验确认后，才可在最终提交上创建 `checkpoint-V1.7-pass`。
 - V1.7.2（备课工作台结构重排，D33/D34）方案提交使用 `plan(V1.7.2): <摘要>`，里程碑提交使用 `v1.7.2(V172-XX): <摘要>`；任务链位于 `implementation-tasks/v1.7.2-tasks/`；V172-D 为唯一全量验收点（全量测试、typecheck、lint、production build、diff check、隔离 Windows 冒烟，不运行 portable/installer），产品负责人按方案 §11 走查清单确认后创建 `checkpoint-V1.7.2-pass`；与 `checkpoint-V1.7-pass` 互不替代、分别创建。
+- V1.7.3（MD 编辑器公式输入与布局改版，D36–D38）方案提交使用 `plan(V1.7.3): <摘要>`，里程碑提交使用 `v1.7.3(V173-XX): <摘要>`，真实反馈修复使用 `v1.7.3(V173-fix): <摘要>`；任务链位于 `implementation-tasks/v1.7.3-tasks/`；V173-E 为唯一全量验收点（全量测试、typecheck、lint、production build、diff check、隔离 Windows 冒烟，不运行 portable/installer，不要求真实 AI 自测），产品负责人按方案 §9 走查清单确认后创建 `checkpoint-V1.7.3-pass`（与 `checkpoint-V1.7-pass`、`checkpoint-V1.7.2-pass` 互不替代、分别创建）；与 V1.7.2 链并行推进时两链任务与提交保持独立、互不阻塞。
 
 ## 3. 实施里程碑提交
 

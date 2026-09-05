@@ -1359,3 +1359,10 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **钉测：**lesson-prep-context.test.ts 新增纯函数 6 例（外部 md/docx、素材库、版本链/学生版/编辑版排除）；v1.7.2-workspace-structure 新增渲染断言（lessonFileSourceLabel 接线、prep-source-badge、判定规则、命名排除锚点）。
 - 门禁：全量 77 files / 373 tests（1 skipped 既有）、typecheck、lint 通过。
 - Git：本地提交 `v1.7.2(V172-fix): lesson file source badges in scope file lists`。
+
+## 2026-09-05 · V1.7.3 立项：MD 编辑器公式输入与布局改版方案落稿
+
+- 产品负责人反馈"md 编辑界面太不方便、公式输入需要大改（参考思源笔记）"，经思源/LaTeX Suite/MarkText 第一手调研后逐屏确认五组场景（数学模式缩写展开/斜杠命令/浮窗与管线/布局方案 A），交互示意 `tmp/mockups/md-editor-formula-redesign.html`（本地不入库）；2026-09-05 拍板布局方案 A（"选择方案 1"），追加"后期隐藏左侧栏"为后续增量预留。
+- 方案 `docs/v1.7.3-md-editor-formula-ux-plan.md` 冻结；决策 D36–D38 追加至 `V1_7_DECISIONS.md`；任务链 `implementation-tasks/v1.7.3-tasks/`（V173-A–E）建立；VERSION_CONTROL.md 增补 V1.7.3 协议行。
+- 边界：零新依赖/零 IPC/零 migration，全 renderer 层；V17-C 冻结架构与 D29 保存语义不动；明确否决思源式 WYSIWYG 与可执行 snippet；公式悬浮浮窗不排期（预览栏覆盖该职责）；沉浸模式留接口不做。
+- 与 V1.7.2 链并行推进、两链提交独立；V173-E 为唯一全量验收点，产品负责人按方案 §9 走查后创建 `checkpoint-V1.7.3-pass`。
