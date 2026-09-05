@@ -3704,8 +3704,8 @@ button.quick-status { cursor: pointer; }
 
 .md-editor-split {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 0;
+  /* 非分屏态（纯编辑/纯预览）单列；分屏态由内联三列模板接管：左·比例fr / 分隔条 auto / 右·比例fr */
+  grid-template-columns: minmax(0, 1fr);
   min-height: 320px;
 }
 

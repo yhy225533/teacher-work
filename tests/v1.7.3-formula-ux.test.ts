@@ -225,8 +225,9 @@ describe('V173-C 三视图与可拖分栏（源码断言）', () => {
     // 拖动期间禁 textarea 捕获避免选中文本
     expect(editorSource).toContain('textarea.disabled = true')
     expect(editorSource).toContain('textarea.disabled = wasDisabled')
-    // split 态比例由内联 gridTemplateColumns 接管
-    expect(editorSource).toContain('gridTemplateColumns')
+    // split 态比例由内联三列模板接管：左·比例fr / 分隔条 auto / 右·比例fr（V173-fix：三子元素必须三列，
+    // 否则分隔条占第二列、预览被挤到第二行变成上下堆叠）
+    expect(editorSource).toContain("gridTemplateColumns: `${(splitRatio * 100).toFixed(2)}fr auto ${(100 - splitRatio * 100).toFixed(2)}fr`")
   })
 
   it('syncs scroll one-way from editor to preview with an 800ms reverse guard', () => {

@@ -571,7 +571,7 @@ export default function MdEditor({
       </div>
       <div
         className={viewMode === 'split' ? 'md-editor-split is-split' : 'md-editor-split'}
-        style={viewMode === 'split' ? { gridTemplateColumns: `${(splitRatio * 100).toFixed(2)}fr ${(100 - splitRatio * 100).toFixed(2)}fr` } : undefined}
+        style={viewMode === 'split' ? { gridTemplateColumns: `${(splitRatio * 100).toFixed(2)}fr auto ${(100 - splitRatio * 100).toFixed(2)}fr` } : undefined}
       >
         {viewMode !== 'preview' && (
           <textarea

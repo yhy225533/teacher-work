@@ -1400,3 +1400,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 全量 79 files / 395 tests（1 skipped 既有）、typecheck、lint、production build、diff check 通过；隔离 Windows 冒烟（4 进程存活、schema 1–17、stderr 无错误、进程全终止 + 临时目录清理）通过；`docs/v1.7.3-acceptance.md` 建立。
 - 产品负责人按方案 §9 走查（验收文档第七节 8 条清单）确认后创建 `checkpoint-V1.7.3-pass`。
 - Git：本地提交 `v1.7.3(V173-E): final gate and acceptance`。
+
+## 2026-09-05 · 产品负责人反馈修复：分屏变上下堆叠（V173-C 回归）
+
+- **反馈：**"应该是左右的，却是上下"（附截图）。
+- **根因：**V173-C 分屏容器内渲染三个子元素（textarea / 分隔条 / 预览），但内联 grid 模板只给了两列（`比例fr 比例fr`）——分隔条被排进第一行第二列、预览被挤到第二行，整体呈上下堆叠（截图中右侧竖线即被挤到角落的分隔条）。
+- **修复：**分屏态内联模板改三列 `比例fr auto 比例fr`（中间 auto 列归分隔条）；`.md-editor-split` 非分屏默认改单列（纯编辑/纯预览单子元素占满）。
+- **验证：**以生产同款 CSS 做静态复现（窄 560px 与宽 1000px 两场景），浏览器实测 textarea/分隔条/预览几何左右并排、顶行对齐，截图确认；修复后三文件测试 39 例、typecheck、lint、build 通过。
+- 钉测：v1.7.3-formula-ux 演进为三列模板断言（`fr auto fr`）。
+- Git：本地提交 `v1.7.3(V173-fix): split grid three columns for handle and preview`。
