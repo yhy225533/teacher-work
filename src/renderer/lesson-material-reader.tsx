@@ -584,13 +584,44 @@ function normalizeInlineMarkdownText(text: string): string {
   return normalizeRichText(protectedText).replace(tokenPattern, (_match, index: string) => protectedTokens[Number(index)] ?? '')
 }
 
+/** V1.7.3（D37）：公式内容 → 渲染 HTML 的 LRU 缓存（MarkText 做法）——输入时未变的公式直接复用，不重跑 KaTeX。 */
+const MATH_HTML_CACHE_MAX = 300
+const mathHtmlCache = new Map<string, string>()
+
+function renderMathHtml(formula: string, display: boolean): string {
+  const key = `${display ? 'D' : 'I'}\u0001${formula}`
+  const cached = mathHtmlCache.get(key)
+  if (cached !== undefined) {
+    mathHtmlCache.delete(key)
+    mathHtmlCache.set(key, cached) // LRU 触碰：移到队尾
+    return cached
+  }
+  let html: string
+  try {
+    html = katex.renderToString(formula, { displayMode: display, throwOnError: true })
+  } catch (error) {
+    // 思源 mathRender.ts 同款降级：红色显示 KaTeX 错误消息，而不是整段回源码
+    const message = error instanceof Error ? error.message : String(error)
+    html = `<span class="math-error" title="${escapeHtml(formula)}">⚠ ${escapeHtml(message)}</span>`
+  }
+  mathHtmlCache.set(key, html)
+  if (mathHtmlCache.size > MATH_HTML_CACHE_MAX) {
+    mathHtmlCache.delete(mathHtmlCache.keys().next().value ?? '')
+  }
+  return html
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/gu, '&amp;').replace(/</gu, '&lt;').replace(/>/gu, '&gt;').replace(/"/gu, '&quot;')
+}
+
 function MathSpan({ formula, display = false }: { readonly formula: string; readonly display?: boolean }): React.JSX.Element {
   try {
     const normalizedFormula = formula
       .replace(/\u200B|\u200C|\u200D|\uFEFF/gu, '')
       .trim()
       .replace(/^\$([^$\n]+)\$$/u, '$1')
-    return <span className={display ? 'material-math material-math-display' : 'material-math'} dangerouslySetInnerHTML={{ __html: katex.renderToString(normalizedFormula, { displayMode: display, throwOnError: false }) }} />
+    return <span className={display ? 'material-math material-math-display' : 'material-math'} dangerouslySetInnerHTML={{ __html: renderMathHtml(normalizedFormula, display) }} />
   } catch {
     return <code>{formula}</code>
   }

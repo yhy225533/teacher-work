@@ -1388,3 +1388,9 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 行比例单向同步滚动（编辑→预览），预览侧滚动后 800ms 抑制反向；单视图/非 split 态不触发。
 - 门禁：v1.7.3-formula-ux 17 例、v17-c 回归 12 例、typecheck、lint 通过。
 - Git：本地提交 `v1.7.3(V173-C): view modes, draggable split and sync scroll`。
+
+## 2026-09-05 · V173-D 完成：预览管线加固
+
+- MathSpan 公式内容 Map LRU 缓存（300 条，display 标记键隔离）；KaTeX throwOnError+try/catch 红色 math-error 降级（⚠ + 错误消息 + title 原串），代替旧整段回源码；预览 120ms 防抖（保存/热保存路径不动）。
+- 门禁：v1.7.3-formula-ux 21 例、lesson-material-reader 回归、typecheck、lint 通过。
+- Git：本地提交 `v1.7.3(V173-D): math cache, error fallback and preview debounce`。

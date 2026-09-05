@@ -243,3 +243,53 @@ describe('V173-C 三视图与可拖分栏（源码断言）', () => {
     expect(editorSource).toContain('onScroll={syncPreviewScroll}')
   })
 })
+
+// V173-D：预览管线——公式 LRU 缓存、错误红色降级、120ms 防抖。
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+
+import { MarkdownDocument } from '../src/renderer/lesson-material-reader'
+
+describe('V173-D MathSpan 公式缓存与错误降级', () => {
+  it('renders valid formulas through KaTeX and caches by content (re-render does not duplicate)', () => {
+    const body = '公式 $a^2+b^2=c^2$ 与 $\frac{1}{2}$。'
+    const first = renderToStaticMarkup(createElement(MarkdownDocument, { body, files: [] }))
+    const second = renderToStaticMarkup(createElement(MarkdownDocument, { body, files: [] }))
+    // 两次渲染产物一致；命中缓存的第二次与第一次字节相同（内容缓存语义）
+    expect(first).toContain('class="katex"')
+    expect(second).toBe(first)
+    // 模块级缓存命中不产生 KaTeX 重复输出差异（错误路径才可见 math-error）
+    expect(first).not.toContain('math-error')
+  })
+
+  it('degrades broken formulas to the red math-error span with the KaTeX message instead of raw source', () => {
+    const body = '坏公式 ' + String.raw`$\frac{$` + ' 继续'
+    const markup = renderToStaticMarkup(createElement(MarkdownDocument, { body, files: [] }))
+    expect(markup).toContain('math-error')
+    expect(markup).toContain('⚠')
+    // title 悬停可见原始串，消息本身来自 KaTeX（含 parse error 语义）
+    expect(markup).toContain('title="' + String.raw`\frac{` + '"')
+    expect(markup).toMatch(/KaTeX parse error|Undefined control sequence|Expected group/u)
+    // 不再是整段裸源码回显（旧 throwOnError:false 语义的 .material-math 包裹不再出现于坏公式）
+    expect(markup).not.toMatch(/class="material-math"[^>]*>\\frac\{/u)
+  })
+
+  it('keeps valid and broken formulas side by side in one document', () => {
+    const markup = renderToStaticMarkup(createElement(MarkdownDocument, { body: '好 $x^2$ 坏 ' + String.raw`$\begin{cases}$` + ' 收', files: [] }))
+    expect(markup).toContain('class="katex"')
+    expect(markup).toContain('math-error')
+  })
+})
+
+describe('V173-D 预览防抖（源码断言）', () => {
+  it('debounces the preview render at 120ms while save and hot-save paths stay on body', () => {
+    const editorSource = source('../src/renderer/md-editor.tsx')
+
+    expect(editorSource).toContain('setPreviewBody(body), 120')
+    expect(editorSource).toContain('previewSource')
+    expect(editorSource).toContain('<MarkdownDocument body={previewSource}')
+    // 保存/热保存不走防抖值：writeVersion 与热草稿仍读 body
+    expect(editorSource).toContain('bodyMd: body')
+    expect(editorSource).toContain('window.localStorage.setItem(draftKey, body)')
+  })
+})

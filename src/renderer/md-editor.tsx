@@ -420,11 +420,20 @@ export default function MdEditor({
     }
   }
 
+  // D37（V1.7.3）：预览渲染 120ms 防抖——连续输入时不逐字全量重渲（热保存 250ms 与保存路径不变，保存始终用 body）。
+  const [previewBody, setPreviewBody] = useState('')
+  useEffect(() => {
+    const timer = window.setTimeout(() => setPreviewBody(body), 120)
+    return () => window.clearTimeout(timer)
+  }, [body])
+
   const lessonImages = useMemo(
     () => files.filter((candidate) => candidate.mimeType.startsWith('image/')),
     [files],
   )
   const canSave = !loading && !saving && !recoverPrompt && body.trim() !== ''
+  // 预览源：防抖值优先；防抖尚未首刷时直接用 body（首次载入不闪"空文档"占位）
+  const previewSource = previewBody !== '' ? previewBody : body !== '' ? body : '（空文档）'
 
   return (
     <div className="md-editor" aria-label={`编辑 ${file.originalName}`}>
@@ -600,7 +609,7 @@ export default function MdEditor({
             aria-label="实时预览（KaTeX 渲染）"
             onScroll={armPreviewScrollGuard}
           >
-            <MarkdownDocument body={body === '' ? '（空文档）' : body} files={files} />
+            <MarkdownDocument body={previewSource} files={files} />
           </div>
         )}
       </div>
