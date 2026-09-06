@@ -1467,3 +1467,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 人工/真实环境验证：DeepSeek 真实自测（预估 ≤ ¥1，真实转写 .txt → generate → 草稿质量/Skill 遵循度 → 手改 → 保存 → 学生页验证）与最终体验确认**待产品负责人执行**（清单见 `docs/v1.8-acceptance.md` §6）。
 - Git 任务提交：`v1.8(V18-D): full gates, smoke and acceptance record`。**不创建 `checkpoint-V1.8-pass`**——待产品负责人最终确认后在最终提交创建（与既有 pass 标签互不替代）。
 - 已知限制：无 BLOCKED 项。`AGENTS.md` 活动增量段仍写 V1.7（由产品负责人自行维护，方案 §9 已列明更新要点）。
+
+
+## 2026-09-07 00:10 · V1.8.1 · 自动门 DONE（走查待产品负责人）
+
+- 关键改动：课件区目录树讲义/材料分组（方案 A，产品负责人 2026-09-06 拍板"左侧这个可以！"）+ 材料区 md「设为讲义底稿」一键纳管版本链。零 migration、零新依赖；新 IPC 仅 `files:set-lesson-role`。
+- 修改文件：lesson-prep-context（splitLessonFilesByRole/isLessonLectureFile）、lesson-material-reader（grouped/currentLectureId/onPromoteFile + 分组渲染 + 徽标/空态）、lesson-files-section（promoteToLecture + grouped 接线）、styles.css、ipc-contracts、managed-file-service（setLessonFileRole + nextLectureBaseVersionNumber）、file-ipc、preload、preload-api；测试 4 文件（+9 例 + 新 6 例钉测）；任务链 3 文件 + STATUS + 本文件 + 验收文档。
+- 验证命令与结果：`npm test` ✅ 83 files / 457 tests passed（1 skipped）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅；未运行 portable/installer（符合约束）。
+- 设计微调：提讲义版本号 = 同基名 MAX+1（任务原文"课次锚定 MAX+1"更正，新底稿首版即第 1 版、同基名重复导入递增、跨基名独立），验收记录已注明。
+- 人工/真实环境验证：产品负责人走查清单见 `docs/v1.8.1-acceptance.md` §4（以高馨云第12讲真实数据：题目.md/核对表/docx/13 题图分组 + 提讲义往返 + 编辑出第 2 版 + 备课工作台零回归）。
+- Git 任务提交：`v1.8.1(V181-C): final gates and acceptance record`（V181-A/B 合并于本链提交）。**不创建 `checkpoint-V1.8.1-pass`**——待产品负责人最终确认后创建。
+- 已知限制：分组纯靠文件名约定（历史外部导入恰好形如版本名会被认作讲义，真实库经查无）；提讲义产生副本、原件保留材料区（D29 同语义）；`files:set-lesson-role` 无 contentChanged 之外的全局广播（与 writeVersion 一致）。

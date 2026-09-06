@@ -209,3 +209,14 @@
 | V18-B 确认已上内嵌反馈与可见性 | DONE | confirm-lesson-taught-modal 重做完成（内嵌 LessonFeedbackSection + 主按钮软强制 gating + 跳过原因单选/红色二次确认 + upsert 编辑态预填最新一条 + 保存编排 createNote/updateNote→confirmLessonTaught + occurredOn=scheduledAt 本地日期 + 无学生退化纯确认）；lessonFeedbackStatus 派生（taught/complete/每生 hasFeedback+latestNote，deleted/draft 类不计）；课次行已反馈绿/缺反馈黄徽标（仅已上且有在读学生）；Viewed Lesson 黄条+补写入口/摘要行（首行 40 字+已挂到×××名下）；lesson-feedback-modal 补写弹窗（共享反馈区、无 Current Lesson/确认按钮）；styles.css 反馈区样式；新增 v1.8-feedback-ui 18 例；全量 83 files / 432 tests passed（1 skipped）、typecheck、lint、production build 通过 |
 | V18-C 班课反馈与转写转反馈 | DONE | LessonFeedbackSection 班课折叠列表完成（attendance.getLesson 到课/请假/缺席徽标、未点名不显示；待写/已写✓；请假/缺席虚线"可跳过"可写可跳；N/M 已写徽章分母=到课学生）；确认弹窗班课 gating=≥1 到课学生有内容、首次点击 missing-inline 黄条点名、再次点击按已写保存未写跳过、请假学生填写也保存；rec-flow 折叠块（路径 A 选 .txt/.md → read-transcript → 自动 generate → 草稿落 textarea + 文件 chip/字数/截断提示 + 两段进度 + 取消令牌防迟到回写；路径 B 纯录音置灰"未配置语音模型·后续版本"）；反馈 Skill select（全部 active Skill + 不使用 Skill（默认结构），仅影响下一次 generate）；草稿来源标签"AI 草稿·请人工修改"→"已人工修改 ✓"（绿）、生成中该生 textarea 与主按钮禁用；CreateNoteRequest 追加可选 aiMetadata（FeedbackNoteMetadata，core-ipc 透传 → core-data 落 ai_metadata_json；手写不写）+ create-note 往返钉测；v1.8-feedback-ui 追加 11 例（共 29）；全量 83 files / 444 tests passed（1 skipped）、typecheck、lint、production build、diff check 通过 |
 | V18-D 最终门禁与验收 | 自动门 DONE / 真实自测待产品负责人 | 全量 83 files / 444 tests passed（1 skipped）、typecheck、lint、production build、diff check 通过；隔离 Windows 冒烟 16/16（一对一 保存含 aiMetadata→确认→occurredOn=排课日期、跳过→缺反馈→补写→绿、upsert 不重复建行、班课 3 学生 1 请假 每人一条、徽标/黄条派生、generate 不登记 files、学生时间线 occurredOn 降序、fake provider 收到三段提示词+学生上下文、stderr 无致命、进程全终止+临时目录清理）；`docs/v1.8-acceptance.md` 已建；DeepSeek 真实自测（预估 ≤ ¥1）与最终体验确认交产品负责人，通过后创建 `checkpoint-V1.8-pass` |
+
+
+## V1.8.1 已立项（课件区讲义/材料分组方案 A + 设为讲义底稿）
+
+基线：V1.8 自动门已过（走查确认与 `checkpoint-V1.8-pass` 待产品负责人，互不阻塞）。方案 `docs/v1.8.1-courseware-lecture-material-split-plan.md`，决策 D46/D47（`implementation-tasks/V1_8_DECISIONS.md`）；任务链 `implementation-tasks/v1.8.1-tasks/`；零 migration、零新依赖，新 IPC 仅 `files:set-lesson-role` 一条；不运行 portable/installer。
+
+| 里程碑 | 状态 | 计划内容 |
+|---|---|---|
+| V181-A 分组与树渲染 | DONE | splitLessonFilesByRole 纯函数（版本链/学生版/编辑版→讲义组；其余→材料组）+ LessonMaterialTree grouped 可选 prop 分组渲染（讲义组在前）+ 当前徽标/来源标签（lessonFileSourceLabel 首次进课件区树）+ 空态引导 + role-group CSS；lesson-prep-context +3 例、v1.8.1-courseware-groups 新 5 例；相关测试 + typecheck + lint 通过 |
+| V181-B 设为讲义底稿 | DONE | ManagedFileService.setLessonFileRole（同基名 MAX+1 出 `基名 · 第 N 版.md` 副本，临时文件+原子重命名，原件不动；非 md/已讲义命名/未挂课次/空内容/超限拒绝）+ files:set-lesson-role IPC（enqueueIndex + notifyContentChanged）+ preload + reader「↥ 设为讲义底稿」入口 + section handler；service +3 例、ipc +1 例；相关测试 + typecheck + lint 通过 |
+| V181-C 最终门禁与验收 | 自动门 DONE / 走查待产品负责人 | 全量 83 files / 457 tests passed（1 skipped）、typecheck、lint、production build、diff check 全绿；`docs/v1.8.1-acceptance.md`；产品负责人走查确认后创建 `checkpoint-V1.8.1-pass` |
