@@ -5,12 +5,14 @@ import {
   formatLocalDateOnly,
   formatLocalDateTime,
   getLessonNumber,
+  lessonFeedbackStatus,
   listValidCurrentLessons,
   localDateTimeToUtc,
   toDateTimeLocalValue,
   type CourseSummary,
 } from './course-view-model'
 import { createLessonPrepContext, type LessonPrepContext } from './lesson-prep-context'
+import LessonFeedbackModal from './lesson-feedback-modal'
 import Modal from './modal'
 
 type CourseTab = 'lessons' | 'students' | 'materials'
@@ -50,6 +52,7 @@ export default function CourseDetail({
   const [createLessonPeriodId, setCreateLessonPeriodId] = useState<string | null>(null)
   const [scheduleLessonId, setScheduleLessonId] = useState<string | null>(null)
   const [progressOpen, setProgressOpen] = useState(false)
+  const [feedbackLessonId, setFeedbackLessonId] = useState<string | null>(null)
   const [expandedPeriodIds, setExpandedPeriodIds] = useState<ReadonlySet<string>>(new Set())
 
   useEffect(() => {
@@ -155,6 +158,7 @@ export default function CourseDetail({
             else next.add(periodId)
             return next
           })}
+          onOpenFeedback={setFeedbackLessonId}
           onAction={onAction}
         />
       ) : tab === 'students' ? (
@@ -194,6 +198,19 @@ export default function CourseDetail({
           onAction={onAction}
         />
       )}
+      {feedbackLessonId !== null && (() => {
+        const lesson = summary.lessons.find((candidate) => candidate.id === feedbackLessonId)
+        if (lesson === undefined) return null
+        return (
+          <LessonFeedbackModal
+            overview={overview}
+            summary={summary}
+            lesson={lesson}
+            onClose={() => setFeedbackLessonId(null)}
+            onSaved={async (message) => { await onAction(async () => undefined, message) }}
+          />
+        )
+      })()}
       {progressOpen && (
         <ProgressModal
           overview={overview}
@@ -225,6 +242,7 @@ export function LessonsSection({
   viewedDraft,
   expandedPeriodIds,
   onTogglePeriod,
+  onOpenFeedback,
   onAction,
 }: {
   readonly overview: CoreOverview
@@ -243,6 +261,7 @@ export function LessonsSection({
   readonly viewedDraft: NoteRecord | null
   readonly expandedPeriodIds: ReadonlySet<string>
   readonly onTogglePeriod: (periodId: string) => void
+  readonly onOpenFeedback: (lessonId: string) => void
   readonly onAction: (action: () => Promise<void>, successMessage: string) => Promise<boolean>
 }): React.JSX.Element {
   const sessionByLesson = new Map(overview.lessonSessions.map((session) => [session.lessonId, session]))
@@ -273,9 +292,11 @@ export function LessonsSection({
                 </button>
                 <button className="link-button" type="button" disabled={busy || summary.ended} onClick={() => onCreateLesson(period.id)}>+ 新建课次</button>
               </header>
-              {expanded && <div className="lesson-row-list" id={`period-lessons-${period.id}`}>
+                  {expanded && <div className="lesson-row-list" id={`period-lessons-${period.id}`}>
                   {lessons.map((lesson, index) => {
                     const session = sessionByLesson.get(lesson.id)
+                    const feedback = lessonFeedbackStatus(overview, summary, lesson.id)
+                    const showFeedbackBadge = session?.taughtConfirmedAt != null && feedback.students.length > 0
                     return (
                       <button
                         className={`lesson-row${viewedLesson?.id === lesson.id ? ' is-viewed' : ''}`}
@@ -291,6 +312,9 @@ export function LessonsSection({
                           {session?.scheduledOn !== undefined && session.taughtConfirmedAt === null && <em>历史</em>}
                           {summary.currentLesson?.id === lesson.id && <em className="is-current">Current</em>}
                           {session?.attendanceRecordedAt !== null && session?.attendanceRecordedAt !== undefined && <em>已点名</em>}
+                          {showFeedbackBadge && (feedback.complete
+                            ? <em>已反馈</em>
+                            : <em className="is-missing">缺反馈</em>)}
                           {session?.scheduledOn !== null && session?.scheduledOn !== undefined
                             ? <small>{formatLocalDateOnly(session.scheduledOn)} · {session.scheduledAt === null ? '时间未记录' : formatLocalDateTime(session.scheduledAt)}</small>
                             : session?.scheduledAt !== null && session?.scheduledAt !== undefined && <small>{formatLocalDateTime(session.scheduledAt)}</small>}
@@ -346,10 +370,54 @@ export function LessonsSection({
               </details>
             )}
           </div>
+          {viewedFeedbackBlock({ overview, summary, lesson: viewedLesson, onOpenFeedback })}
         </aside>
       )}
     </div>
   )
+}
+
+/** D42：Viewed Lesson 反馈区——已上缺反馈黄条 + 补写入口；已上有反馈显示摘要行；未上不显示。 */
+function viewedFeedbackBlock({
+  overview,
+  summary,
+  lesson,
+  onOpenFeedback,
+}: {
+  readonly overview: CoreOverview
+  readonly summary: CourseSummary
+  readonly lesson: NodeRecord
+  readonly onOpenFeedback: (lessonId: string) => void
+}): React.JSX.Element | null {
+  const feedback = lessonFeedbackStatus(overview, summary, lesson.id)
+  if (!feedback.taught || feedback.students.length === 0) return null
+  if (!feedback.complete) {
+    return (
+      <div className="feedback-alert" role="status">
+        <span>本课缺反馈 · 确认已上时跳过了课后反馈</span>
+        <button className="secondary-button" type="button" onClick={() => onOpenFeedback(lesson.id)}>✍ 补写反馈</button>
+      </div>
+    )
+  }
+  const notes = feedback.students
+    .flatMap((entry) => (entry.latestNote === null ? [] : [entry.latestNote]))
+    .sort((left, right) => (right.occurredOn ?? right.updatedAt).localeCompare(left.occurredOn ?? left.updatedAt))
+  if (notes.length === 0) return null
+  const latest = notes[0]!
+  const owner = feedback.students.find((entry) => entry.latestNote?.id === latest.id)?.student.name ?? '学生'
+  return (
+    <p className="feedback-summary-line">
+      本课反馈（{notes.length} 条）：「{feedbackFirstLine(latest.bodyMd)}」 — 已挂到 {owner} 名下
+      {!feedback.students.every((entry) => entry.student.name === owner) && (
+        <button className="link-button" type="button" onClick={() => onOpenFeedback(lesson.id)}>补写其他学生</button>
+      )}
+    </p>
+  )
+}
+
+function feedbackFirstLine(body: string): string {
+  const firstLine = body.split(/\r?\n/, 1)[0] ?? ''
+  return Array.from(firstLine.trim()).slice(0, 40).join('')
 }
 
 function CourseStudentsSection({ overview, summary, busy, onOpenStudent, onAction }: {

@@ -173,6 +173,53 @@ export function getLessonNumber(
   )).findIndex((lesson) => lesson.id === lessonId) + 1
 }
 
+/** D42 反馈状态：每个学生是否已有该课次的未删除 manual 反馈（noteKind manual/undefined，排除草稿类）。 */
+export interface LessonFeedbackStudentStatus {
+  readonly student: StudentRecord
+  readonly hasFeedback: boolean
+  /** 该学生该课次最新一条未删除 manual 反馈（hasFeedback=false 时为 null）。 */
+  readonly latestNote: NoteRecord | null
+}
+
+export interface LessonFeedbackStatus {
+  readonly taught: boolean
+  /** 全部在读学生均有反馈（无在读学生视为 incomplete，由调用方按空态处理）。 */
+  readonly complete: boolean
+  readonly students: readonly LessonFeedbackStudentStatus[]
+}
+
+export function lessonFeedbackStatus(
+  overview: CoreOverview,
+  summary: CourseSummary,
+  lessonId: string,
+): LessonFeedbackStatus {
+  const session = overview.lessonSessions.find((candidate) => candidate.lessonId === lessonId)
+  const byStudent = new Map<string, NoteRecord[]>()
+  for (const note of overview.notes) {
+    if (
+      note.deletedAt !== null ||
+      note.lessonId !== lessonId ||
+      note.studentId === null ||
+      (note.noteKind !== undefined && note.noteKind !== 'manual')
+    ) continue
+    const existing = byStudent.get(note.studentId)
+    if (existing === undefined) byStudent.set(note.studentId, [note])
+    else existing.push(note)
+  }
+  const students = summary.activeStudents.map((student) => {
+    const notes = (byStudent.get(student.id) ?? [])
+      .sort((left, right) => (right.occurredOn ?? right.updatedAt).localeCompare(left.occurredOn ?? left.updatedAt) ||
+        right.updatedAt.localeCompare(left.updatedAt))
+    const latestNote = notes[0] ?? null
+    return { student, hasFeedback: latestNote !== null, latestNote }
+  })
+  return {
+    taught: session?.taughtConfirmedAt != null,
+    complete: students.length > 0 && students.every((entry) => entry.hasFeedback),
+    students,
+  }
+}
+
 export function formatLocalDateTime(utcIso: string | null): string {
   if (utcIso === null) return '未排时间'
   return new Intl.DateTimeFormat('zh-CN', {

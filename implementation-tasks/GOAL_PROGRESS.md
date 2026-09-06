@@ -1437,3 +1437,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Git 任务提交：`v1.8(V18-A): feedback contracts, ipc and main service`。
 - 已知限制：契约无 requestId 字段（方案 §4.2 冻结），取消按 AiGateway AbortController 模式预留（requestId 由 lessonId+studentId 派生）；scheduled_on 列现状无写入方，反馈日期从 scheduled_at 本地日期派生（与 D40 语义一致）。
 - 下一任务可依赖的接口：Renderer 可用 `window.teacherWorkbench.feedback.readTranscript() / .generate({lessonId, studentId, transcriptText, skillId?})`；`draftNoteMetadata(note)`（draft-scope）收窄 DraftNoteMetadata；FeedbackNoteMetadata 由 Renderer 保存路径构造（provider 取 ai.getSettings()）。
+
+## 2026-09-06 11:02 · V18-B · DONE
+
+- 关键改动：`course-view-model.ts` 新增 `lessonFeedbackStatus(overview, summary, lessonId)`（taught / complete / 每生 hasFeedback + latestNote；仅 noteKind manual/undefined 且未删除的行计为反馈，按 occurredOn ?? updatedAt 降序取最新）；新建 `lesson-feedback-section.tsx` 共享反馈区（受控组件：宿主持 bodies；反馈区头部徽标「本课常规项」+ hint、feedback-meta 学生 chip + 自动反馈日期、一对一单编辑器 / 班课折叠行、textarea maxLength=FEEDBACK_BODY_MAX_CHARS）；`confirm-lesson-taught-modal.tsx` 重做（反馈区 + 确认后的 Current Lesson + 主按钮软强制 gating + 跳过原因单选两项 + 红色「仍然跳过」二次确认 + 编辑态文案切换「更新反馈并确认已上」/「保持原反馈，只确认已上」+ 保存编排先逐学生 upsert note 再 confirmLessonTaught + occurredOn 自动派生 + 无在读学生退化为纯确认且无跳过按钮）；新建 `lesson-feedback-modal.tsx` 补写弹窗（复用反馈区、无 Current Lesson 下拉/确认编排/跳过按钮）；`course-detail.tsx` 课次行徽标（taught && complete → 绿「已反馈」；taught && !complete → 黄「缺反馈」is-missing）与 Viewed Lesson 反馈区（缺反馈黄条 +「✍ 补写反馈」入口 / 有反馈摘要行「首行 ≤40 字 — 已挂到 ×××名下」/ 未上不显示）；`styles.css` 追加反馈区/徽标/黄条/跳过原因样式（取自静态稿 tokens）。
+- 修改文件：`src/renderer/course-view-model.ts`、`src/renderer/lesson-feedback-section.tsx`（新）、`src/renderer/lesson-feedback-modal.tsx`（新）、`src/renderer/confirm-lesson-taught-modal.tsx`、`src/renderer/course-detail.tsx`、`src/renderer/styles.css`、`tests/v1.8-feedback-ui.test.ts`（新）、`implementation-tasks/STATUS.md`、本文件。
+- 验证命令与结果：`npm test` ✅ 83 files / 432 tests passed（1 skipped）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅。v1.8-feedback-ui 18 例：主按钮 gating、跳过二次确认、upsert 分支、occurredOn 自动值、无学生退化、徽标派生（含 deleted/draft/manual_edit 不计反馈、班课全员判定）、补写弹窗无 Current Lesson、共享组件 maxLength。
+- 人工/真实环境验证：一对一/班课窗口全流走查并入 V18-D 隔离 Windows 冒烟（本任务无新 Main 行为，渲染链路由钉测与 V18-D 实机覆盖）。
+- Git 任务提交：`v1.8(V18-B): confirm-taught embedded feedback and visibility`。
+- 已知限制：班课行折叠已在共享组件预留（待写/已写状态），到课/请假/缺席徽标与 missing-inline 黄条、录音/转写转反馈接线为 V18-C 范围；「反馈 Skill」select 与 🎙 工具行随 V18-C 落地。
+- 下一任务可依赖的接口：`lessonFeedbackStatus` / `LessonFeedbackSection`（props: overview/summary/lesson/bodies/onBodiesChange）/ `LessonFeedbackModal`；occurredOn 派生逻辑与 Main 侧 FeedbackService.resolveFeedbackDate 一致（scheduled_at 本地日期 ?? 当天）。
