@@ -84,3 +84,4 @@
 可提交：源代码、测试、锁文件、构建配置、脱敏测试夹具、规格、ADR、状态/进度和审核报告。
 
 不得提交：真实学生/教学资料、实际工作区、SQLite 运行库、搜索索引、备份、API Key、`.env`、证书、日志、临时文件、依赖目录、构建产物或安装包。
+- V1.8.1（课件区讲义/材料分组方案 A + 设为讲义底稿，D46/D47）方案提交使用 `plan(V1.8.1): <摘要>`，里程碑提交使用 `v1.8.1(V181-XX): <摘要>`；任务链位于 `implementation-tasks/v1.8.1-tasks/`；V181-C 为唯一全量验收点（全量测试、typecheck、lint、production build、diff check，不运行 portable/installer），产品负责人走查确认后创建 `checkpoint-V1.8.1-pass`（与 V1.8 pass 互不替代、分别创建）；设计基准 `docs/v1.8.1-courseware-lecture-material-split-plan.md`，决策 `implementation-tasks/V1_8_DECISIONS.md` D46/D47；零 migration、零新依赖，新 IPC 仅 `files:set-lesson-role` 一条；与 V1.7/V1.7.2/V1.7.3/V1.8 的待确认标签互不阻塞。

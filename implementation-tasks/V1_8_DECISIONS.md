@@ -48,3 +48,24 @@
 - 反馈定时提醒/通知/待办系统（缺反馈徽标即提醒）；
 - 反馈导出/分享给家长、结构化掌握度字段、评分；
 - 学生页改版、确认已上/点名/Current Lesson 状态机语义变更、V1.6 冻结的流式/预算语义变更。
+
+---
+
+# V1.8.1 决策记录（课件区讲义/材料分组 + 设为讲义底稿）
+
+产品负责人 2026-09-06 会话确认。方案：`docs/v1.8.1-courseware-lecture-material-split-plan.md`；交互示意 `tmp/mockups/lesson-courseware-split.html`（本地不入库）。
+
+## D46 · 方案 A 一棵树两段分组 + 提讲义动作
+
+- 背景（产品负责人 2026-09-06 原话）："外部资料如果导入到这节课里了以后，为啥会出现在课件的位置。这个逻辑对吗？"确认后补充："那就是说材料和讲义，应该有个区分的吧。"查看示意图后拍板："左侧这个可以！"= 方案 A（一棵树两段分组）；方案 B（两卡并列）未采纳。
+- 分组判定零迁移零回填：` · 第 N 版.md`（最新版）与 `（编辑版）.md` → 本课讲义；其余一切挂课文件 → 本课材料；旧版本仍走既有"历史版本"折叠块。
+- **设为讲义底稿**：材料区的外部导入 md 可一键纳管——生成 `原名 · 第 1 版.md` 副本（复用 writeVersion 版本号规则与临时文件+原子重命名路径），原件不动、材料区保留。新 IPC 仅 `files:set-lesson-role` 一条（FileIdRequest 同形）。
+- 复用既有能力：`lessonFileSourceLabel`（外部/素材库标签首次渲染进课件区树）、`classifyLessonCoursewareFiles`（currentVersion/history 派生不动）、`material-reader-tree-group` 样式（已存在，本版本启用）。
+- V1.7.2 D33/D34"课件分区不动"约束在本版本由产品负责人显式放开到分组展示层：`lesson-files-section`/`lesson-material-reader` 仅改**目录树的分组渲染**与新增入口按钮；正文阅读、题图跟随、MinerU、编辑保存、AI 修改/发布逻辑全部不动。
+
+## D47 · V1.8.1 非目标
+
+- 不做方案 B（讲义/材料两卡并列）与讲义区独立阅读窗格；不做拖拽排序/手动调序；
+- 不新增数据库列（不做 lesson_files.role），判定纯靠文件名约定；
+- 不改 AI 修改（D27）、编辑保存（D29）、发布版本链、draft-panel 参考行、V1.7.2 备课工作台；
+- 零 migration、零新依赖；不运行 portable/installer。
