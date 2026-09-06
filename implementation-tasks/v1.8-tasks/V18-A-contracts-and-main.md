@@ -1,6 +1,6 @@
 # V18-A · 反馈合同、IPC 与 Main 服务
 
-**状态：** `TODO`
+**状态：** `DONE`
 
 方案基准：`docs/v1.8-lesson-feedback-plan.md` §2（D39/D40/D43/D44 数据与合同部分）、§3、§4。前置：无（V1.8 首任务）。
 

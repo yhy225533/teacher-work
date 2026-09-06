@@ -1457,3 +1457,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Git 任务提交：`v1.8(V18-C): class feedback list and transcript to feedback`。
 - 已知限制：`core:create-note` 合同按 D40 落地最小演进（新增可选 aiMetadata 字段，守卫 isFeedbackNoteMetadata 拒绝其他形状；无 aiMetadata 时行为与既有零差异，既有 create-note 钉测全绿）；纯录音路径仅置灰渲染（D45 非目标）；转写材料用完即弃，不落任何库表（V18-A 测试断言）。
 - 下一任务可依赖的接口：确认/补写弹窗保存路径完成（note→confirm 顺序 + aiMetadata）；V18-D 只剩门禁、冒烟、验收文档。
+
+## 2026-09-06 11:40 · V18-D · 自动门 DONE（真实自测待产品负责人）
+
+- 关键改动：V1.8 唯一全量验收点执行完毕。全量门禁 + 隔离 Windows 冒烟 + `docs/v1.8-acceptance.md` 验收记录。
+- 修改文件：`docs/v1.8-acceptance.md`（新）、`implementation-tasks/STATUS.md`、`implementation-tasks/v1.8-tasks/V18-A..V18-D`（状态置 DONE）、本文件。
+- 验证命令与结果：`npm test` ✅ 83 files / 444 tests passed（1 skipped）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（三端产物）；`git diff --check` ✅；未运行 portable/installer（符合约束）。
+- 隔离 Windows 冒烟（2026-09-06，production `out/main/index.js` + 独立 `TEACHER_WORKBENCH_L01_SMOKE_APP_DATA` + `--user-data-dir` + 本机 `127.0.0.1:18768` fake OpenAI-compatible 服务，DevTools 协议驱动，默认安全配置）：**16/16 通过**——一对一 保存反馈（aiMetadata 落库）→ 确认已上 → occurredOn=排课日期；跳过路径 → 缺反馈 → 补写 → 绿；upsert 不重复建行；班课 3 学生 1 请假 每人一条（请假也保存）；徽标/黄条派生（三课 全绿）；generate/保存链路 files=0（转写材料用完即弃）；学生时间线 occurredOn 降序；fake provider 收到默认三段提示词 + 学生/课次上下文；stderr 无致命错误；冒烟后 Electron 进程全部终止、两个临时目录删除（tasklist/TEMP 双复核）。
+- 人工/真实环境验证：DeepSeek 真实自测（预估 ≤ ¥1，真实转写 .txt → generate → 草稿质量/Skill 遵循度 → 手改 → 保存 → 学生页验证）与最终体验确认**待产品负责人执行**（清单见 `docs/v1.8-acceptance.md` §6）。
+- Git 任务提交：`v1.8(V18-D): full gates, smoke and acceptance record`。**不创建 `checkpoint-V1.8-pass`**——待产品负责人最终确认后在最终提交创建（与既有 pass 标签互不替代）。
+- 已知限制：无 BLOCKED 项。`AGENTS.md` 活动增量段仍写 V1.7（由产品负责人自行维护，方案 §9 已列明更新要点）。
