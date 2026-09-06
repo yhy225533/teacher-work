@@ -225,6 +225,64 @@ export class ManagedFileService {
   }
 
   /**
+   * V1.8.1/D46：设为讲义底稿——把课次下未版本化的 md 复制为 `基名 · 第 N 版.md` 纳入讲义版本链；
+   * 原件不动（材料区保留），新副本经 createTextObjectAndRegister（临时文件 + 原子重命名）入课次。
+   */
+  setLessonFileRole(fileId: string): { file: ManagedFileRecord; version: number } {
+    const source = this.requireActiveFile(fileId)
+    if (source.mimeType !== 'text/markdown') {
+      throw new ManagedFileError('FILE_SOURCE_INVALID', '只能把 Markdown 文件设为讲义。')
+    }
+    if (isLectureCoursewareName(source.originalName)) {
+      throw new ManagedFileError('FILE_SOURCE_INVALID', '该文件已是讲义，无需重复设置。')
+    }
+    const bodyMd = readFileSync(this.requireReadableObject(source.id)).toString('utf8')
+    if (bodyMd.trim() === '') {
+      throw new ManagedFileError('FILE_SOURCE_INVALID', '文件内容为空，不能设为讲义。')
+    }
+    if (bodyMd.length > MAX_WRITE_BODY_CHARS) {
+      throw new ManagedFileError('FILE_CONTENT_TOO_LARGE', '文件内容过大，暂不能设为讲义。')
+    }
+    const linkedLessonIds = this.database
+      .prepare('SELECT lesson_id FROM lesson_files WHERE file_id = ? ORDER BY created_at, lesson_id')
+      .all(source.id) as Array<{ readonly lesson_id: string }>
+    const lessonId = linkedLessonIds[0]?.lesson_id
+    if (lessonId === undefined) {
+      throw new ManagedFileError('FILE_SOURCE_INVALID', '该文件未挂接课次，请先复制到课次再设为讲义。')
+    }
+    this.requireActiveLesson(lessonId)
+    const base = stripMarkdownExtension(source.originalName)
+    const version = this.nextLectureBaseVersionNumber(lessonId, base)
+    const file = this.createTextObjectAndRegister(
+      bodyMd,
+      `${base} · 第 ${version} 版.md`,
+      { targetType: 'lesson', targetId: lessonId },
+    )
+    return { file, version }
+  }
+
+  /** V1.8.1/D46：同基名讲义版本号——`基名 · 第 N 版(· 学生版).md` 的最大 N + 1（新底稿从 1 起）。 */
+  private nextLectureBaseVersionNumber(lessonId: string, base: string): number {
+    const rows = this.database
+      .prepare(
+        `SELECT f.original_name
+           FROM lesson_files lf
+           JOIN files f ON f.id = lf.file_id
+          WHERE lf.lesson_id = ? AND f.deleted_at IS NULL`,
+      )
+      .all(lessonId) as Array<{ readonly original_name: string }>
+    const prefix = `${base} · 第 `
+    let max = 0
+    for (const row of rows) {
+      const name = row.original_name
+      if (!name.startsWith(prefix) || !name.endsWith('.md')) continue
+      const match = /^(\d+) 版/u.exec(name.slice(prefix.length))
+      if (match !== null) max = Math.max(max, Number(match[1]))
+    }
+    return max + 1
+  }
+
+  /**
    * V17-C/D28：人工编辑保存后在课次留一条 note_kind='manual_edit' 的来源标注
    * （不参与 AI 修改流 note 语义，仅作“人工编辑”标识；正文存文件，note 只做标记）。
    */
@@ -858,6 +916,11 @@ function resolvePublishBaseName(aiMetadataJson: string | null): string | null {
   } catch {
     return null
   }
+}
+
+/** V1.8.1/D46：讲义命名（版本链/学生版/编辑版副本）——与 renderer 侧 isLessonLectureFile 同一约定。 */
+function isLectureCoursewareName(name: string): boolean {
+  return /(?: · 第 \d+ 版(?: · 学生版)?|（编辑版）)\.md$/u.test(name)
 }
 
 function stripMarkdownExtension(name: string): string {

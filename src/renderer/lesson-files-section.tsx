@@ -174,6 +174,23 @@ export default function LessonFilesSection({
     onStartPrep(prepContext, { mode: 'lesson' })
   }
 
+  /** V1.8.1/D46：设为讲义底稿——新讲义副本入版本链并选中，原件保留在材料区。 */
+  async function promoteToLecture(fileId: string): Promise<void> {
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const promoted = await window.teacherWorkbench.files.setLessonFileRole({ fileId })
+      await reload()
+      setSelectedFileId(promoted.file.id)
+      setNotice(`已设为讲义底稿《${promoted.file.originalName}》（第 ${promoted.version} 版），原件保留在材料区。`)
+    } catch (promoteError) {
+      setError(toErrorMessage(promoteError, '设为讲义底稿失败，请稍后重试。'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   /** V17-C/D28：本课“人工编辑”来源标注（note_kind='manual_edit'，最多显示最近 5 条）。 */
   const lessonId = lesson?.id ?? null
   const manualEditNotes = useMemo(() => {
@@ -252,11 +269,14 @@ export default function LessonFilesSection({
           onEnhanceFile={readOnly ? undefined : (fileId) => { void enhanceWithMineru(fileId) }}
           editable={!readOnly}
           onFileSaved={(fileId) => { void handleManualEditSaved(fileId) }}
+          onPromoteFile={readOnly ? undefined : (fileId) => { void promoteToLecture(fileId) }}
           mineruTokenConfigured={mineruTokenConfigured}
           mineruBusy={mineruBusy}
           mineruStatus={mineruStatus}
           hideTree={immersive}
           treeTitle={lesson.title}
+          grouped
+          currentLectureId={currentVersionFile?.id ?? null}
         />
       )}
       {historyFiles.length > 0 && (

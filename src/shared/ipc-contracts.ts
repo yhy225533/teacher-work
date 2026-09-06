@@ -48,6 +48,7 @@ export const FILE_IPC_CHANNELS = {
   permanentlyDeleteFile: 'files:permanent-delete',
   copyToLesson: 'files:copy-to-lesson',
   copyToStudent: 'files:copy-to-student',
+  setLessonRole: 'files:set-lesson-role',
 } as const
 
 export const SEARCH_IPC_CHANNELS = {

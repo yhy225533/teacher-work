@@ -112,6 +112,30 @@ export function isAppGeneratedCoursewareFile(file: ManagedFileRecord): boolean {
   return file.mimeType === 'text/markdown' && lessonVersionPattern.test(file.originalName)
 }
 
+/** V1.8.1/D46：讲义命名——版本链（` · 第 N 版.md`）与人工编辑副本（`（编辑版）.md`）计入讲义组；其余挂课文件归材料组。 */
+const lectureCoursewareNamePattern = /(?: · 第 \d+ 版(?: · 学生版)?|（编辑版）)\.md$/u
+
+/** V1.8.1/D46：单文件讲义判定（提讲义入口用它隐藏已是讲义的文件）。 */
+export function isLessonLectureFile(file: ManagedFileRecord): boolean {
+  return file.mimeType === 'text/markdown' && lectureCoursewareNamePattern.test(file.originalName)
+}
+
+export interface LessonFilesByRole {
+  readonly lecture: readonly ManagedFileRecord[]
+  readonly materials: readonly ManagedFileRecord[]
+}
+
+/** V1.8.1/D46 方案 A：课件区目录树分组（纯展示，不改变文件获取与既有 classify 管线）。 */
+export function splitLessonFilesByRole(files: readonly ManagedFileRecord[]): LessonFilesByRole {
+  const lecture: ManagedFileRecord[] = []
+  const materials: ManagedFileRecord[] = []
+  for (const file of files) {
+    if (isLessonLectureFile(file)) lecture.push(file)
+    else materials.push(file)
+  }
+  return { lecture, materials }
+}
+
 /** 修改候选排序（V17-B）：版本链最新版在前，其余 md 依原序跟后。 */
 export function orderAiEditableFiles(files: readonly ManagedFileRecord[]): ManagedFileRecord[] {
   const versioned = files

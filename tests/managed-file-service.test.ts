@@ -312,4 +312,78 @@ describe('L02 managed file service', () => {
     expect(failingService.getOverview()).toEqual({ files: [], links: [] })
     expect(readdirSync(fixture.workspace.paths.objectsDirectory)).toEqual([])
   })
-})
+
+describe('V1.8.1/D46 setLessonFileRole 设为讲义底稿', () => {
+  function createLessonFixture(): { fixture: Fixture; lessonId: string } {
+    const fixture = createFixture()
+    const course = fixture.core.nodes.createCourse('课程', 'class')
+    const period = fixture.core.nodes.createPeriod(course.id, '阶段')
+    const lesson = fixture.core.nodes.createLesson(period.id, '课次 A')
+    return { fixture, lessonId: lesson.id }
+  }
+
+  it('copies an imported md to a versioned lecture copy and keeps the original untouched', () => {
+    const { fixture, lessonId } = createLessonFixture()
+    const sourcePath = join(fixture.baseDirectory, '讲义底稿.md')
+    writeFileSync(sourcePath, '# 题目\n\n正文', 'utf8')
+    const imported = fixture.files.importToLesson(sourcePath, lessonId)
+
+    const promoted = fixture.files.setLessonFileRole(imported.id)
+
+    expect(promoted.version).toBe(1)
+    expect(promoted.file.originalName).toBe('讲义底稿 · 第 1 版.md')
+    expect(promoted.file.id).not.toBe(imported.id)
+    // 原件不动：内容与名称保留，仍在课次链接中
+    expect(fixture.files.readText(imported.id).content).toBe('# 题目\n\n正文')
+    const lessonLinked = fixture.files.getOverview().links.filter((link) => link.targetId === lessonId)
+    expect(lessonLinked.map((link) => link.fileId)).toContain(imported.id)
+    // 新副本内容与原件一致
+    expect(fixture.files.readText(promoted.file.id).content).toBe('# 题目\n\n正文')
+  })
+
+  it('numbers a second promotion of the same base above existing versions', () => {
+    const { fixture, lessonId } = createLessonFixture()
+    const sourcePath = join(fixture.baseDirectory, '讲义底稿.md')
+    writeFileSync(sourcePath, '第一份', 'utf8')
+    const imported = fixture.files.importToLesson(sourcePath, lessonId)
+    fixture.files.setLessonFileRole(imported.id)
+
+    const sourcePath2 = join(fixture.baseDirectory, '讲义底稿 第2份.md')
+    writeFileSync(sourcePath2, '不同底稿，不占版本', 'utf8')
+    const otherBase = fixture.files.importToLesson(sourcePath2, lessonId)
+    const promotedOther = fixture.files.setLessonFileRole(otherBase.id)
+    expect(promotedOther.file.originalName).toBe('讲义底稿 第2份 · 第 1 版.md')
+
+    // 同基名再提：先模拟一份外部重导的同名 md
+    const sourcePath3 = join(fixture.baseDirectory, 're-import.md')
+    writeFileSync(sourcePath3, '重新导入的同名底稿', 'utf8')
+    const reImported = fixture.files.importToLesson(sourcePath3, lessonId)
+    const second = fixture.files.setLessonFileRole(reImported.id)
+    // 基名是 re-import，独立从第 1 版起
+    expect(second.file.originalName).toBe('re-import · 第 1 版.md')
+  })
+
+  it('rejects non-markdown, already-versioned, edited-copy and unlinked targets', () => {
+    const { fixture, lessonId } = createLessonFixture()
+    const txtPath = join(fixture.baseDirectory, 'notes.txt')
+    writeFileSync(txtPath, 'plain text', 'utf8')
+    const txt = fixture.files.importToLesson(txtPath, lessonId)
+    expect(() => fixture.files.setLessonFileRole(txt.id)).toThrow(ManagedFileError)
+
+    const mdPath = join(fixture.baseDirectory, '复习.md')
+    writeFileSync(mdPath, 'md 内容', 'utf8')
+    const md = fixture.files.importToLesson(mdPath, lessonId)
+    const promoted = fixture.files.setLessonFileRole(md.id)
+    expect(() => fixture.files.setLessonFileRole(promoted.file.id)).toThrow(ManagedFileError)
+
+    // 编辑版副本（writeVersion 产物）同样不可再提
+    const edited = fixture.files.writeVersion(md.id, '人工编辑后的正文')
+    expect(() => fixture.files.setLessonFileRole(edited.file.id)).toThrow(ManagedFileError)
+
+    // 未挂课次的 md 不可提
+    const unlinkedPath = join(fixture.baseDirectory, 'unlinked.md')
+    writeFileSync(unlinkedPath, '未挂课次', 'utf8')
+    const unlinked = fixture.files.importFile(unlinkedPath)
+    expect(() => fixture.files.setLessonFileRole(unlinked.id)).toThrow(ManagedFileError)
+  })
+})})

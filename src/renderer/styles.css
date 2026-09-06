@@ -4100,3 +4100,72 @@ button.quick-status { cursor: pointer; }
 .draft-origin.is-running { color: var(--color-primary-active); }
 
 .missing-inline { margin-top: 9px; border: 1px solid #fcd34d; background: #fef3c7; border-radius: 9px; padding: 8px 11px; color: #92400e; font-size: 12px; line-height: 1.6; }
+
+/* ===== V1.8.1/D46 课件区讲义/材料分组（方案 A） ===== */
+.material-reader-tree-list > .material-role-group {
+  list-style: none;
+}
+
+.material-role-group + .material-role-group {
+  margin-top: 10px;
+}
+
+.material-role-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 3px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.material-role-group-title > span {
+  color: var(--color-primary-hover);
+}
+
+.material-role-group-title small {
+  margin-left: auto;
+  color: var(--color-text-faint);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.material-role-group > ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.material-role-group-empty {
+  margin: 4px 0 6px;
+  padding: 4px 8px;
+  color: var(--color-text-faint);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.material-role-badge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.material-role-badge.is-current {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  color: #059669;
+}
+
+.material-role-badge.is-source {
+  background: #fff;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+}

@@ -180,6 +180,18 @@ export async function dispatchFileIpc(
           ),
           isManagedFileRecord,
         )
+      case FILE_IPC_CHANNELS.setLessonRole: {
+        // V1.8.1/D46 设为讲义底稿：payload 复用 FileIdRequest，产物复用 WriteFileVersionResult 守卫。
+        assertRequest(payload, isFileIdRequest)
+        const promoted = fileService.setLessonFileRole((payload as FileIdRequest).fileId)
+        dependencies.enqueueIndex?.(promoted.file.id)
+        dependencies.notifyContentChanged({
+          fileId: promoted.file.id,
+          contentChanged: true,
+          file: promoted.file,
+        })
+        return ensureResponse(promoted, isWriteFileVersionResult)
+      }
     }
     throw new Error('Unhandled file IPC channel')
   } catch (error) {

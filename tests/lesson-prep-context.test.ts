@@ -11,6 +11,7 @@ import {
   lessonFileSourceLabel,
   listLessonPrepFiles,
   reconcileSelectedLessonFileIds,
+  splitLessonFilesByRole,
 } from '../src/renderer/lesson-prep-context'
 
 function node(
@@ -207,5 +208,37 @@ describe('V1.7.2 lesson file source label', () => {
     expect(lessonFileSourceLabel(file('pub-1', '有理数 · 第 1 版.md', 'text/markdown'))).toBe(null)
     expect(lessonFileSourceLabel(file('pub-2', '有理数 · 第 2 版 · 学生版.md', 'text/markdown'))).toBe(null)
     expect(lessonFileSourceLabel(file('edit-1', '二次根式加减法（编辑版）.md', 'text/markdown'))).toBe(null)
+  })
+})
+
+describe('V1.8.1/D46 splitLessonFilesByRole 课件区讲义/材料分组', () => {
+  it('sends version-chain, student-edition and manual-edit copies to lecture; everything else to materials', () => {
+    const versioned = file('v1', '暑假综合复习 · 第 1 版.md', 'text/markdown')
+    const studentEdition = file('v2', '暑假综合复习 · 第 2 版 · 学生版.md', 'text/markdown')
+    const edited = file('e1', '二次根式（编辑版）.md', 'text/markdown')
+    const externalMd = file('ext-1', '题目.md', 'text/markdown')
+    const answerMd = file('ext-2', '学生答案核对表.md', 'text/markdown')
+    const docx = file('ext-3', '第1章 有理数专练.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    const image = file('img-1', 'q015-20260812.png', 'image/png')
+
+    const byRole = splitLessonFilesByRole([versioned, externalMd, studentEdition, docx, edited, answerMd, image])
+
+    expect(byRole.lecture.map((item) => item.id)).toEqual([versioned.id, studentEdition.id, edited.id])
+    expect(byRole.materials.map((item) => item.id)).toEqual([externalMd.id, docx.id, answerMd.id, image.id])
+  })
+
+  it('keeps original relative order inside each group and tolerates an empty lecture group', () => {
+    const externalMd = file('ext-1', '题目.md', 'text/markdown')
+    const image = file('img-1', 'figure.png', 'image/png')
+    const byRole = splitLessonFilesByRole([image, externalMd])
+    expect(byRole.lecture).toEqual([])
+    expect(byRole.materials.map((item) => item.id)).toEqual([image.id, externalMd.id])
+  })
+
+  it('never classifies a same-name non-markdown file as lecture (mime must be text/markdown)', () => {
+    const fakeVersionedDocx = file('x1', '复习 · 第 1 版.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    const byRole = splitLessonFilesByRole([fakeVersionedDocx])
+    expect(byRole.lecture).toEqual([])
+    expect(byRole.materials.map((item) => item.id)).toEqual([fakeVersionedDocx.id])
   })
 })

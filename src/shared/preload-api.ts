@@ -348,6 +348,7 @@ export interface TeacherWorkbenchApi {
     permanentlyDeleteFile: (request: FileIdRequest) => Promise<FileActionResult>
     copyToLesson: (request: CopyFileToLessonRequest) => Promise<ManagedFileRecord>
     copyToStudent: (request: CopyFileToStudentRequest) => Promise<ManagedFileRecord>
+    setLessonFileRole: (request: FileIdRequest) => Promise<WriteFileVersionResult>
     onContentChanged: (listener: (event: ManagedFileContentChanged) => void) => () => void
   }
   materialLibrary: {

@@ -193,6 +193,7 @@ const api = Object.freeze({
     permanentlyDeleteFile: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.permanentlyDeleteFile, request, isFileActionResult),
     copyToLesson: (request: CopyFileToLessonRequest) => invoke(FILE_IPC_CHANNELS.copyToLesson, request, isManagedFileRecord),
     copyToStudent: (request: CopyFileToStudentRequest) => invoke(FILE_IPC_CHANNELS.copyToStudent, request, isManagedFileRecord),
+    setLessonFileRole: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.setLessonRole, request, isWriteFileVersionResult),
     onContentChanged: (listener: (event: ManagedFileContentChanged) => void): (() => void) => {
       const handler = (_event: unknown, payload: unknown): void => {
         if (isManagedFileContentChanged(payload)) {

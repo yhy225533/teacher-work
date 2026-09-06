@@ -6,7 +6,10 @@ import MdEditor from './md-editor'
 import type { ManagedFileContent, ManagedFileRecord } from '../shared/file-contracts'
 import {
   buildLessonMaterialTree,
+  isLessonLectureFile,
   isSelectableLessonPrepFile,
+  lessonFileSourceLabel,
+  splitLessonFilesByRole,
   type LessonMaterialTreeNode,
 } from './lesson-prep-context'
 import { normalizeMarkdownImageReferences, normalizeRichText } from './rich-text'
@@ -23,11 +26,14 @@ export default function LessonMaterialReader({
   onEnhanceFile,
   editable = false,
   onFileSaved,
+  onPromoteFile,
   mineruTokenConfigured = false,
   mineruBusy = false,
   mineruStatus,
   hideTree = false,
   treeTitle = '本课资料',
+  grouped = false,
+  currentLectureId = null,
 }: {
   readonly files: readonly ManagedFileRecord[]
   readonly selectedFileId: string
@@ -39,11 +45,17 @@ export default function LessonMaterialReader({
   /** D28（V17-C）：md 编辑入口（只读课次不传 = 不显示）。 */
   readonly editable?: boolean
   readonly onFileSaved?: (fileId: string) => void
+  /** V1.8.1/D46：设为讲义底稿入口（不传 = 不显示）。 */
+  readonly onPromoteFile?: (fileId: string) => void
   readonly mineruTokenConfigured?: boolean
   readonly mineruBusy?: boolean
   readonly mineruStatus?: { readonly state: 'queued' | 'running' | 'done' | 'failed'; readonly message?: string } | null
   readonly hideTree?: boolean
   readonly treeTitle?: string
+  /** V1.8.1/D46：课件区目录树讲义/材料分组（默认不分，既有调用零改动）。 */
+  readonly grouped?: boolean
+  /** V1.8.1/D46：当前讲义文件 id（用于"当前"徽标；由 lesson-files-section 按版本链最新版派生）。 */
+  readonly currentLectureId?: string | null
 }): React.JSX.Element {
   const selectedFile = files.find((file) => file.id === selectedFileId) ?? null
   const preferredFile = useMemo(() => choosePreferredFile(files), [files])
@@ -91,6 +103,11 @@ export default function LessonMaterialReader({
   }, [selectedFileId])
 
   const canEditSelectedFile = editable && selectedFile !== null && selectedFile.mimeType === 'text/markdown'
+  /** V1.8.1/D46：可提为讲义底稿 = 材料区的 md（非讲义命名）且本区域可编辑。 */
+  const canPromoteSelectedFile = onPromoteFile !== undefined
+    && selectedFile !== null
+    && selectedFile.mimeType === 'text/markdown'
+    && !isLessonLectureFile(selectedFile)
 
   return (
     <div className={`material-reader${hideTree ? ' is-single' : ''}`}>
@@ -101,6 +118,8 @@ export default function LessonMaterialReader({
             selectedFileId={selectedFileId}
             onSelectFile={onSelectFile}
             treeTitle={treeTitle}
+            grouped={grouped}
+            currentLectureId={currentLectureId}
           />
         </aside>
       )}
@@ -121,6 +140,16 @@ export default function LessonMaterialReader({
                   onClick={() => { setEditing((current) => !current); setEditSavedNotice('') }}
                 >
                   {editing ? '✓ 预览' : '✎ 编辑'}
+                </button>
+              )}
+              {canPromoteSelectedFile && (
+                <button
+                  className="link-button"
+                  type="button"
+                  title="复制为“基名 · 第 N 版.md”进入本课讲义版本链，原件保留在材料区"
+                  onClick={() => onPromoteFile?.(selectedFile.id)}
+                >
+                  ↥ 设为讲义底稿
                 </button>
               )}
               {onOpenFile !== undefined && <button className="link-button" type="button" onClick={() => onOpenFile(selectedFile.id)}>系统打开</button>}
@@ -193,6 +222,8 @@ export function LessonMaterialTree({
   onToggleFile,
   treeTitle = '本课资料',
   showHeading = true,
+  grouped = false,
+  currentLectureId = null,
 }: {
   readonly files: readonly ManagedFileRecord[]
   readonly selectedFileId: string
@@ -201,6 +232,8 @@ export function LessonMaterialTree({
   readonly onToggleFile?: (fileId: string) => void
   readonly treeTitle?: string
   readonly showHeading?: boolean
+  readonly grouped?: boolean
+  readonly currentLectureId?: string | null
 }): React.JSX.Element {
   const markdownFiles = useMemo(
     () => files.filter((file) => file.mimeType === 'text/markdown'),
@@ -238,6 +271,17 @@ export function LessonMaterialTree({
   )
   const treeSnapshot = nodes.map((node) => `${node.file.id}:${node.children.map((child) => child.id).join(',')}`).join('|')
 
+  /** V1.8.1/D46：方案 A 分组——讲义组在前、材料组在后；纯展示层切分，不动文件树构建。 */
+  const groupedNodes = useMemo(() => {
+    if (!grouped) return null
+    const byRole = splitLessonFilesByRole(nodes.map((node) => node.file))
+    const lectureIds = new Set(byRole.lecture.map((file) => file.id))
+    return {
+      lecture: nodes.filter((node) => lectureIds.has(node.file.id)),
+      materials: nodes.filter((node) => !lectureIds.has(node.file.id)),
+    }
+  }, [grouped, nodes])
+
   useEffect(() => {
     setExpandedFileIds((current) => {
       const expandableIds = new Set(
@@ -266,19 +310,68 @@ export function LessonMaterialTree({
         </div>
       )}
       <ul className="material-reader-tree-list">
-        {nodes.map((node) => (
-          <MaterialTreeNodeRow
-            key={node.file.id}
-            node={node}
-            selectedFileId={selectedFileId}
-            selectedFileIds={selectedFileIds}
-            expanded={expandedFileIds.has(node.file.id)}
-            canSelect={onToggleFile !== undefined && isSelectableLessonPrepFile(node.file)}
-            onSelectFile={onSelectFile}
-            onToggleFile={onToggleFile}
-            onToggleExpanded={toggleExpanded}
-          />
-        ))}
+        {groupedNodes === null
+          ? nodes.map((node) => (
+            <MaterialTreeNodeRow
+              key={node.file.id}
+              node={node}
+              selectedFileId={selectedFileId}
+              selectedFileIds={selectedFileIds}
+              expanded={expandedFileIds.has(node.file.id)}
+              canSelect={onToggleFile !== undefined && isSelectableLessonPrepFile(node.file)}
+              onSelectFile={onSelectFile}
+              onToggleFile={onToggleFile}
+              onToggleExpanded={toggleExpanded}
+            />
+          ))
+          : (
+            <li className="material-role-group" aria-label="本课讲义分组">
+              <div className="material-role-group-title"><span aria-hidden="true">📘</span>本课讲义<small>{groupedNodes.lecture.length} 项</small></div>
+              {groupedNodes.lecture.length === 0 && (
+                <p className="material-role-group-empty">还没有讲义——选中材料区的 Markdown 可「设为讲义底稿」，或用 AI 生成第一版课件。</p>
+              )}
+              <ul>
+                {groupedNodes.lecture.map((node) => (
+                  <MaterialTreeNodeRow
+                    key={node.file.id}
+                    node={node}
+                    selectedFileId={selectedFileId}
+                    selectedFileIds={selectedFileIds}
+                    expanded={expandedFileIds.has(node.file.id)}
+                    canSelect={onToggleFile !== undefined && isSelectableLessonPrepFile(node.file)}
+                    onSelectFile={onSelectFile}
+                    onToggleFile={onToggleFile}
+                    onToggleExpanded={toggleExpanded}
+                    isCurrentLecture={node.file.id === currentLectureId}
+                  />
+                ))}
+              </ul>
+            </li>
+          )}
+        {groupedNodes !== null && (
+          <li className="material-role-group" aria-label="本课材料分组">
+            <div className="material-role-group-title"><span aria-hidden="true">📎</span>本课材料<small>{groupedNodes.materials.length} 项</small></div>
+            {groupedNodes.materials.length === 0 && (
+              <p className="material-role-group-empty">本课还没有材料。</p>
+            )}
+            <ul>
+              {groupedNodes.materials.map((node) => (
+                <MaterialTreeNodeRow
+                  key={node.file.id}
+                  node={node}
+                  selectedFileId={selectedFileId}
+                  selectedFileIds={selectedFileIds}
+                  expanded={expandedFileIds.has(node.file.id)}
+                  canSelect={onToggleFile !== undefined && isSelectableLessonPrepFile(node.file)}
+                  onSelectFile={onSelectFile}
+                  onToggleFile={onToggleFile}
+                  onToggleExpanded={toggleExpanded}
+                  sourceLabel={lessonFileSourceLabel(node.file)}
+                />
+              ))}
+            </ul>
+          </li>
+        )}
       </ul>
       {files.length === 0 && <p className="empty-state">本课次还没有资料。</p>}
     </div>
@@ -294,6 +387,8 @@ function MaterialTreeNodeRow({
   onSelectFile,
   onToggleFile,
   onToggleExpanded,
+  isCurrentLecture = false,
+  sourceLabel = null,
 }: {
   readonly node: LessonMaterialTreeNode
   readonly selectedFileId: string
@@ -303,6 +398,10 @@ function MaterialTreeNodeRow({
   readonly onSelectFile: (fileId: string) => void
   readonly onToggleFile?: (fileId: string) => void
   readonly onToggleExpanded: (fileId: string) => void
+  /** V1.8.1/D46：讲义组"当前"徽标。 */
+  readonly isCurrentLecture?: boolean
+  /** V1.8.1/D46：材料组来源标签（外部/素材库；工作台产物为 null 不显示）。 */
+  readonly sourceLabel?: string | null
 }): React.JSX.Element {
   const hasChildren = node.children.length > 0
   return (
@@ -334,6 +433,8 @@ function MaterialTreeNodeRow({
         >
           <span className="material-file-icon" aria-hidden="true">{fileIcon(node.file)}</span>
           <span>{displayFileName(node.file.originalName)}</span>
+          {isCurrentLecture && <small className="material-role-badge is-current">当前</small>}
+          {sourceLabel !== null && <small className="material-role-badge is-source">{sourceLabel}</small>}
           {hasChildren && <small>{node.children.length}</small>}
         </button>
       </div>

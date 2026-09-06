@@ -243,4 +243,54 @@ describe('L02 managed file IPC', () => {
     expect(removedFromIndex).toEqual([record.id])
     expect(service.getOverview()).toEqual({ files: [], links: [] })
   })
+  it('V1.8.1: promotes a lesson-linked md to a lecture copy and notifies content change', async () => {
+    const { workspace, service, dependencies } = createDependencies()
+    const core = new CoreDataService(workspace.database.raw)
+    const course = core.nodes.createCourse('课程', 'class')
+    const period = core.nodes.createPeriod(course.id, '阶段')
+    const lesson = core.nodes.createLesson(period.id, '课次')
+    const promoteRoot = mkdtempSync(join(tmpdir(), 'v181-promote-'))
+    const sourcePath = join(promoteRoot, '讲义.md')
+    writeFileSync(sourcePath, '# 讲义', 'utf8')
+    const imported = service.importToLesson(sourcePath, lesson.id)
+    const indexedIds: string[] = []
+    const contentChanged: unknown[] = []
+    const guarded: FileIpcDependencies = {
+      ...dependencies,
+      enqueueIndex: (fileId) => indexedIds.push(fileId),
+      notifyContentChanged: (event) => contentChanged.push(event),
+    }
+
+    const response = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.setLessonRole,
+      { fileId: imported.id },
+      guarded,
+      new TestLogger(),
+    )
+
+    expect(response).toMatchObject({ ok: true, data: { version: 1, file: { originalName: '讲义 · 第 1 版.md' } } })
+    expect(indexedIds).toHaveLength(1)
+    expect(contentChanged).toHaveLength(1)
+    // 原件仍在
+    expect(service.readText(imported.id).content).toBe('# 讲义')
+
+    // 已是讲义的文件再提 → MANAGED_FILE_ERROR；多余字段 → INVALID_PAYLOAD
+    const promotedId = (response as { data: { file: { id: string } } }).data.file.id
+    const again = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.setLessonRole,
+      { fileId: promotedId },
+      guarded,
+      new TestLogger(),
+    )
+    expect(again).toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.MANAGED_FILE_ERROR } })
+
+    const invalid = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.setLessonRole,
+      { fileId: imported.id, path: sourcePath },
+      guarded,
+      new TestLogger(),
+    )
+    expect(invalid).toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
+  })
+
 })
