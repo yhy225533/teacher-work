@@ -205,7 +205,7 @@
 
 | 里程碑 | 状态 | 计划内容 |
 |---|---|---|
-| V18-A 反馈合同与 Main 服务 | TODO | feedback-contracts（常量/四接口/守卫）、read-transcript（选 .txt/.md 读文本，不登记 files/不索引，30k 头截 + truncated）、feedback:generate（skill prompt 或默认三段 + 学生/课程/课次上下文 + 转写文本 → 非流式草稿，不落库，可取消）、ipc-security 通道清单演进；三新测试文件 |
-| V18-B 确认已上内嵌反馈与可见性 | TODO | confirm-lesson-taught-modal 重做（反馈区 + 主按钮软强制 gating + 跳过二次确认 + upsert 编辑态 + 保存编排 note→confirm + 无学生退化）；lessonFeedbackStatus 派生；课次行 已反馈/缺反馈 徽标；Viewed Lesson 黄条/摘要；补写弹窗（共享 LessonFeedbackSection） |
+| V18-A 反馈合同与 Main 服务 | DONE | feedback-contracts（常量/四接口/守卫）、`feedback:read-transcript`（选 .txt/.md 读文本不登记 files，30k 头截 + truncated，取消返回 null）、`feedback:generate`（skill prompt 或默认三段 FEEDBACK_PROMPT_VERSION + 学生/课程/课次/反馈日期上下文 → 非流式草稿不落库；反馈日期 = scheduled_at 本地日期 ?? 当天）；NoteRecord.aiMetadata 双轨合同（DraftNoteMetadata | FeedbackNoteMetadata）与 core-data mapNote/draft-scope/draft-view-model/draft-panel/draft-service 收窄；ipc-security 未锁通道清单、三新测试文件 18 例 + 4 处钉测演进；全量 82 files / 414 tests passed（1 skipped）、typecheck、lint 通过 |
+| V18-B 确认已上内嵌反馈与可见性 | IN_PROGRESS | confirm-lesson-taught-modal 重做（反馈区 + 主按钮软强制 gating + 跳过二次确认 + upsert 编辑态 + 保存编排 note→confirm + 无学生退化）；lessonFeedbackStatus 派生；课次行 已反馈/缺反馈 徽标；Viewed Lesson 黄条/摘要；补写弹窗（共享 LessonFeedbackSection） |
 | V18-C 班课反馈与转写转反馈 | TODO | 班课折叠列表（到课/请假/缺席徽标、待写/已写、N/M 徽章、missing-inline 黄条提醒、请假可跳过）；rec-flow 双路径（A 导入转写文字→AI 整理→草稿落 textarea + 来源标签"AI 草稿→已人工修改"；B 纯录音置灰后续版本）；反馈 Skill select 接线 + aiMetadata 记录 |
 | V18-D 最终门禁与验收 | TODO | 全量测试、typecheck、lint、production build、diff check；隔离 Windows 冒烟（一对一确认/跳过/补写/幂等、班课 3 学生 1 请假、fake provider）；DeepSeek 真实自测（预估 ≤ ¥1，产品负责人执行）；`docs/v1.8-acceptance.md`；确认后创建 `checkpoint-V1.8-pass` |

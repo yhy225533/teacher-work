@@ -96,7 +96,8 @@ describe('V1.5.3.1 scoped AI modification contract', () => {
     expect(restore).toContain("setLessonBaselineFileIds(scope.mode === 'lesson' ? baselineIds : [])")
     expect(restore).toContain('setRequirement(scope.teacherRequirement)')
     expect(restore).toContain('buildComparisonBase(scope.mode, scopedText.baselineParts)')
-    expect(scope).toContain('metadata?.modification !== undefined')
+    // V18-A（D40）：aiMetadata 双轨后经 draftNoteMetadata 收窄，modification 分支语义不变
+    expect(scope).toContain('if (metadata.modification !== undefined)')
     expect(scope).toContain("if (mode === null) return null")
   })
 

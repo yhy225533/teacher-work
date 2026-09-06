@@ -33,11 +33,13 @@ export function listDraftInbox(overview: CoreOverview | null): DraftInboxEntry[]
       const context = note.lessonId === null
         ? null
         : createPrepContextFromOverview(overview, note.lessonId, note.studentId ?? undefined)
+      // D40：反馈类 aiMetadata 无 lesson 快照，回退课次名。
+      const draftMetadata = note.aiMetadata !== undefined && !('generatedBy' in note.aiMetadata) ? note.aiMetadata : undefined
       return {
         note,
         context,
-        courseTitle: context?.courseTitle ?? note.aiMetadata?.lesson?.courseTitle ?? '课程不可用',
-        lessonTitle: context?.lessonTitle ?? note.aiMetadata?.lesson?.lessonTitle ?? '课次不可用',
+        courseTitle: context?.courseTitle ?? draftMetadata?.lesson?.courseTitle ?? '课程不可用',
+        lessonTitle: context?.lessonTitle ?? draftMetadata?.lesson?.lessonTitle ?? '课次不可用',
       }
     })
 }

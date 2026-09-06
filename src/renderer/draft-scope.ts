@@ -1,4 +1,12 @@
 import type { NoteRecord } from '../shared/core-contracts'
+import type { DraftNoteMetadata } from '../shared/draft-contracts'
+
+/** D40：note.aiMetadata 双轨合同收窄——备课/修改链路只认 DraftNoteMetadata（反馈 AI 来源另走 FeedbackNoteMetadata）。 */
+export function draftNoteMetadata(note: NoteRecord): DraftNoteMetadata | null {
+  const metadata = note.aiMetadata
+  if (metadata === undefined || 'generatedBy' in metadata) return null
+  return metadata
+}
 import {
   DRAFT_MODIFICATION_PLAN_MAX_CHARS,
   DRAFT_MODIFICATION_SCOPE_VERSION,
@@ -79,8 +87,9 @@ export function buildModificationScope(
 }
 
 export function parseModificationScope(note: NoteRecord): ParsedModificationScope | null {
-  const metadata = note.aiMetadata
-  if (metadata?.modification !== undefined) {
+  const metadata = draftNoteMetadata(note)
+  if (metadata === null) return null
+  if (metadata.modification !== undefined) {
     const scope = metadata.modification
     return {
       mode: scope.mode,
@@ -89,7 +98,7 @@ export function parseModificationScope(note: NoteRecord): ParsedModificationScop
       teacherRequirement: scope.teacherRequirement,
     }
   }
-  const storedRequirement = metadata?.requirement
+  const storedRequirement = metadata.requirement
   if (storedRequirement === undefined) return null
   const mode: ModificationMode | null = storedRequirement.includes(SINGLE_MODE_MARKER)
     ? 'single'

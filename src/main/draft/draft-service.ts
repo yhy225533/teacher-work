@@ -7,6 +7,7 @@ import {
   DRAFT_MAX_CHARS,
   DRAFT_PROMPT_VERSION,
   DRAFT_REQUIREMENT_MAX_CHARS,
+  isDraftNoteMetadata,
   type DraftBankPlan,
   type DraftBankSelection,
   type DraftKind,
@@ -141,7 +142,8 @@ export class DraftService {
 
   async regenerate(request: RegenerateDraftRequest, onStream?: AiGatewayStreamSink): Promise<GenerateDraftResult> {
     const original = this.resolveAiResult(request.noteId)
-    if (original.aiMetadata === undefined) {
+    // D40：aiMetadata 双轨合同——重新生成只认 DraftNoteMetadata（反馈类元数据不参与备课链）。
+    if (original.aiMetadata === undefined || !isDraftNoteMetadata(original.aiMetadata)) {
       throw new DraftServiceError('DRAFT_INVALID_REQUEST', '所选结果缺少重新生成所需的历史信息。')
     }
     const fileIds = [...new Set(original.aiMetadata.sources.map((source) => source.fileId))]

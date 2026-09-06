@@ -18,6 +18,7 @@ import {
   type DraftLessonSnapshot,
   type DraftNoteMetadata,
 } from '../../shared/draft-contracts'
+import { isFeedbackNoteMetadata, type FeedbackNoteMetadata } from '../../shared/feedback-contracts'
 import type { SqliteDatabase } from '../db/migrations'
 import { NodeService } from './node-service'
 import { CourseProgressService } from './course-progress-service'
@@ -827,11 +828,16 @@ function mapLink(row: LinkRow): CourseStudentLink {
 }
 
 function mapNote(row: NoteRow): NoteRecord {
-  let aiMetadata: DraftNoteMetadata | undefined
+  let aiMetadata: DraftNoteMetadata | FeedbackNoteMetadata | undefined
   if (row.ai_metadata_json !== null) {
     try {
       const parsed: unknown = JSON.parse(row.ai_metadata_json)
-      if (isDraftNoteMetadata(parsed)) aiMetadata = parsed
+      // D40：draft 合同与 FeedbackNoteMetadata（反馈 AI 来源）双轨；两者互斥，按各自守卫认领。
+      if (isDraftNoteMetadata(parsed)) {
+        aiMetadata = parsed
+      } else if (isFeedbackNoteMetadata(parsed)) {
+        aiMetadata = parsed as FeedbackNoteMetadata
+      }
     } catch {
       // Optional metadata must not make the editable note unavailable.
     }

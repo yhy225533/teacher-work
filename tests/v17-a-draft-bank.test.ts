@@ -8,6 +8,7 @@ import type { AiGateway } from '../src/main/ai/ai-gateway'
 import { AiSettingsService } from '../src/main/ai/ai-settings-service'
 import type { SecureStoragePort } from '../src/main/ai/secure-storage'
 import { CoreDataService } from '../src/main/data/core-data-service'
+import type { DraftNoteMetadata } from '../src/shared/draft-contracts'
 import {
   DraftService,
   DRAFT_BANK_CANDIDATE_MULTIPLIER,
@@ -409,7 +410,7 @@ describe('V17-A draft-service dualVersion orchestration (D31)', () => {
     const studentNote = overview.notes.find((note) => note.id === result.studentNoteId)
     expect(teacherNote).toMatchObject({ noteKind: 'lecture', draftStatus: 'draft', lessonId: f.lessonId })
     expect(studentNote).toMatchObject({ noteKind: 'lecture', draftStatus: 'draft', lessonId: f.lessonId, bodyMd: '# 学生版讲义' })
-    expect(studentNote?.aiMetadata?.bankSelection).toBeDefined()
+    expect((studentNote?.aiMetadata as DraftNoteMetadata | undefined)?.bankSelection).toBeDefined()
   })
 
   it('dualVersion defaults to absent: single request, no student note', async () => {

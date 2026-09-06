@@ -16,6 +16,7 @@ import { registerAttendanceIpc } from './ipc/attendance-ipc'
 import { registerQuestionBankIpc } from './ipc/question-bank-ipc'
 import { registerMaterialLibraryIpc } from './ipc/material-library-ipc'
 import { registerMineruIpc } from './ipc/mineru-ipc'
+import { registerFeedbackIpc } from './ipc/feedback-ipc'
 import { MineruSettingsService } from './ai/mineru-settings-service'
 import { MineruService } from './parser/mineru-service'
 import { createElectronSecureStorage } from './ai/secure-storage'
@@ -37,6 +38,7 @@ import { BackupRestoreService } from './backup/backup-service'
 import { ExternalLibraryService } from './external/external-library-service'
 import { SkillService } from './skills/skill-service'
 import { QuestionBankService } from './question-bank/question-bank-service'
+import { FeedbackService } from './feedback/feedback-service'
 import { BACKUP_DIRECTORY_NAME } from './backup/backup-service'
 import { WorkspaceActivityError, WorkspaceActivityGate } from './workspace/activity-gate'
 import {
@@ -66,6 +68,7 @@ let unregisterAttendanceIpc: (() => void) | null = null
 let unregisterQuestionBankIpc: (() => void) | null = null
 let unregisterMaterialLibraryIpc: (() => void) | null = null
 let unregisterMineruIpc: (() => void) | null = null
+let unregisterFeedbackIpc: (() => void) | null = null
 let aiSettingsService: AiSettingsService | null = null
 let aiGateway: AiGateway | null = null
 let draftService: DraftService | null = null
@@ -74,6 +77,7 @@ let externalLibraryService: ExternalLibraryService | null = null
 let skillService: SkillService | null = null
 let questionBankService: QuestionBankService | null = null
 let materialLibraryService: MaterialLibraryService | null = null
+let feedbackService: FeedbackService | null = null
 let mineruSettingsService: MineruSettingsService | null = null
 let mineruService: MineruService | null = null
 const deferredIndexIds = new Set<string>()
@@ -247,6 +251,29 @@ function getMineruService(): MineruService {
     getMineruSettings(),
   )
   return mineruService
+}
+
+// D43：转写材料用完即弃——只读对话框选中的单个文件，不登记 files、不复制、不索引、正文不进日志。
+function getFeedbackService(): FeedbackService {
+  if (workspaceHandle === null) getWorkspaceInfo()
+  if (workspaceHandle === null) throw new Error('Workspace was not initialized')
+  feedbackService ??= new FeedbackService({
+    coreData: getCoreData(),
+    skills: getSkillService(),
+    aiGateway: getAiGateway(),
+    chooseTranscript: async () => {
+      const options: OpenDialogOptions = {
+        properties: ['openFile'],
+        title: '导入录音转写文字',
+        filters: [{ name: '转写文字文件', extensions: ['txt', 'md'] }],
+      }
+      const result = mainWindow !== null && !mainWindow.isDestroyed()
+        ? await dialog.showOpenDialog(mainWindow, options)
+        : await dialog.showOpenDialog(options)
+      return result.canceled ? null : result.filePaths[0] ?? null
+    },
+  })
+  return feedbackService
 }
 
 function enqueueIndex(fileId: string): void {
@@ -517,6 +544,11 @@ void app.whenReady().then(() => {
     { getService: getMaterialLibraryService, getExternalService: getExternalLibraryService, activityGate },
     logger,
   )
+  unregisterFeedbackIpc = registerFeedbackIpc(
+    ipcMain,
+    { getService: getFeedbackService, activityGate },
+    logger,
+  )
   mainWindow = createMainWindow()
   refreshManagedFilesInBackground('workspace_startup')
   void getDocumentIndexWorker().rebuildPending().catch((error: unknown) => {
@@ -556,6 +588,7 @@ app.on('before-quit', (event) => {
   unregisterQuestionBankIpc?.()
   unregisterMaterialLibraryIpc?.()
   unregisterMineruIpc?.()
+  unregisterFeedbackIpc?.()
   mineruService?.close()
   mineruService = null
   mineruSettingsService = null
@@ -569,6 +602,7 @@ app.on('before-quit', (event) => {
   questionBankService?.close()
   questionBankService = null
   materialLibraryService = null
+  feedbackService = null
   void (async () => {
     await documentIndexWorker?.close()
     documentIndexWorker = null

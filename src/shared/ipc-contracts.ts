@@ -129,6 +129,12 @@ export const MATERIAL_LIBRARY_IPC_CHANNELS = {
   saveFileAsMaterial: 'material-library:save-file-as-material',
 } as const
 
+/** D43 V1.8 反馈链路（仅两条）：转写读取用完即弃、AI 整理草稿不落库。 */
+export const FEEDBACK_IPC_CHANNELS = {
+  readTranscript: 'feedback:read-transcript',
+  generate: 'feedback:generate',
+} as const
+
 export const FILE_IPC_EVENTS = {
   contentChanged: 'files:content-changed',
 } as const
@@ -147,6 +153,7 @@ export type IpcChannel =
   | (typeof QUESTION_BANK_IPC_CHANNELS)[keyof typeof QUESTION_BANK_IPC_CHANNELS]
   | (typeof MATERIAL_LIBRARY_IPC_CHANNELS)[keyof typeof MATERIAL_LIBRARY_IPC_CHANNELS]
   | (typeof MINERU_IPC_CHANNELS)[keyof typeof MINERU_IPC_CHANNELS]
+  | (typeof FEEDBACK_IPC_CHANNELS)[keyof typeof FEEDBACK_IPC_CHANNELS]
 
 export const IPC_ERROR_CODES = {
   INVALID_PAYLOAD: 'INVALID_PAYLOAD',
@@ -167,6 +174,7 @@ export const IPC_ERROR_CODES = {
   QUESTION_BANK_ERROR: 'QUESTION_BANK_ERROR',
   MATERIAL_LIBRARY_ERROR: 'MATERIAL_LIBRARY_ERROR',
   MINERU_ERROR: 'MINERU_ERROR',
+  FEEDBACK_ERROR: 'FEEDBACK_ERROR',
 } as const
 
 export type IpcErrorCode = (typeof IPC_ERROR_CODES)[keyof typeof IPC_ERROR_CODES]

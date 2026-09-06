@@ -9,6 +9,7 @@ import type { AiGateway } from '../src/main/ai/ai-gateway'
 import { AiGatewayError } from '../src/main/ai/ai-gateway'
 import type { SecureStoragePort } from '../src/main/ai/secure-storage'
 import { CoreDataService } from '../src/main/data/core-data-service'
+import type { DraftNoteMetadata } from '../src/shared/draft-contracts'
 import { DraftService } from '../src/main/draft/draft-service'
 import { ManagedFileService } from '../src/main/files/managed-file-service'
 import { openSearchDatabase } from '../src/main/search/search-database'
@@ -325,7 +326,7 @@ describe('L09 context builder and draft generation', () => {
 
     expect(first.metadata.modification).toEqual(modification)
     const stored = core.getOverview().notes.find((note) => note.id === first.noteId)
-    expect(stored?.aiMetadata?.modification).toEqual(modification)
+    expect((stored?.aiMetadata as DraftNoteMetadata | undefined)?.modification).toEqual(modification)
 
     const regenerated = await draft.regenerate({
       requestId: 'modification-regenerate',

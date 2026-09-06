@@ -1,4 +1,5 @@
 import { isDraftKind, isDraftNoteMetadata, type DraftKind, type DraftNoteMetadata } from './draft-contracts'
+import { isFeedbackNoteMetadata, type FeedbackNoteMetadata } from './feedback-contracts'
 
 export type NodeKind = 'course' | 'period' | 'lesson'
 
@@ -104,7 +105,8 @@ export interface NoteRecord {
   readonly occurredOn?: string
   readonly noteKind?: 'manual' | 'manual_edit' | DraftKind
   readonly draftStatus?: DraftStatus
-  readonly aiMetadata?: DraftNoteMetadata
+  /** D40：draft 类生成走 DraftNoteMetadata；AI 整理的课后反馈走 FeedbackNoteMetadata。 */
+  readonly aiMetadata?: DraftNoteMetadata | FeedbackNoteMetadata
 }
 
 export interface CoreOverview {
@@ -375,7 +377,9 @@ export function isNoteRecord(value: unknown): value is NoteRecord {
       value.noteKind === 'manual' ||
       value.noteKind === 'manual_edit' ||
       isDraftKind(value.noteKind)) &&
-    (value.aiMetadata === undefined || isDraftNoteMetadata(value.aiMetadata))
+    (value.aiMetadata === undefined ||
+      isDraftNoteMetadata(value.aiMetadata) ||
+      isFeedbackNoteMetadata(value.aiMetadata))
   )
 }
 

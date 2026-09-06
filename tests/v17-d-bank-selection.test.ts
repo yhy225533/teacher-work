@@ -9,6 +9,7 @@ import type { AiGateway } from '../src/main/ai/ai-gateway'
 import { AiSettingsService } from '../src/main/ai/ai-settings-service'
 import type { SecureStoragePort } from '../src/main/ai/secure-storage'
 import { CoreDataService } from '../src/main/data/core-data-service'
+import type { DraftNoteMetadata } from '../src/shared/draft-contracts'
 import { DraftService, type QuestionBankDraftPort } from '../src/main/draft/draft-service'
 import { ManagedFileService } from '../src/main/files/managed-file-service'
 import { openSearchDatabase } from '../src/main/search/search-database'
@@ -267,8 +268,8 @@ describe('V17-D 编排：bankQuestionIds 剔除集 + variant 留痕 + 双版', (
 
     const teacher = core.getOverview().notes.find((note) => note.id === result.noteId)
     const student = core.getOverview().notes.find((note) => note.id === result.studentNoteId)
-    expect(teacher?.aiMetadata?.variant).toBe('teacher')
-    expect(student?.aiMetadata?.variant).toBe('student')
+    expect((teacher?.aiMetadata as DraftNoteMetadata | undefined)?.variant).toBe('teacher')
+    expect((student?.aiMetadata as DraftNoteMetadata | undefined)?.variant).toBe('student')
     expect(student?.bodyMd).toContain('纯题面')
   })
 
@@ -285,7 +286,7 @@ describe('V17-D 编排：bankQuestionIds 剔除集 + variant 留痕 + 双版', (
     expect(result.studentNoteId).toBeUndefined()
     expect(gatewayCalls).toHaveLength(1)
     const note = core.getOverview().notes.find((record) => record.id === result.noteId)
-    expect(note?.aiMetadata?.variant).toBeUndefined()
+    expect((note?.aiMetadata as DraftNoteMetadata | undefined)?.variant).toBeUndefined()
   })
 })
 
@@ -363,7 +364,8 @@ describe('V17-D Renderer 钉测：开关 / 过目卡 / 徽标 / 预算列名', (
     expect(panel).toContain('draft-variant-badge is-student')
     expect(panel).toContain('（教师版）')
     expect(panel).toContain('（学生版）')
-    expect(panel).toContain("is-${entry.note.aiMetadata.variant}")
+    // V18-A（D40）：aiMetadata 双轨合同后入口收窄为 draftNoteMetadata 助手，徽标行为不变
+    expect(panel).toContain("is-${variant}")
   })
 
   it('covers the new-prep mode: toggle outside the mode gate and two-step generate', () => {

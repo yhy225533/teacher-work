@@ -59,6 +59,7 @@ import {
   buildModificationScope,
   buildModeRequirement,
   buildPublishConfirmation,
+  draftNoteMetadata,
   kindLabels,
   modificationNodeLabel,
   parseModificationScope,
@@ -221,6 +222,7 @@ export default function DraftPanel({
   const selectedNote = selectedNoteId === null
     ? undefined
     : lessonResults.find((note) => note.id === selectedNoteId)
+  const selectedVariant = selectedNote === undefined ? undefined : draftNoteMetadata(selectedNote)?.variant
   const dirty = editing && selectedNote !== undefined && editBody !== selectedNote.bodyMd
 
   useEffect(() => {
@@ -325,9 +327,10 @@ export default function DraftPanel({
     let cancelled = false
     if (files === null || selectedNote === undefined) return
     const scope = parseModificationScope(selectedNote)
-    if (scope === null || selectedNote.aiMetadata === undefined) return
+    const selectedDraftMetadata = draftNoteMetadata(selectedNote)
+    if (scope === null || selectedDraftMetadata === null) return
 
-    const orderedSourceIds = uniqueStrings(selectedNote.aiMetadata.sources.map((source) => source.fileId))
+    const orderedSourceIds = uniqueStrings(selectedDraftMetadata.sources.map((source) => source.fileId))
     const baselineIds = orderedSourceIds.slice(0, scope.baselineCount)
     const referenceIds = orderedSourceIds.slice(scope.baselineCount)
     const baselineFiles = baselineIds
@@ -338,7 +341,7 @@ export default function DraftPanel({
     setTargetFileId(scope.mode === 'single' ? baselineIds[0] ?? '' : '')
     setLessonBaselineFileIds(scope.mode === 'lesson' ? baselineIds : [])
     setSelectedReferenceFileIds(referenceIds)
-    setSelectedSkillId(selectedNote.aiMetadata.skill?.id ?? '')
+    setSelectedSkillId(selectedDraftMetadata.skill?.id ?? '')
     setRequirement(scope.teacherRequirement)
     setImprovePhase('')
     setImprovePlan('')
@@ -1062,14 +1065,15 @@ export default function DraftPanel({
           <ul className="draft-result-list">
             {lessonResults.map((note) => {
               const kind = note.noteKind as DraftKind
+              const variant = draftNoteMetadata(note)?.variant
               return (
                 <li key={note.id} className={selectedNote?.id === note.id ? 'is-selected' : ''}>
                   <button type="button" className="draft-result-select" onClick={() => { void selectResult(note) }} disabled={busyAction !== ''}>
                     <span className="draft-kind-icon" aria-hidden="true">{kindIcon(kind)}</span>
                     <span><strong>{modificationNodeLabel(note)}</strong><small>{formatDateTime(note.updatedAt)}</small></span>
                     <span className="draft-row-badges">
-                      {note.aiMetadata?.variant === 'teacher' && <span className="draft-variant-badge is-teacher">教师版</span>}
-                      {note.aiMetadata?.variant === 'student' && <span className="draft-variant-badge is-student">学生版</span>}
+                      {variant === 'teacher' && <span className="draft-variant-badge is-teacher">教师版</span>}
+                      {variant === 'student' && <span className="draft-variant-badge is-student">学生版</span>}
                       <span className={`draft-status draft-status-${note.draftStatus}`}>{note.draftStatus === 'draft' ? '修改中' : '已确认'}</span>
                     </span>
                   </button>
@@ -1374,7 +1378,7 @@ export default function DraftPanel({
                 </div>
               )}
               <div className="draft-content-header">
-                <div><p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '修改中 · 尚未发布' : '已确认 · 本次课次成果'}</p><h2>{modificationNodeLabel(selectedNote)}{selectedNote.aiMetadata?.variant === 'teacher' ? '（教师版）' : selectedNote.aiMetadata?.variant === 'student' ? '（学生版）' : ''}</h2></div>
+                <div><p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '修改中 · 尚未发布' : '已确认 · 本次课次成果'}</p><h2>{modificationNodeLabel(selectedNote)}{selectedVariant === 'teacher' ? '（教师版）' : selectedVariant === 'student' ? '（学生版）' : ''}</h2></div>
                 <div className="draft-content-actions">
                   {editing ? <><button className="secondary-button" type="button" onClick={cancelEditing} disabled={busyAction !== ''}>取消编辑</button><button className="secondary-button" type="button" onClick={() => void saveModification()} disabled={busyAction !== ''}>保存修改</button></> : <button className="secondary-button" type="button" onClick={startEditing} disabled={busyAction !== ''}>编辑</button>}
                   <button className="secondary-button" type="button" onClick={() => void regenerate()} disabled={busyAction !== ''}>重新生成</button>
@@ -1545,13 +1549,14 @@ function DraftInboxRow({ entry, busy, onOpenDraft, onDeleteDraft }: {
   readonly onDeleteDraft: (note: NoteRecord) => void
 }): React.JSX.Element {
   const kind = entry.note.noteKind as DraftKind
+  const variant = draftNoteMetadata(entry.note)?.variant
   return (
     <li>
       <button className="draft-inbox-open" type="button" disabled={busy || entry.context === null} onClick={() => entry.context !== null && onOpenDraft(entry.context, entry.note.id)}>
         <span className="draft-kind-icon" aria-hidden="true">{kindIcon(kind)}</span>
         <span><strong>{modificationNodeLabel(entry.note)}</strong><small>{entry.courseTitle} / {entry.lessonTitle}</small></span>
-        {entry.note.aiMetadata?.variant !== undefined && (
-          <span className={`draft-variant-badge is-${entry.note.aiMetadata.variant}`}>{entry.note.aiMetadata.variant === 'teacher' ? '教师版' : '学生版'}</span>
+        {variant !== undefined && (
+          <span className={`draft-variant-badge is-${variant}`}>{variant === 'teacher' ? '教师版' : '学生版'}</span>
         )}
         <time dateTime={entry.note.updatedAt}>{formatDateTime(entry.note.updatedAt)}</time>
       </button>

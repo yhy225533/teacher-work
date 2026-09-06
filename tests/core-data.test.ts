@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { CoreDataService, isConstraintError } from '../src/main/data/core-data-service'
 import { runMigrations } from '../src/main/db/migrations'
 import { isCoreOverview, isCourseStudentLink } from '../src/shared/core-contracts'
+import type { DraftNoteMetadata } from '../src/shared/draft-contracts'
 
 function createService(): { database: Database.Database; service: CoreDataService } {
   const database = new Database(':memory:')
@@ -169,7 +170,7 @@ describe('L01 core data tree', () => {
       const disposable = service.createLessonDraft(lesson.id, '# 可删除草稿', {
         noteKind: 'homework',
         aiMetadata: {
-          ...note.aiMetadata!,
+          ...(note.aiMetadata as DraftNoteMetadata),
           kind: 'homework',
         },
       })

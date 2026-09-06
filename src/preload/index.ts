@@ -16,6 +16,7 @@ import {
   QUESTION_BANK_IPC_CHANNELS,
   MATERIAL_LIBRARY_IPC_CHANNELS,
   MINERU_IPC_CHANNELS,
+  FEEDBACK_IPC_CHANNELS,
   isFileActionResult,
   isManagedFileContent,
   isManagedFileContentChanged,
@@ -59,6 +60,8 @@ import {
   isMineruEnhanceResult,
   isMineruSettings,
   isMineruStatus,
+  isGeneratedFeedback,
+  isTranscriptResult,
   isMaterialFolder,
   isMaterialFolderItem,
   parseIpcResponse,
@@ -304,6 +307,19 @@ const api = Object.freeze({
       value === null || isBackupSummary(value)),
     restore: () => invoke(BACKUP_IPC_CHANNELS.restore, {}, (value): value is import('../shared/ipc-contracts').RestoreSummary | null =>
       value === null || isRestoreSummary(value)),
+  }),
+  feedback: Object.freeze({
+    readTranscript: () => invoke(
+      FEEDBACK_IPC_CHANNELS.readTranscript,
+      {},
+      (value): value is import('../shared/feedback-contracts').TranscriptResult | null =>
+        value === null || isTranscriptResult(value),
+    ),
+    generate: (request: import('../shared/feedback-contracts').GenerateFeedbackRequest) => invoke(
+      FEEDBACK_IPC_CHANNELS.generate,
+      request,
+      isGeneratedFeedback,
+    ),
   }),
 }) satisfies TeacherWorkbenchApi
 

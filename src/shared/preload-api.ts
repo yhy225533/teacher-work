@@ -184,8 +184,15 @@ import {
   type ReorderMaterialFolderRequest,
   type SaveFileAsMaterialRequest,
 } from './material-library-contracts'
+import {
+  isGeneratedFeedback,
+  isTranscriptResult,
+  type GenerateFeedbackRequest,
+  type GeneratedFeedback,
+  type TranscriptResult,
+} from './feedback-contracts'
 
-export { AI_IPC_CHANNELS, ATTENDANCE_IPC_CHANNELS, BACKUP_IPC_CHANNELS, CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, EXTERNAL_LIBRARY_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, MATERIAL_LIBRARY_IPC_CHANNELS, QUESTION_BANK_IPC_CHANNELS, SEARCH_IPC_CHANNELS, SKILL_IPC_CHANNELS } from './ipc-contracts'
+export { AI_IPC_CHANNELS, ATTENDANCE_IPC_CHANNELS, BACKUP_IPC_CHANNELS, CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, EXTERNAL_LIBRARY_IPC_CHANNELS, FEEDBACK_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, MATERIAL_LIBRARY_IPC_CHANNELS, QUESTION_BANK_IPC_CHANNELS, SEARCH_IPC_CHANNELS, SKILL_IPC_CHANNELS } from './ipc-contracts'
 export type { BackupSummary, IpcChannel, RestoreSummary, WorkspaceInfo } from './ipc-contracts'
 export { isBackupSummary, isRestoreSummary } from './ipc-contracts'
 export type {
@@ -410,6 +417,10 @@ export interface TeacherWorkbenchApi {
     create: () => Promise<BackupSummary | null>
     restore: () => Promise<RestoreSummary | null>
   }
+  feedback: {
+    readTranscript: () => Promise<TranscriptResult | null>
+    generate: (request: GenerateFeedbackRequest) => Promise<GeneratedFeedback>
+  }
 }
 
 export {
@@ -494,4 +505,6 @@ export {
   isMoveMaterialRequest,
   isCopyExternalToMaterialRequest,
   isSaveFileAsMaterialRequest,
+  isGeneratedFeedback,
+  isTranscriptResult,
 }
