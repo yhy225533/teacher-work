@@ -31,8 +31,8 @@ describe('V18-B 确认已上内嵌反馈（一对一）', () => {
   })
 
   it('primary button gating: soft-required feedback before confirm (D39)', () => {
-    // 主按钮 disabled 条件包含 canSave（≥1 名学生有内容），且仍保留原确认语义（保存后 confirm）
-    expect(confirmModal).toContain('disabled={saving || !canSave}')
+    // 主按钮 disabled 条件包含 canSave（≥1 名到课学生有内容），且仍保留原确认语义（保存后 confirm）
+    expect(confirmModal).toContain('disabled={saving || !canSave || generationInFlight}')
     expect(confirmModal).toContain('✓ 保存反馈并确认已上')
     expect(confirmModal).toContain('✓ 更新反馈并确认已上')
   })
@@ -255,5 +255,89 @@ describe('V18-B 共享反馈区组件', () => {
   it('one-to-one renders a single expanded editor; class renders collapsed rows', () => {
     expect(feedbackSection).toContain("summary.course.courseMode === 'class'")
     expect(feedbackSection).toContain('is-single')
+  })
+})
+
+describe('V18-C 班课反馈列表（D41）', () => {
+  it('attendance badges: 到课/请假/缺席 from attendance.getLesson; unmarked lessons hide badges', () => {
+    expect(feedbackSection).toContain('attendance.students')
+    expect(feedbackSection).toContain("status === 'present' ? '到课' : status === 'leave' ? '请假' : '缺席'")
+    expect(feedbackSection).toContain('if (attendance === null) return map')
+  })
+
+  it('leave/absent rows default collapsed with dashed style and 可跳过 label; filled content still saves', () => {
+    expect(feedbackSection).toContain('is-absent')
+    expect(feedbackSection).toContain("skippedKind ? '可跳过' : '待写'")
+    expect(feedbackSection).toContain('本课请假 · 可跳过（填写也会保存）')
+  })
+
+  it('gating counts only attended students; header shows N / M 已写 with attended denominator', () => {
+    expect(confirmModal).toContain('attendedEntries')
+    expect(feedbackSection).toContain('attendedWrittenCount} / {attendedEntries.length} 已写')
+    // 未点名（无到课记录）时全部学生计入分母
+    expect(feedbackSection).toContain("return status === undefined || status === 'present'")
+  })
+
+  it('missing-inline yellow bar lists names on first primary click; second click saves written and skips missing', () => {
+    expect(confirmModal).toContain('missing-inline')
+    expect(confirmModal).toContain('if (attendedMissing.length > 0 && !missingSeen)')
+    expect(confirmModal).toContain('按已写的保存，继续确认')
+    expect(confirmModal).toContain('没写反馈：点学生姓名补写，或再次点击主按钮')
+  })
+})
+
+describe('V18-C 录音/转写转反馈（D43/D44）', () => {
+  it('rec-flow collapsible block with path A upload and path B disabled voice path', () => {
+    expect(feedbackSection).toContain('rec-flow')
+    expect(feedbackSection).toContain('🎙 录音 / 转写转反馈')
+    expect(feedbackSection).toContain('导入转写文字')
+    expect(feedbackSection).toContain('手机录音 App 的转写文件：.txt / .md')
+    expect(feedbackSection).toContain('上传纯录音')
+    expect(feedbackSection).toContain('未配置语音模型')
+    expect(feedbackSection).toContain('后续版本支持')
+  })
+
+  it('path A wires read-transcript then generate; draft lands in the textarea', () => {
+    const readAt = feedbackSection.indexOf('feedback.readTranscript()')
+    const generateAt = feedbackSection.indexOf('feedback.generate({')
+    const landAt = feedbackSection.indexOf('generated.draftText }')
+    expect(readAt).toBeGreaterThan(-1)
+    expect(generateAt).toBeGreaterThan(readAt)
+    expect(landAt).toBeGreaterThan(generateAt)
+  })
+
+  it('file chip shows name, chars and 30000-truncation hint; transcript is ephemeral', () => {
+    expect(feedbackSection).toContain('已截取前 30000 字')
+    expect(feedbackSection).toContain('转写文字只用于本次整理，不保存到工作台')
+  })
+
+  it('cancel/re-pick invalidates in-flight results without touching handwritten text', () => {
+    expect(feedbackSection).toContain('generationToken')
+    expect(feedbackSection).toContain('cancelDraft')
+  })
+
+  it('skill select lists all skills plus 不使用 Skill（默认结构）and only affects the next generate', () => {
+    expect(feedbackSection).toContain('不使用 Skill（默认结构）')
+    expect(feedbackSection).toContain('反馈 Skill')
+    expect(feedbackSection).toContain('skillId: selectedSkill.id')
+  })
+
+  it('draft origin label switches from AI 草稿 to 已人工修改；textarea disabled while generating', () => {
+    expect(feedbackSection).toContain('AI 草稿 · 请人工修改')
+    expect(feedbackSection).toContain('已人工修改 ✓')
+    expect(feedbackSection).toContain('disabled={generating}')
+    expect(feedbackSection).toContain('正在读取转写并整理…')
+    // 生成中主按钮同样禁用（两弹窗一致）
+    expect(confirmModal).toContain('generationInFlight')
+    expect(feedbackModal).toContain('generationInFlight')
+  })
+
+  it('aiMetadata recorded on save via buildFeedbackNoteMetadata (provider/model/skill/transcriptChars)', () => {
+    expect(feedbackSection).toContain('buildFeedbackNoteMetadata')
+    expect(feedbackSection).toContain("generatedBy: 'feedback-assistant'")
+    expect(confirmModal).toContain('aiMetadata === undefined ? {} : { aiMetadata }')
+    expect(feedbackModal).toContain('aiMetadata === undefined ? {} : { aiMetadata }')
+    // 手写保存（无草稿）不写 aiMetadata
+    expect(confirmModal).toContain('drafts[entry.student.id]')
   })
 })

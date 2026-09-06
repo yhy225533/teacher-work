@@ -191,9 +191,11 @@ export async function dispatchCoreIpc(
             (payload as CreateNoteRequest).studentId,
             (payload as CreateNoteRequest).bodyMd,
             (payload as CreateNoteRequest).lessonId,
-            (payload as CreateNoteRequest).occurredOn === undefined
-              ? undefined
-              : { occurredOn: (payload as CreateNoteRequest).occurredOn },
+            {
+              occurredOn: (payload as CreateNoteRequest).occurredOn,
+              // D40/D44：AI 整理的课后反馈经 aiMetadata 记录来源（FeedbackNoteMetadata）
+              aiMetadata: (payload as CreateNoteRequest).aiMetadata,
+            },
           ),
           isNoteRecord,
         )

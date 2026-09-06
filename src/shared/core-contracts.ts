@@ -233,6 +233,8 @@ export interface CreateNoteRequest {
   readonly bodyMd: string
   readonly lessonId?: string
   readonly occurredOn?: string
+  /** D40/D44：AI 整理的课后反馈记录来源（FeedbackNoteMetadata）；手写反馈缺省不写。 */
+  readonly aiMetadata?: FeedbackNoteMetadata
 }
 
 export interface UpdateNoteRequest {
@@ -575,12 +577,13 @@ export function getLocalDayUtcRange(year: number, month: number, day: number): L
 
 export function isCreateNoteRequest(value: unknown): value is CreateNoteRequest {
   return (
-    hasOnlyKeys(value, ['studentId', 'bodyMd'], ['lessonId', 'occurredOn']) &&
+    hasOnlyKeys(value, ['studentId', 'bodyMd'], ['lessonId', 'occurredOn', 'aiMetadata']) &&
     isNonEmptyString(value.studentId) &&
     typeof value.bodyMd === 'string' &&
     value.bodyMd.trim().length > 0 &&
     (value.lessonId === undefined || isNonEmptyString(value.lessonId)) &&
-    (value.occurredOn === undefined || isLocalDateString(value.occurredOn))
+    (value.occurredOn === undefined || isLocalDateString(value.occurredOn)) &&
+    (value.aiMetadata === undefined || isFeedbackNoteMetadata(value.aiMetadata))
   )
 }
 

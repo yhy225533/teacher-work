@@ -300,7 +300,7 @@ export class CoreDataService {
     lessonId?: string,
     metadata?: {
       readonly noteKind?: 'manual' | 'manual_edit' | DraftKind
-      readonly aiMetadata?: DraftNoteMetadata
+      readonly aiMetadata?: DraftNoteMetadata | FeedbackNoteMetadata
       readonly occurredOn?: string
     },
   ): NoteRecord {

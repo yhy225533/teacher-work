@@ -1,17 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import type { CoreOverview, NodeRecord } from '../shared/core-contracts'
+import type { CoreOverview, LessonAttendanceRecord, NodeRecord } from '../shared/core-contracts'
+import type { SkillRecord } from '../shared/skill-contracts'
 import {
   lessonFeedbackStatus,
   type CourseSummary,
 } from './course-view-model'
-import LessonFeedbackSection from './lesson-feedback-section'
+import LessonFeedbackSection, {
+  buildFeedbackNoteMetadata,
+  type StudentFeedbackDraftState,
+} from './lesson-feedback-section'
 import Modal from './modal'
 import { toErrorMessage } from './ui-utils'
 
 /**
- * D42 补写弹窗：复用反馈区（含录音/转写转反馈），无 Current Lesson 下拉、无确认按钮；
- * 跳过 = 直接关闭弹窗（课已确认）。保存 = 逐学生 upsert（D40 幂等）。
+ * D42 补写弹窗：复用反馈区（含录音/转写转反馈与反馈 Skill），无 Current Lesson 下拉、无确认按钮；
+ * 跳过 = 直接关闭弹窗（课已确认）。保存 = 逐学生 upsert（D40 幂等，缺反馈走 create、已有走 update）。
  */
 export default function LessonFeedbackModal({
   overview,
@@ -27,12 +31,30 @@ export default function LessonFeedbackModal({
   readonly onSaved: (message: string) => Promise<void>
 }): React.JSX.Element {
   const [bodies, setBodies] = useState<Readonly<Record<string, string>>>({})
+  const [drafts, setDrafts] = useState<Readonly<Record<string, StudentFeedbackDraftState>>>({})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [attendance, setAttendance] = useState<LessonAttendanceRecord | null>(null)
+  const [skills, setSkills] = useState<readonly SkillRecord[]>([])
+  const [aiProvider, setAiProvider] = useState<string | null>(null)
   const feedback = useMemo(
     () => lessonFeedbackStatus(overview, summary, lesson.id),
     [lesson.id, overview, summary],
   )
+
+  useEffect(() => {
+    let active = true
+    void window.teacherWorkbench.attendance.getLesson({ lessonId: lesson.id })
+      .then((record) => active && setAttendance(record))
+      .catch(() => active && setAttendance(null))
+    void window.teacherWorkbench.skills.list()
+      .then((list) => active && setSkills(list))
+      .catch(() => active && setSkills([]))
+    void window.teacherWorkbench.ai.getSettings()
+      .then((settings) => active && setAiProvider(settings.provider))
+      .catch(() => active && setAiProvider(null))
+    return () => { active = false }
+  }, [lesson.id])
 
   // D40 upsert 编辑态：已有反馈预填最新一条正文
   useEffect(() => {
@@ -45,6 +67,7 @@ export default function LessonFeedbackModal({
 
   const writtenEntries = feedback.students.filter((entry) => (bodies[entry.student.id] ?? '').trim() !== '')
   const canSave = writtenEntries.length > 0
+  const generationInFlight = Object.values(drafts).some((draft) => draft.phase === 'reading')
 
   const scheduledSession = overview.lessonSessions.find((session) => session.lessonId === lesson.id)
   const occurredOn = useMemo(() => {
@@ -60,11 +83,16 @@ export default function LessonFeedbackModal({
       for (const entry of writtenEntries) {
         const existing = entry.latestNote
         if (existing === null) {
+          const draft = drafts[entry.student.id]
+          const aiMetadata = aiProvider === null || draft === undefined
+            ? undefined
+            : buildFeedbackNoteMetadata(draft, aiProvider, skills)
           await window.teacherWorkbench.core.createNote({
             studentId: entry.student.id,
             bodyMd: bodies[entry.student.id]!,
             lessonId: lesson.id,
             occurredOn,
+            ...(aiMetadata === undefined ? {} : { aiMetadata }),
           })
         } else {
           await window.teacherWorkbench.core.updateNote({
@@ -94,12 +122,21 @@ export default function LessonFeedbackModal({
         overview={overview}
         summary={summary}
         lesson={lesson}
+        attendance={attendance}
         bodies={bodies}
+        drafts={drafts}
         onBodiesChange={setBodies}
+        onDraftsChange={setDrafts}
+        skills={skills}
       />
       <footer className="modal-actions feedback-actions">
         <button className="secondary-button" type="button" disabled={saving} onClick={onClose}>取消</button>
-        <button className="primary-button" type="button" disabled={saving || !canSave} onClick={() => void save()}>
+        <button
+          className="primary-button"
+          type="button"
+          disabled={saving || !canSave || generationInFlight}
+          onClick={() => void save()}
+        >
           {saving ? '保存中…' : '✓ 保存反馈'}
         </button>
       </footer>

@@ -1447,3 +1447,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Git 任务提交：`v1.8(V18-B): confirm-taught embedded feedback and visibility`。
 - 已知限制：班课行折叠已在共享组件预留（待写/已写状态），到课/请假/缺席徽标与 missing-inline 黄条、录音/转写转反馈接线为 V18-C 范围；「反馈 Skill」select 与 🎙 工具行随 V18-C 落地。
 - 下一任务可依赖的接口：`lessonFeedbackStatus` / `LessonFeedbackSection`（props: overview/summary/lesson/bodies/onBodiesChange）/ `LessonFeedbackModal`；occurredOn 派生逻辑与 Main 侧 FeedbackService.resolveFeedbackDate 一致（scheduled_at 本地日期 ?? 当天）。
+
+## 2026-09-06 11:14 · V18-C · DONE
+
+- 关键改动：`lesson-feedback-section.tsx` 扩展为班课折叠列表 + 录音/转写转反馈区（attendance 到课/请假/缺席徽标（未点名不显示）；待写/已写✓；请假/缺席虚线 is-absent + "可跳过"、填写也保存；N/M 已写徽章分母=到课学生；fb-toolbar：🎙 rec-btn 展开 rec-flow + 反馈 Skill select（skills.list 全部 + 不使用 Skill（默认结构），change 仅影响下一次 generate）；rec-flow 路径 A 主入口（feedback.readTranscript → 文件 chip（名/字数/已截取前 30000 字提示）→ 自动 feedback.generate → 草稿落该生 textarea + "草稿就绪请人工修改"，generationToken 取消令牌防迟到回写、✕/取消不动已手写内容）；路径 B 纯录音置灰（未配置语音模型 · 后续版本支持，disabled 不实现音频逻辑）；草稿来源标签"AI 草稿 · 请人工修改"→与 draftText 不一致切"已人工修改 ✓"绿；生成中该生 textarea 禁用、两弹窗主按钮 generationInFlight 禁用；班课逐学生独立发起（整理给 学生选择））；确认弹窗班课 gating=≥1 名到课学生有内容，首次点击 missing-inline 黄条点名、再次点击按"已写的保存、未写的跳过"继续 confirm；`CreateNoteRequest` 追加可选 `aiMetadata`（FeedbackNoteMetadata 守卫，D40 保存路径唯一缺口——经 core-ipc 透传 CoreDataService.createNote 既有 metadata.aiMetadata 形参落 ai_metadata_json，零 migration 零新通道）；`lesson-feedback-modal` 同步获得全部能力（attendance/skills/aiProvider 加载 + 保存挂 aiMetadata）；styles.css rec-flow/折叠行/黄条样式。
+- 修改文件：`src/renderer/lesson-feedback-section.tsx`、`src/renderer/confirm-lesson-taught-modal.tsx`、`src/renderer/lesson-feedback-modal.tsx`、`src/renderer/styles.css`、`src/shared/core-contracts.ts`（CreateNoteRequest + isCreateNoteRequest）、`src/main/ipc/core-ipc.ts`（createNote aiMetadata 透传）、`src/main/data/core-data-service.ts`（createNote 参数联合类型）、`tests/v1.8-feedback-ui.test.ts`（追加 11 例共 29）、`tests/feedback-ipc.test.ts`（create-note 往返钉测）、`implementation-tasks/STATUS.md`、本文件。
+- 验证命令与结果：`npm test` ✅ 83 files / 444 tests passed（1 skipped）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅。
+- 人工/真实环境验证：班课（≥2 学生含 1 请假）窗口走查并入 V18-D 隔离 Windows 冒烟；AI 整理链路在单测中以 fake gateway 覆盖（V18-D 冒烟再走 fake provider 端到端）。
+- Git 任务提交：`v1.8(V18-C): class feedback list and transcript to feedback`。
+- 已知限制：`core:create-note` 合同按 D40 落地最小演进（新增可选 aiMetadata 字段，守卫 isFeedbackNoteMetadata 拒绝其他形状；无 aiMetadata 时行为与既有零差异，既有 create-note 钉测全绿）；纯录音路径仅置灰渲染（D45 非目标）；转写材料用完即弃，不落任何库表（V18-A 测试断言）。
+- 下一任务可依赖的接口：确认/补写弹窗保存路径完成（note→confirm 顺序 + aiMetadata）；V18-D 只剩门禁、冒烟、验收文档。

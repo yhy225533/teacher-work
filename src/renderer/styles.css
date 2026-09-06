@@ -4061,3 +4061,42 @@ button.quick-status { cursor: pointer; }
 .feedback-alert button { margin-left: auto; flex: 0 0 auto; border: 1px solid #fbbf24; background: #fff; color: #92400e; border-radius: 7px; padding: 5px 11px; font-size: 12px; font-weight: 700; cursor: pointer; }
 .feedback-summary-line { margin: 10px 0 0; color: var(--color-text-muted); font-size: 12px; line-height: 1.7; }
 .feedback-summary-line .link-button { margin-left: 8px; }
+
+/* ───── V1.8 V18-C：录音/转写转反馈 + 班课折叠 ───── */
+.fb-toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 8px; }
+.fb-toolbar .rec-btn { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #fca5a5; border-radius: 999px; background: #fee2e2; color: #b91c1c; font-size: 11.5px; font-weight: 800; padding: 5px 12px; cursor: pointer; }
+.fb-toolbar .rec-btn:hover { background: #fecaca; }
+.fb-toolbar .feedback-class-count { margin-left: auto; color: var(--color-text-muted); font-size: 11px; font-weight: 700; }
+.skill-label { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-muted); font-size: 11.5px; font-weight: 700; }
+.skill-label select { border: 1px solid var(--color-border); border-radius: 7px; padding: 4px 8px; color: var(--color-text-strong); background: #fff; font-size: 11.5px; font-family: inherit; }
+
+.rec-flow { border: 1px solid #fecaca; background: #fff; border-radius: var(--radius-lg); padding: 11px 13px; margin: 0 0 9px; }
+.rec-flow-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; flex-wrap: wrap; }
+.rec-flow-head b { font-size: 12.5px; color: #7f1d1d; }
+.rec-flow-close { margin-left: auto; border: 0; background: none; color: var(--color-text-faint); font-size: 15px; cursor: pointer; }
+.rec-paths { display: grid; gap: 8px; }
+.rec-paths .path-tag { display: inline-block; margin-left: 6px; border-radius: 999px; background: var(--color-primary); color: #fff; font-size: 9px; font-weight: 800; padding: 1px 7px; vertical-align: 2px; }
+.rec-paths .path-tag.off { background: #cbd5e1; }
+.rec-upload { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; border: 1.5px dashed #fca5a5; border-radius: 9px; padding: 13px 14px; background: #fef7f7; text-align: left; }
+.rec-upload .glyph { grid-row: span 2; font-size: 24px; }
+.rec-upload p { margin: 0; color: var(--color-text-strong); font-size: 12.5px; font-weight: 700; }
+.rec-upload small { display: block; margin-top: 3px; color: var(--color-text-muted); font-size: 11px; font-weight: 400; line-height: 1.6; }
+.rec-upload button { border: 1px solid #fca5a5; border-radius: var(--radius-md); background: #fff; color: #b91c1c; font-size: 12px; font-weight: 700; padding: 7px 13px; cursor: pointer; white-space: nowrap; }
+.rec-upload.is-off { border-color: #e2e8f0; background: #f8fafc; }
+.rec-upload.is-off .glyph { filter: grayscale(1); opacity: .6; }
+.rec-upload.is-off button { border-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
+.rec-file { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 9px; color: var(--color-text-strong); font-size: 12px; }
+.rec-file .chip { border: 1px solid var(--color-border); border-radius: 7px; background: #f8fafc; padding: 4px 9px; display: inline-flex; gap: 5px; align-items: center; }
+.rec-file .chip b { font-weight: 700; }
+.rec-file .chip small { color: var(--color-text-faint); }
+.rec-stage.done { color: #166534; font-size: 11.5px; font-weight: 700; }
+.rec-note { margin: 8px 0 0; color: var(--color-text-faint); font-size: 10.5px; line-height: 1.6; }
+
+.student-fb-row.is-absent { border-style: dashed; opacity: .75; }
+.student-fb-head .st.skipped { color: var(--color-text-faint); }
+.student-fb-body .absent-skip { margin-top: 6px; color: var(--color-text-faint); font-size: 11px; }
+.draft-origin { margin: 6px 0 0; color: var(--color-text-faint); font-size: 11px; }
+.draft-origin.is-edited { color: #166534; font-weight: 700; }
+.draft-origin.is-running { color: var(--color-primary-active); }
+
+.missing-inline { margin-top: 9px; border: 1px solid #fcd34d; background: #fef3c7; border-radius: 9px; padding: 8px 11px; color: #92400e; font-size: 12px; line-height: 1.6; }

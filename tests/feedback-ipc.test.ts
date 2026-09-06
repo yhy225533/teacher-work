@@ -203,4 +203,32 @@ describe('V18-A feedback IPC', () => {
     expect(logger.lines.join('\n')).toContain('ipc.feedback_request_failed')
     expect(logger.lines.join('\n')).not.toContain('机密转写内容')
   })
+
+  it('core:create-note round-trips a FeedbackNoteMetadata row (D40 save path)', async () => {
+    const { core, lesson, student } = fixture()
+    const note = await core.createNote(
+      student.id,
+      'AI 整理的反馈正文',
+      lesson.id,
+      {
+        occurredOn: '2026-09-05',
+        aiMetadata: {
+          generatedBy: 'feedback-assistant',
+          promptVersion: 'v18-01-v1',
+          provider: 'openai-compatible',
+          model: 'deepseek-chat',
+          skill: { id: 'skill-1', name: '反馈 Skill', prompt: '按三段结构整理' },
+          transcriptChars: 1_800,
+        },
+      },
+    )
+    expect(note.noteKind).toBeUndefined()
+    const stored = core.getOverview().notes.find((candidate) => candidate.id === note.id)
+    expect(stored?.occurredOn).toBe('2026-09-05')
+    expect(stored?.aiMetadata).toMatchObject({
+      generatedBy: 'feedback-assistant',
+      model: 'deepseek-chat',
+      transcriptChars: 1_800,
+    })
+  })
 })
