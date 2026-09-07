@@ -198,4 +198,45 @@ describe('V172-A 工作台骨架：左轨 / 生成器范围行 / 收起态', () 
     expect(styles).toContain('.prep-add-card {')
     expect(styles).toContain('.prep-add-card-plus {')
   })
+
+  it('V172-C: main empty state is a per-mode guidance card', () => {
+    const draft = source('../src/renderer/draft-panel.tsx')
+    const styles = source('../src/renderer/styles.css')
+
+    // 卡片化：workspace-card draft-content-empty（§5.2/§8）
+    expect(draft).toContain('workspace-card draft-content-empty')
+    // 分模式文案：new vs single/lesson（§8）
+    expect(draft).toContain('先添加生成依据（或直接写要求），点「生成讲义」即可出第一版；生成后节点出现在左侧修改记录里，随时回看与继续修改。')
+    expect(draft).toContain('修改方案生成后先在这里审阅，确认后才会生成新副本；节点会出现在左侧修改记录里。')
+    // 旧通用文案退役
+    expect(draft).not.toContain('左侧选择修改节点，或在上方生成新内容')
+    // CSS 落地
+    expect(styles).toContain('.workspace-card.draft-content-empty {')
+  })
+
+  it('V172-C: improve-review-card keeps an independent card look without workspace-card', () => {
+    const styles = source('../src/renderer/styles.css')
+
+    // §5.2 核查结论：.improve-review-card 自带独立边框与内边距（卡片视觉齐备），不再叠加 workspace-card
+    const block = styles.slice(styles.indexOf('.improve-review-card {'), styles.indexOf('.improve-plan-body {'))
+    expect(block).toContain('border:')
+    expect(block).toContain('padding:')
+    expect(block).not.toContain('workspace-card')
+  })
+
+  it('V172-C: collapse rules are pinned (select→collapse, adjust→expand, no-selection stays open)', () => {
+    const draft = source('../src/renderer/draft-panel.tsx')
+
+    // 规则 4：选中节点自动收起、无选中强制展开（V172-A 落地，V172-C 钉测防回归）
+    expect(draft).toContain('setGeneratorOpen(selectedNoteId === null)')
+    // 展开态与收起态互斥渲染
+    expect(draft).toContain('generatorOpen || selectedNote === undefined ? (')
+    expect(draft).toContain('prep-generator is-collapsed')
+    // "调整要求"按钮在收起条内（重展开入口）
+    const collapsed = draft.slice(draft.indexOf('is-collapsed'), draft.indexOf('</section>', draft.indexOf('is-collapsed')))
+    expect(collapsed).toContain('调整要求')
+    // 规则 5：abandon/startImprovePlan 取消路径强制展开（可改要求重试）
+    const abandonFn = draft.slice(draft.indexOf('function abandonImprove'), draft.indexOf('function abandonImprove') + 700)
+    expect(abandonFn).toContain('setGeneratorOpen(true)')
+  })
 })

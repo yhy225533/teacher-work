@@ -1395,7 +1395,11 @@ export default function DraftPanel({
             </div>
           )}
           {selectedNote === undefined ? (
-            <div className="draft-content-empty"><p>左侧选择修改节点，或在上方生成新内容。正式课件的阅读在「课件」分区。</p></div>
+            <div className="workspace-card draft-content-empty" role="status">
+              {prepMode === 'new'
+                ? <p>先添加生成依据（或直接写要求），点「生成讲义」即可出第一版；生成后节点出现在左侧修改记录里，随时回看与继续修改。</p>
+                : <p>修改方案生成后先在这里审阅，确认后才会生成新副本；节点会出现在左侧修改记录里。</p>}
+            </div>
           ) : (
             <div className="workspace-card prep-doc-card">
               {restoreNoticeVisible && selectedNote.draftStatus === 'draft' && (

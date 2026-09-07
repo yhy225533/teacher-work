@@ -1529,12 +1529,17 @@ button:disabled {
   line-height: 1.75;
 }
 
-.draft-content-empty {
-  display: grid;
-  min-height: 560px;
-  place-items: center;
-  padding: 30px;
-  text-align: center;
+/* V172-C（D33/§8）：主区空态卡片化 + 分模式引导文案 */
+.workspace-card.draft-content-empty {
+  min-height: 320px;
+  align-content: center;
+}
+
+.workspace-card.draft-content-empty p {
+  max-width: 480px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.9;
 }
 
 .draft-markdown-preview {

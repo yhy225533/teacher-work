@@ -1497,3 +1497,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 已知限制：new 模式"＋ 从本课资料选择"在 0 选中时才显示（有选中时由 chips 区"＋ 本课资料"承担，方案 §5.6 同构语义）；`prep-gen-note` 的选中计数文案（已选 n/10 份）随 chips 同步显示。
 - 下一任务可依赖的接口：V172-C 空态分模式文案可直接按 prepMode 分支渲染（draft-content-empty 处）；improve-review-card 已有独立边框（V172-C 只需核查确认）。
 
+
+## 2026-09-07 15:05 · V172-C · DONE
+
+- 关键改动：主区空态改 `workspace-card draft-content-empty` 卡片化并分模式给引导文案（new："先添加生成依据（或直接写要求），点「生成讲义」即可出第一版；生成后节点出现在左侧修改记录里，随时回看与继续修改。" / single·lesson："修改方案生成后先在这里审阅，确认后才会生成新副本；节点会出现在左侧修改记录里。"），旧通用文案"左侧选择修改节点，或在上方生成新内容。正式课件的阅读在「课件」分区"退役；CSS 新增 `.workspace-card.draft-content-empty`（min-height 320 + muted 文案）；improve-review-card 核查结论=自带独立边框内边距，不叠加 workspace-card（钉测锁视觉）；收起/展开规则（规则 4-5）钉测防回归。
+- 修改文件：`src/renderer/draft-panel.tsx`、`src/renderer/styles.css`、`tests/v1.7.2-workspace-structure.test.ts`（追加 3 例共 15）、`implementation-tasks/STATUS.md`、本文件。
+- 验证命令与结果：`npm test` ✅ 83 files / 462 tests passed（1 skipped 既有）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅。
+- 已知限制：1100px 以下堆叠走查（媒体查询 V172-A 已改写）并入 V172-D 隔离 Windows 冒烟执行；收起态摘要与规则 4-5 为 V172-A 已落地行为，本任务只补钉测。
+- 下一任务可依赖的接口：无新增接口；V172-D 直接进入全量门禁 + 冒烟 + 验收文档。
+
