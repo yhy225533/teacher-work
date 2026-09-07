@@ -1478,3 +1478,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 人工/真实环境验证：产品负责人走查清单见 `docs/v1.8.1-acceptance.md` §4（以高馨云第12讲真实数据：题目.md/核对表/docx/13 题图分组 + 提讲义往返 + 编辑出第 2 版 + 备课工作台零回归）。
 - Git 任务提交：`v1.8.1(V181-C): final gates and acceptance record`（V181-A/B 合并于本链提交）。**不创建 `checkpoint-V1.8.1-pass`**——待产品负责人最终确认后创建。
 - 已知限制：分组纯靠文件名约定（历史外部导入恰好形如版本名会被认作讲义，真实库经查无）；提讲义产生副本、原件保留材料区（D29 同语义）；`files:set-lesson-role` 无 contentChanged 之外的全局广播（与 writeVersion 一致）。
+
+
+## 2026-09-07 · V1.9 立项：课件导出可打印 PDF（方案冻结，plan 提交）
+
+- 产品负责人 2026-09-06 提出导出需求（"最终目标是纸质版"）；2026-09-06/07 走读代码确认技术路线（渲染管线全在 Renderer、图片 data URL、窗口安全/对话框注入/sender 校验先例均可复用）→ 草案（未编号）+ 流程示意图（`tmp/mockups/pdf-export-flow.html`，本地不入库）→ 2026-09-07 确认"差不多，没问题，写成方案"立项为 V1.9。
+- 方案：`docs/v1.9-pdf-export-plan.md`（设计基准，草案转正后删除）；决策 D48–D54：`implementation-tasks/V1_9_DECISIONS.md`——隐藏打印窗复用 `MarkdownDocument` + Electron 内建 `printToPDF`（所见即所得、零新依赖；Main 重写 md 解析器方案否决）。D48 范围=课次全部 md（与 D27 同宽）；D49 另存为对话框+原子落盘+成功后定位文件夹（响应不含路径）；D50 页眉学生名·课次/日期+页脚页码；D51 A4/11pt/白底省墨/防断裂；D52 合并成册候选不做；D53 无封面；D54 非目标与边界（零 migration/零 AI 调用/新 IPC 仅三条、载荷通道 sender 校验；PDF 不登记 files/不进索引备份）。
+- 任务链：`implementation-tasks/v1.9-tasks/` V19-A（合同+IPC+Main 服务）→ V19-B（打印视图+课件区入口）→ V19-C（唯一全量验收点 + 隔离冒烟 + `docs/v1.9-pdf-export-acceptance.md`）；同一时刻最多一个 `IN_PROGRESS`。
+- 版本控制协议已追加 V1.9 行（`plan(V1.9)` / `v1.9(V19-XX)`；`checkpoint-V1.9-pass` 待产品负责人走查确认后创建，与既有 pass 互不替代）。
+- 实施节奏：本立项只冻结方案与任务链骨架；V19-A 待产品负责人完成 V1.8 / V1.8.1 走查确认（`checkpoint-V1.8-pass` / `checkpoint-V1.8.1-pass` 创建）后开始。
+- Git：本地提交 `plan(V1.9): pdf export via hidden print window and printToPDF`；随后 push（沿用 GitHub 授权）。

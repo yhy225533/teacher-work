@@ -220,3 +220,13 @@
 | V181-A 分组与树渲染 | DONE | splitLessonFilesByRole 纯函数（版本链/学生版/编辑版→讲义组；其余→材料组）+ LessonMaterialTree grouped 可选 prop 分组渲染（讲义组在前）+ 当前徽标/来源标签（lessonFileSourceLabel 首次进课件区树）+ 空态引导 + role-group CSS；lesson-prep-context +3 例、v1.8.1-courseware-groups 新 5 例；相关测试 + typecheck + lint 通过 |
 | V181-B 设为讲义底稿 | DONE | ManagedFileService.setLessonFileRole（同基名 MAX+1 出 `基名 · 第 N 版.md` 副本，临时文件+原子重命名，原件不动；非 md/已讲义命名/未挂课次/空内容/超限拒绝）+ files:set-lesson-role IPC（enqueueIndex + notifyContentChanged）+ preload + reader「↥ 设为讲义底稿」入口 + section handler；service +3 例、ipc +1 例；相关测试 + typecheck + lint 通过 |
 | V181-C 最终门禁与验收 | 自动门 DONE / 走查待产品负责人 | 全量 83 files / 457 tests passed（1 skipped）、typecheck、lint、production build、diff check 全绿；`docs/v1.8.1-acceptance.md`；产品负责人走查确认后创建 `checkpoint-V1.8.1-pass` |
+
+## V1.9 已立项（课件导出可打印 PDF：隐藏打印窗 + printToPDF）
+
+基线：V1.8.1 自动门已过（走查确认与 `checkpoint-V1.8.1-pass` 待产品负责人，互不阻塞 V1.9）。方案 `docs/v1.9-pdf-export-plan.md`，决策 D48–D54（`implementation-tasks/V1_9_DECISIONS.md`）；任务链 `implementation-tasks/v1.9-tasks/`，按编号顺序执行，同一时刻最多一个 `IN_PROGRESS`；零 migration、零新依赖、零 AI 调用，新 IPC 仅 `export:print-to-pdf` / `export:get-print-payload` / `export:print-ready` 三条（载荷通道带 sender 校验）；PDF 不登记 files 表、不进索引/备份；不运行 portable/installer；实施待产品负责人完成 V1.8 / V1.8.1 走查确认后开始。
+
+| 里程碑 | 状态 | 计划内容 |
+|---|---|---|
+| V19-A 导出合同与 Main 服务 | TODO | export-contracts（常量/接口/守卫）+ 三条 `export:*` IPC（载荷通道 sender 校验、print-ready 仅一次）+ ExportService（校验/载荷组装不信任 Renderer 内容/隐藏打印窗编排/printToPDF A4 版式参数/60s 超时与 crash 清理/另存为对话框 + 临时文件原子重命名 + showItemInFolder，响应不含路径）+ index.ts 接线；service/ipc/contracts 三组测试（编排用注入 fake 窗口端口与 fake printToPDF） |
+| V19-B 打印视图与课件区入口 | TODO | main.tsx `?print=1` 分支 + PrintDocumentView（复用 MarkdownDocument 所见即所得 + fonts/imgs 就绪协议）+ print-document.css A4 版式（11pt/防断裂/白底黑字）+ 阅读器「导出 PDF」入口（仅 md、busy 禁用态、提示分支）+ lesson-files-section 接线（headerText = 学生名 · 课次标题）；v1.9-export-ui 静态钉测 |
+| V19-C 最终门禁与验收 | TODO | 全量测试、typecheck、lint、production build、diff check；隔离 Windows 冒烟（真实导出含公式+题图样例 md → `%PDF-` 头/页数/默认名断言 + 取消/并发 BUSY/超时清理路径 + 进程与临时目录双复核）；`docs/v1.9-pdf-export-acceptance.md`；产品负责人走查（方案 §11 八条）确认后创建 `checkpoint-V1.9-pass` |
