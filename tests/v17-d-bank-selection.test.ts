@@ -354,8 +354,12 @@ describe('V17-D Renderer 钉测：开关 / 过目卡 / 徽标 / 预算列名', (
   it('extends the D25 budget dialog with the bank candidate line and shows inline usage', () => {
     const panel = source('../src/renderer/draft-panel.tsx')
     expect(panel).toContain('题库候选 ${keptBankCandidates.length} 道（按预算部分纳入 ${bankFitCount} 道）')
-    expect(panel).toContain('题库候选 ${keptBankCandidates.length} 题 · ${bankCandidateChars.toLocaleString')
+    // V19-A（D55）：预算行简化为对话栏底部一行小字（超预算红态），题库候选计数提示保留
+    expect(panel).toContain('题库候选 ${keptBankCandidates.length} 题')
     expect(panel).toContain('fitBankCandidateCount(keptBankRendereds, bankPlan.targetCount, bankRemaining)')
+    const styles = source('../src/renderer/styles.css')
+    expect(styles).toContain('.prep-chat-budget')
+    expect(styles).toContain('.prep-chat-budget.is-over')
   })
 
   it('shows teacher/student variant badges in results list, content header and inbox', () => {
@@ -368,24 +372,22 @@ describe('V17-D Renderer 钉测：开关 / 过目卡 / 徽标 / 预算列名', (
     expect(panel).toContain("is-${variant}")
   })
 
-  it('covers the new-prep mode: toggle outside the mode gate and two-step generate', () => {
+  it('covers the new-prep mode: chat bank row outside any mode gate and two-step generate', () => {
     const panel = source('../src/renderer/draft-panel.tsx')
-    // 开关块已移出 prepMode !== 'new' 门：新建备课同样显示参考题库开关
-    // V172-A（D33）：开关块由 prep-bank-toggle 大块改为参考行/生成依据行内的 switch 行
-    const referenceGate = panel.indexOf("{prepMode !== 'new' && (")
+    // V19-A（D55）：题库开关行在对话栏常驻（new/single/lesson 三态共用，不再套模式门）
     const bankToggle = panel.indexOf("className={`prep-switch-row${(bankSummary?.installed ?? false) ? '' : ' is-disabled'}`}")
     expect(bankToggle).toBeGreaterThan(0)
-    expect(panel.indexOf("className={`prep-switch-row${(bankSummary?.installed ?? false) ? '' : ' is-disabled'}`}", bankToggle + 1)).toBeGreaterThan(referenceGate)
+    expect(panel.indexOf("className={`prep-switch-row${(bankSummary?.installed ?? false) ? '' : ' is-disabled'}`}", bankToggle + 1)).toBe(-1)
     // generate()：开启且无候选时先出候选并提示二次点击；候选就绪后带 bankPlan/bankQuestionIds/dualVersion
     expect(panel).toContain('题库候选已列出，请过目（可剔除或调整后重新选题），再点一次生成按钮执行。')
     expect(panel).toContain('const bankActive = bankEnabled && bankPlan !== null')
-    // 候选过目卡独立于修改方案卡（improvePhase 门外）渲染
-    const reviewCard = panel.indexOf("{improvePhase === 'review' && (")
-    const bankSectionCard = panel.indexOf('<div className="improve-bank-section"')
-    const reviewActions = panel.indexOf('{improvePhase === \'review\' && (', reviewCard + 1)
-    expect(reviewActions).toBeGreaterThan(reviewCard)
-    expect(bankSectionCard).toBeGreaterThan(reviewCard)
-    expect(bankSectionCard).toBeLessThan(reviewActions)
+    // V19-A：候选列表在方案态舞台卡内就地渲染（确认条之前、方案正文之后）
+    const reviewStage = panel.indexOf("{improvePhase === 'review' ? (")
+    const stageBank = panel.indexOf('<div className="prep-stage-bank"')
+    const stageActions = panel.indexOf('className="prep-stage-actions">')
+    expect(reviewStage).toBeGreaterThan(-1)
+    expect(stageBank).toBeGreaterThan(reviewStage)
+    expect(stageBank).toBeLessThan(stageActions)
   })
 
   it('offers a return-to-prep button on the external library picker mode', () => {

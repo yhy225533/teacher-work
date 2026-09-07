@@ -339,12 +339,13 @@ describe('V156-D static render upgrades (additive)', () => {
       const context = createLessonPrepContext(course, lesson, [student], '第一阶段')
       const markup = renderToStaticMarkup(createElement(DraftPanel, draftProps(context) as never))
       expect(markup).toContain('lesson-prep-workspace')
-      // V172-A（D33）：左栏节头（新建备课/选择生成依据）删除；生成依据为生成器范围行 label，主区空态文案 V172-C 演进
-      expect(markup).toContain('prep-rail')
-      expect(markup).toContain('<b>修改记录</b>')
-      expect(markup).toContain('生成依据')
-      // V172-B（D33/§5.6）：资料加载完成前生成依据行只有加载态；外部资料/素材库入口
-      // （冷启动大卡）在 files 就绪后渲染，防再犯钉测移至 v1.7.2-workspace-structure（源码断言）
+      // V19-A（D55）：页面头（kicker「AI 修改」+ 课次标题 + 修改记录浮层按钮）与常驻对话栏
+      expect(markup).toContain('prep-workspace-head')
+      expect(markup).toContain('AI 修改')
+      expect(markup).toContain('有理数')
+      expect(markup).toContain('修改记录 0')
+      expect(markup).toContain('prep-chat')
+      // 资料加载完成前依据区只有加载态；外部资料/素材库入口（冷启动大卡）在 files 就绪后渲染
       expect(markup).toContain('正在读取本次资料…')
       expect(markup).not.toContain('prep-add-card')
     })

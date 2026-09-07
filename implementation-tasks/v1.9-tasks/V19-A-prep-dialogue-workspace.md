@@ -1,6 +1,6 @@
 # V19-A · 备课工作台对话式重做
 
-状态：TODO
+状态：DONE
 
 ## 目标
 
@@ -26,7 +26,7 @@ draft-panel 重排为「对话栏 + 主舞台」两栏：右栏 = 与 AI 对话�
 4. 测试：
    - draft-panel 重组钉测：自动挂载规则（有/无 md）、radio 范围切换映射 lesson、"发送"按钮态、舞台四态渲染与同卡替换（流式不插卡）、确认/调整/放弃三键、成果三主键与 ⋯ 菜单、修改记录浮层开合与选择加载、删除草稿仍红区确认；
    - md-editor 双用法：文件用法零变化钉测（write-version 往返不变）+ note 用法（保存回 note、热保存键隔离、取消丢弃）；
-   - 演进受影响钉测（v1.7.2-workspace-structure、static-render-v156-d、v17-d-bank-selection 等），验收语义不改写。
+   - 演进受影响钉测（v1.7.2-workspace-structure、static-render-v156-d、v17-d 等），验收语义不改写。
 
 ## 边界
 
@@ -39,6 +39,13 @@ draft-panel 重排为「对话栏 + 主舞台」两栏：右栏 = 与 AI 对话�
 
 - 相关测试 + `npm run typecheck` + `npm run lint`。
 
-## 完成记录
+## 完成记录（2026-09-07）
 
-（待实施）
+- **draft-panel.tsx 重排**：页面头（kicker「AI 修改」+ `阶段 · 课次` 标题 + `🕘 修改记录 N` 浮层按钮 + 「退出修改，回到课件」）+ grid 改 `minmax(0,1fr) 302px`（主舞台在前、对话栏在后）；撤 prep-mode-bar / prep-rail / prep-generator（含收起规则 1-5）/ improve-bank-section 独立卡 / improve-review-actions 独立确认条 / prep-budget-line 预算长行；
+- **对话栏（prep-chat）**：依据区 = 有 md 课次「这次改什么」radio 两项（这份讲义[自动徽标+目标卡+更换] ｜ 整个课件包 N 份）映射 selectChatScope→changePrepMode（prepMode 合同保留）；无 md 课次沿用 prep-add-cards 两张大卡 + chips 三小入口；补充参考 chips/三入口；题库开关行（唯一 PrepBankOptions 实例随开关展开）；「对 AI 说」textarea rows=5（DRAFT_REQUIREMENT_MAX_CHARS 不变）+ Skill select +（new：生成类型 select）+ `✦ 发送`（prepMode 路由 generate/startImprovePlan，生成中禁用）；预算一行小字 + 超预算红态；chatCollapsed 手动折叠摘要条（1100px 堆叠提示）；
+- **主舞台（prep-stage）**：improvePhase==='review' 方案态（方案正文 + 题库候选就地 prep-stage-bank 列表逐题剔除/调整重选 + `✓ 确认并生成`/`让 AI 调整`/`放弃`）→ streamState 流式态（思考行秒表 + 逐字正文 + 取消，同卡替换不插卡）→ 成果态（未发布/已确认徽标 + `✎ 编辑`/`⇄ 新旧对比`/`⬆ 保存为新版本`(draft primary；saved 退化为保存到本次课次) + `⋯` 菜单[重新生成/保存到本次课次/查看课件/删除草稿红区底部]）→ compareOpen 对比分栏（退出对比键）；恢复提示置顶保留；空态分模式文案卡片；
+- **修改记录浮层**：historyOpen Drawer（teaching-content-drawer 视觉复用，backdrop 点击关闭），条目 = 原 rail 行（节点名/时间/教师版·学生版徽标/修改中·已确认/删除红键带确认），选择即 selectResult+关闭；DraftInbox（context=null 草稿箱）零改动；
+- **MdEditor 双用法（D56）**：可选 `initialBody`+`onSaveBody`+`storageKey`+`onBodyChange`；文件用法（课件区）read-text/write-version/热保存键/视图分栏记忆键字面量全部零变化；受控用法读 initialBody、保存回调 updateNote（note 语义）、热保存键 `md-editor-draft:note:<noteId>` 隔离、按钮文案「保存修改」；成果 ✎ 编辑接入（key=noteId 隔离实例、onBodyChange 镜像维持 dirty 离开确认、取消丢弃）；守卫拒绝双用法/空用法；
+- **styles.css**：prep-workspace-head / prep-chat（sticky 302px + 折叠条）/ prep-scope-option radio / prep-stage 四态 / prep-result-menu / prep-history-drawer / prep-chat-budget 红态；1100px 断点堆叠；退役 prep-rail*/prep-generator*/prep-gen-*/prep-mode-*/prep-doc-card/prep-budget-line/prep-meter/improve-review-card 区块；
+- **测试**：新增 `tests/v1.9-prep-dialogue.test.ts` 16 例（模式行撤除+合同保留、页面头静态渲染、radio 映射、自动初始化、发送路由与禁用、预算小字行、方案态三键+题库就地、流式同卡、成果三主键+⋯菜单+删除确认、对比态、恢复提示、浮层开合与选择加载、MdEditor 双用法文件侧零变化、受控用法接线与守卫、D59 无对话消息数组护栏）；演进 6 处既有钉测（v1.7.2-workspace-structure 按新结构重钉 15 例、static-render-v156-d 初始态、v1.5.2 方案/确认文案、v1.5.3.1 依据区/快捷生成、v1.2-prep-files-ui 补充参考行、v17-d 预算行与题库开关常驻）——验收语义不改写；
+- **门禁**：全量 84 files / 476 tests passed（1 skipped 为既有 skip）、typecheck、lint 全绿；未运行 build（门禁为相关测试+typecheck+lint，按任务文件约定）。

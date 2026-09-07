@@ -52,6 +52,7 @@ import {
 } from './lesson-prep-context'
 import { listDraftInbox, listLessonAiResults, type DraftInboxEntry } from './draft-view-model'
 import { MarkdownDocument } from './lesson-material-reader'
+import MdEditor from './md-editor'
 import { useAppDialog } from './app-confirm-dialog'
 import { useCoreOverview } from './core-overview-provider'
 import type { PrepLaunchIntent, PrepLaunchMode } from './teaching-content-context'
@@ -119,6 +120,9 @@ export default function DraftPanel({
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [restoreNoticeVisible, setRestoreNoticeVisible] = useState(false)
+  // V19-A（D55）：修改记录默认收起为顶部浮层按钮；成果操作低频项收进 ⋯ 菜单
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [resultMenuOpen, setResultMenuOpen] = useState(false)
   const [improvePhase, setImprovePhase] = useState<'' | 'review'>('')
   const [improvePlan, setImprovePlan] = useState('')
   const [improveBusy, setImproveBusy] = useState(false)
@@ -154,10 +158,10 @@ export default function DraftPanel({
   const confirmedBudgetSignature = useRef('')
   const knownLessonFileIds = useRef<Set<string>>(new Set())
   const scopeInitialized = useRef(false)
-  // V172-A（D33）：结构重排的三个纯 UI 展开态——修改对象"更换"、本课资料候选列表、生成器收起（规则见方案 §6）
-  const [targetPickerOpen, setTargetPickerOpen] = useState(false)
+  // V19-A（D55）：对话栏折叠态（窄窗堆叠时的摘要条）；依据区 scope radio 收起态（规则随 V172-A 更换列表同构）
+  const [chatCollapsed, setChatCollapsed] = useState(false)
+  const [scopePickerOpen, setScopePickerOpen] = useState(false)
   const [refPickerOpen, setRefPickerOpen] = useState(false)
-  const [generatorOpen, setGeneratorOpen] = useState(true)
 
   const lessonFiles = useMemo(() => {
     if (files === null || context === null) return []
@@ -263,8 +267,11 @@ export default function DraftPanel({
     setImproveBase(null)
     setCompareOpen(false)
     setReferenceNotice('')
-    setTargetPickerOpen(false)
-    setGeneratorOpen(true)
+    setHistoryOpen(false)
+    setResultMenuOpen(false)
+    setChatCollapsed(false)
+    setScopePickerOpen(false)
+    setRefPickerOpen(false)
     void (async () => {
       const loadedCore = await reload()
       if (cancelled || context === null || loadedCore === null) return
@@ -318,9 +325,10 @@ export default function DraftPanel({
     setEditBody('')
   }, [lessonResults, selectedNoteId, showResults])
 
-  // V172-A（D33）规则 4：选中任意修改节点（生成完成/恢复/左轨切换）时生成器自动收起；无选中节点强制展开。
+  // V19-A（D55）：进入页面按课次状态自动初始化（有 md → single + 当前讲义；无 → new）；
+  // 模式切换器已撤除，"整个课件包"经依据区 radio 映射 lesson。选中节点只关浮层，对话栏常驻可改要求。
   useEffect(() => {
-    setGeneratorOpen(selectedNoteId === null)
+    setResultMenuOpen(false)
   }, [selectedNoteId])
 
   useEffect(() => {
@@ -466,7 +474,7 @@ export default function DraftPanel({
     if (!modifiableCurrentFiles.some((file) => file.id === fileId)) return
     setTargetFileId(fileId)
     setSelectedReferenceFileIds((current) => current.filter((id) => id !== fileId))
-    setTargetPickerOpen(false)
+    setScopePickerOpen(false)
     setImprovePhase('')
     setImprovePlan('')
     setImproveError('')
@@ -474,6 +482,11 @@ export default function DraftPanel({
     setCompareOpen(false)
     clearBankSelection()
     setMessage('')
+  }
+
+  /** V19-A（D55）：依据区「这次改什么」radio——这份讲义(single) ｜ 整个课件包(lesson)，映射进保留的 prepMode 合同字段。 */
+  function selectChatScope(nextMode: Exclude<PrepLaunchMode, 'new'>): void {
+    changePrepMode(nextMode)
   }
 
   function changePrepMode(nextMode: Exclude<PrepLaunchMode, 'new'>): void {
@@ -491,8 +504,7 @@ export default function DraftPanel({
     }
     setSelectedReferenceFileIds([])
     setReferenceNotice('')
-    setTargetPickerOpen(false)
-    setGeneratorOpen(true)
+    setScopePickerOpen(false)
     setImprovePhase('')
     setImprovePlan('')
     setImproveError('')
@@ -730,7 +742,6 @@ export default function DraftPanel({
     }
     if (!await confirmReferenceBudget(baselineFiles)) {
       setImproveError('已取消。请删减补充参考后重试，或再次发起并选择“继续生成”。')
-      setGeneratorOpen(true)
       return
     }
     const planRequestId = globalThis.crypto.randomUUID()
@@ -892,7 +903,6 @@ export default function DraftPanel({
     setImprovePlan('')
     setImproveError('')
     setMessage('')
-    setGeneratorOpen(true)
   }
 
   async function selectResult(note: NoteRecord): Promise<void> {
@@ -917,7 +927,6 @@ export default function DraftPanel({
 
   function startEditing(): void {
     if (selectedNote === undefined) return
-    setEditBody(selectedNote.bodyMd)
     setEditing(true)
     setMessage('')
     setError('')
@@ -938,6 +947,8 @@ export default function DraftPanel({
     setBusyAction('save')
     setError('')
     try {
+      // V19-A（D56）：编辑态正文由 MdEditor 受控用法持有，saveModification 保留为
+      // 舞台头「保存修改」入口与编辑器主按钮共用语义（updateNote = note 生命周期零改动）
       await window.teacherWorkbench.core.updateNote({ noteId: selectedNote.id, bodyMd: editBody })
       setEditing(false)
       setEditBody('')
@@ -1050,286 +1061,33 @@ export default function DraftPanel({
     <section className="lesson-prep-workspace" aria-live="polite">
       {error !== '' && <div className="inline-error" role="alert">{error}</div>}
       {message !== '' && <div className="inline-notice" role="status">{message}</div>}
-      {prepMode !== 'new' && (
-        <div className="prep-mode-bar">
-          <div><strong>这次想怎么改？</strong><span>配置都在右侧生成器里，一行一类</span></div>
-          <div className="segmented-control prep-mode-switch" aria-label="AI 修改方式">
-            <button className={prepMode === 'single' ? 'is-active' : ''} type="button" onClick={() => changePrepMode('single')} disabled={busyAction !== '' || improveBusy}>修改当前文件</button>
-            <button className={prepMode === 'lesson' ? 'is-active' : ''} type="button" onClick={() => changePrepMode('lesson')} disabled={busyAction !== '' || improveBusy}>整课重做</button>
-          </div>
+      <header className="prep-workspace-head">
+        <div>
+          <p className="section-kicker">AI 修改</p>
+          <h2>{context.periodTitle === undefined ? '' : `${context.periodTitle} · `}{context.lessonTitle}</h2>
         </div>
-      )}
+        <div className="prep-workspace-head-actions">
+          <button className="secondary-button" type="button" onClick={() => setHistoryOpen(true)}>🕘 修改记录 {lessonResults.length}</button>
+          {onOpenCourseware !== undefined && <button className="link-button" type="button" onClick={onOpenCourseware}>退出修改，回到课件</button>}
+        </div>
+      </header>
       <div className="lesson-prep-workspace-grid">
-        <aside className="workspace-card prep-rail" aria-label="修改记录">
-          <div className="prep-rail-head"><b>修改记录</b><span>{lessonResults.length} 份</span></div>
-          <ul className="draft-result-list">
-            {lessonResults.map((note) => {
-              const kind = note.noteKind as DraftKind
-              const variant = draftNoteMetadata(note)?.variant
-              return (
-                <li key={note.id} className={selectedNote?.id === note.id ? 'is-selected' : ''}>
-                  <button type="button" className="draft-result-select" onClick={() => { void selectResult(note) }} disabled={busyAction !== ''}>
-                    <span className="draft-kind-icon" aria-hidden="true">{kindIcon(kind)}</span>
-                    <span><strong>{modificationNodeLabel(note)}</strong><small>{formatDateTime(note.updatedAt)}</small></span>
-                    <span className="draft-row-badges">
-                      {variant === 'teacher' && <span className="draft-variant-badge is-teacher">教师版</span>}
-                      {variant === 'student' && <span className="draft-variant-badge is-student">学生版</span>}
-                      <span className={`draft-status draft-status-${note.draftStatus}`}>{note.draftStatus === 'draft' ? '修改中' : '已确认'}</span>
-                    </span>
-                  </button>
-                  {note.draftStatus === 'draft' && <button className="danger-button" type="button" onClick={() => void deleteDraft(note)} disabled={busyAction !== ''}>删除</button>}
-                </li>
-              )
-            })}
-            {lessonResults.length === 0 && <li className="empty-state">还没有修改节点。右侧生成后，每个节点都会出现在这里。</li>}
-          </ul>
-          <p className="prep-rail-foot">生成的每个节点都会保留在这里，点开即回看，AI 结果永不覆盖原件。</p>
-        </aside>
         <section className="prep-main">
-          {generatorOpen || selectedNote === undefined ? (
-            <section className="workspace-card prep-generator" aria-label="生成配置">
-              <div className="prep-gen-row">
-                <span className="prep-gen-label">{prepMode === 'single' ? '修改对象' : prepMode === 'lesson' ? '修改范围' : '生成依据'}</span>
-                <div className="prep-gen-field">
-                  {prepMode === 'single' && (
-                    targetPickerOpen ? (
-                      <>
-                        <ScopeFileList files={modifiableCurrentFiles} selection="radio" selectedIds={targetFile === null ? [] : [targetFile.id]} onSelect={selectTargetFile} currentVersionId={classifiedFiles.currentVersion?.id} charCounts={referenceCharCounts} emptyText="本课还没有 Markdown 课件，可先导入 md 讲义或用 AI 生成第一版课件。" />
-                        <button className="prep-mini-btn" type="button" onClick={() => setTargetPickerOpen(false)}>收起</button>
-                      </>
-                    ) : (
-                      <>
-                        <div className="prep-target-card">
-                          <span className="prep-file-glyph" aria-hidden="true">MD</span>
-                          <span className="prep-target-meta">
-                            <b>{targetFile?.originalName ?? '尚未选择'}</b>
-                            <small>
-                              {targetFile === null ? '—' : `${(referenceCharCounts.get(targetFile.id) ?? 0).toLocaleString('zh-CN')} 字`}
-                              {targetFile !== null && targetFile.id === classifiedFiles.currentVersion?.id ? ' · 当前版' : ''} · {kindLabels[plannedDraftKind]}
-                            </small>
-                          </span>
-                          {modifiableCurrentFiles.length > 1 && (
-                            <button className="prep-mini-btn" type="button" disabled={busyAction !== '' || improveBusy} onClick={() => setTargetPickerOpen(true)}>更换</button>
-                          )}
-                        </div>
-                        <span className="prep-gen-note">AI 只改这份文件，未提及部分保持不变</span>
-                      </>
-                    )
-                  )}
-                  {prepMode === 'lesson' && (
-                    <>
-                      <div className="prep-auto-chip">
-                        本课全部课件
-                        <small>{lessonBaselineFiles.length} 份 · 自动纳入最新正式版，历史版本不参与</small>
-                      </div>
-                      <span className="prep-gen-note">输出一份完整新版本（讲义 + 例题 + 课堂练习 + 课后作业）</span>
-                    </>
-                  )}
-                  {prepMode === 'new' && (
-                    files === null ? <div className="material-reader-state">正在读取本次资料…</div> : (
-                      selectedReferenceFileIds.length > 0 ? (
-                        <>
-                          {selectedReferenceFiles.map((file) => (
-                            <span key={file.id} className="prep-chip">
-                              <span>{file.originalName}</span>
-                              <button className="prep-chip-remove" type="button" aria-label={`移除依据 ${file.originalName}`} disabled={busyAction !== ''} onClick={() => toggleReferenceFile(file.id)}>✕</button>
-                            </span>
-                          ))}
-                          <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={() => setRefPickerOpen((current) => !current)}>＋ 本课资料</button>
-                          {refPickerOpen && (
-                            <ScopeFileList files={referenceCandidates} selection="checkbox" selectedIds={selectedReferenceFileIds} onSelect={toggleReferenceFile} currentVersionId={classifiedFiles.currentVersion?.id} charCounts={referenceCharCounts} emptyText="本课没有可作生成依据的课内资料。" />
-                          )}
-                          <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={onBrowseExternal}>＋ 外部资料</button>
-                          <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={onBrowseMaterials}>＋ 素材库</button>
-                          <label className={`prep-switch-row${(bankSummary?.installed ?? false) ? '' : ' is-disabled'}`} title={(bankSummary?.installed ?? false) ? undefined : '先在题库页导入 .tqbank'}>
-                            参考题库
-                            <input
-                              className="prep-switch-input"
-                              type="checkbox"
-                              checked={bankEnabled}
-                              disabled={!(bankSummary?.installed ?? false) || busyAction !== '' || improveBusy}
-                              onChange={toggleBankEnabled}
-                            />
-                            <span className="prep-switch" aria-hidden="true" />
-                          </label>
-                        </>
-                      ) : (
-                        <div className="prep-add-cards">
-                          <button className="prep-add-card" type="button" disabled={busyAction !== ''} onClick={onBrowseExternal}>
-                            <span className="prep-add-card-plus" aria-hidden="true">＋</span>
-                            <b>从外部资料添加</b>
-                            <small>从已登记的外部资料根目录中选择文件作为生成依据</small>
-                          </button>
-                          <button className="prep-add-card" type="button" disabled={busyAction !== ''} onClick={onBrowseMaterials}>
-                            <span className="prep-add-card-plus" aria-hidden="true">＋</span>
-                            <b>从素材库添加</b>
-                            <small>从素材库挑取素材插入本课资料</small>
-                          </button>
-                        </div>
-                      )
-                    )
-                  )}
-                </div>
+          {/* V19-A（D55）：主舞台——固定位置、同卡替换（方案 → 流式 → 成果 → 对比），不编号不步骤链 */}
+          {improvePhase === 'review' ? (
+            <section className="workspace-card prep-stage" aria-label="修改方案">
+              <div className="prep-stage-head">
+                <div><p className="section-kicker">等待确认</p><h3>修改方案（确认后生成）</h3></div>
               </div>
-              {prepMode !== 'new' && (
-                <div className="prep-gen-row">
-                  <span className="prep-gen-label">补充参考</span>
-                  <div className="prep-gen-field">
-                    {selectedReferenceFiles.length === 0 && <span className="prep-gen-note">没有额外参考；可从下面入口添加。</span>}
-                    {selectedReferenceFiles.map((file) => (
-                      <span key={file.id} className="prep-chip">
-                        <span>{file.originalName}</span>
-                        <button className="prep-chip-remove" type="button" aria-label={`移除参考 ${file.originalName}`} disabled={busyAction !== ''} onClick={() => toggleReferenceFile(file.id)}>✕</button>
-                      </span>
-                    ))}
-                    <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={() => setRefPickerOpen((current) => !current)}>＋ 本课资料</button>
-                    <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={onBrowseExternal}>＋ 外部资料</button>
-                    <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={onBrowseMaterials}>＋ 素材库</button>
-                    {refPickerOpen && (
-                      <ScopeFileList files={referenceCandidates} selection="checkbox" selectedIds={selectedReferenceFileIds} onSelect={toggleReferenceFile} currentVersionId={classifiedFiles.currentVersion?.id} charCounts={referenceCharCounts} emptyText="本课没有可作参考的额外资料。" />
-                    )}
-                    <label className={`prep-switch-row${(bankSummary?.installed ?? false) ? '' : ' is-disabled'}`} title={(bankSummary?.installed ?? false) ? undefined : '先在题库页导入 .tqbank'}>
-                      参考题库
-                      <input
-                        className="prep-switch-input"
-                        type="checkbox"
-                        checked={bankEnabled}
-                        disabled={!(bankSummary?.installed ?? false) || busyAction !== '' || improveBusy}
-                        onChange={toggleBankEnabled}
-                      />
-                      <span className="prep-switch" aria-hidden="true" />
-                    </label>
-                  </div>
-                </div>
-              )}
-              {prepMode === 'new' && selectedReferenceFileIds.length === 0 && files !== null && (
-                <div className="prep-gen-row">
-                  <span className="prep-gen-label" />
-                  <div className="prep-gen-field">
-                    {referenceCandidates.length > 0 && (
-                      <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={() => setRefPickerOpen((current) => !current)}>＋ 从本课资料选择</button>
-                    )}
-                    {refPickerOpen && (
-                      <ScopeFileList files={referenceCandidates} selection="checkbox" selectedIds={selectedReferenceFileIds} onSelect={toggleReferenceFile} currentVersionId={classifiedFiles.currentVersion?.id} charCounts={referenceCharCounts} emptyText="本课没有可作生成依据的课内资料。" />
-                    )}
-                    <span className="prep-gen-note">已选 0 份 · 也可以只靠要求直接生成</span>
-                    <label className={`prep-switch-row${(bankSummary?.installed ?? false) ? '' : ' is-disabled'}`} title={(bankSummary?.installed ?? false) ? undefined : '先在题库页导入 .tqbank'}>
-                      参考题库
-                      <input
-                        className="prep-switch-input"
-                        type="checkbox"
-                        checked={bankEnabled}
-                        disabled={!(bankSummary?.installed ?? false) || busyAction !== '' || improveBusy}
-                        onChange={toggleBankEnabled}
-                      />
-                      <span className="prep-switch" aria-hidden="true" />
-                    </label>
-                  </div>
-                </div>
-              )}
-              {prepMode !== 'new' && (
-                <div className="prep-gen-row">
-                  <span className="prep-gen-label" />
-                  <div className={`prep-gen-field prep-budget-line${referenceBudgetExceeded ? ' is-over' : ''}`} role="status">
-                    <span className="prep-meter"><i style={{ width: `${Math.min(100, Math.round(scopedCharTotal / DRAFT_DEFAULT_MAX_CHARS * 100))}%` }} /></span>
-                    <span className="prep-meter-text">
-                      {referenceNotice !== '' ? `（${referenceNotice}）` : ''}
-                      已用 {scopedCharTotal.toLocaleString('zh-CN')} / {DRAFT_DEFAULT_MAX_CHARS.toLocaleString('zh-CN')} 字 · 参考 {selectedReferenceFiles.length} / {DRAFT_MAX_REFERENCE_FILES} 份
-                      {bankEnabled && keptBankCandidates.length > 0 ? ` · 题库候选 ${keptBankCandidates.length} 题 · ${bankCandidateChars.toLocaleString('zh-CN')} 字` : ''}
-                      {referenceFilesFull ? ` · 已选满 ${DRAFT_MAX_REFERENCE_FILES} 份` : ''}
-                      {referenceBudgetExceeded ? ' · 已超预算，生成时按预算截减并需确认' : ''}
-                    </span>
-                  </div>
-                </div>
-              )}
-              <div className="prep-gen-req">
-                <p className="prep-req-caption">{prepMode === 'new' ? '生成要求' : prepMode === 'single' ? '修改要求' : '整课重做要求'} <small>（每次生成都以它为准）</small></p>
-                <textarea value={requirement} onChange={(event) => setRequirement(event.target.value)} maxLength={DRAFT_REQUIREMENT_MAX_CHARS} rows={3} placeholder="例如：每个概念后配一道即时练习；平方根易错点整理成辨析表；结尾加下一讲衔接。" disabled={busyAction !== ''} />
-                <div className="prep-gen-actions">
-                  <label className="improve-kind-label">Skill：
-                    <select value={selectedSkillId} onChange={(event) => setSelectedSkillId(event.target.value)} disabled={busyAction !== ''}>
-                      <option value="">不使用 Skill</option>
-                      {skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}
-                    </select>
-                  </label>
-                  {prepMode !== 'new' && <button className="primary-button" type="button" onClick={() => void startImprovePlan()} disabled={improveBusy || busyAction !== '' || selectedFiles.length === 0}>{improveBusy ? '正在生成修改方案…' : prepMode === 'single' ? '✦ 生成单文件修改方案' : '✦ 生成整课重做方案'}</button>}
-                  {prepMode === 'new' && (
-                    <span className="prep-gen-btns">
-                      {([DRAFT_KINDS.lecture, DRAFT_KINDS.example, DRAFT_KINDS.homework] as DraftKind[]).map((kind) => (
-                        <button key={kind} className={kind === DRAFT_KINDS.lecture ? 'primary-button' : 'secondary-button'} type="button" onClick={() => void generate(kind)} disabled={busyAction !== '' || selectedFiles.length === 0}>{busyAction === kind ? '生成中…' : `生成${kindLabels[kind]}`}</button>
-                      ))}
-                    </span>
-                  )}
-                </div>
-                {improveError !== '' && <p className="inline-error" role="alert">{improveError}</p>}
-                {prepMode === 'single' && aiEditableCurrentFiles.length === 0 && (
-                  <div className="inline-notice" role="status">
-                    本课还没有 Markdown 课件，可先导入 md 讲义或用 AI 生成第一版课件。
-                  </div>
-                )}
-                {prepMode === 'lesson' && appGeneratedCurrentFiles.length === 0 && (
-                  <div className="inline-notice" role="status">
-                    本课还没有应用内生成的课件版本，整课重做需要先用 AI 生成第一版课件；单文件修改已支持外部导入的 md。
-                  </div>
-                )}
-              </div>
-            </section>
-          ) : (
-            <section className="workspace-card prep-generator is-collapsed">
-              <span className="prep-collapsed-sum">
-                ✦ {prepMode === 'single'
-                  ? <>修改对象 <b>{targetFile?.originalName ?? '尚未选择'}</b></>
-                  : prepMode === 'lesson'
-                    ? <>修改范围 <b>本课全部课件</b></>
-                    : <>生成依据 <b>{selectedReferenceFiles.length} 份</b></>}
-                {' · '}{requirement.trim() === ''
-                  ? '要求（未填写）'
-                  : `要求「${requirement.trim().slice(0, 18)}${requirement.trim().length > 18 ? '…' : ''}」`}
-                {' · '}参考 {selectedReferenceFiles.length} 份 · 题库{bankEnabled ? '开' : '关'}
-              </span>
-              <button className="prep-mini-btn" type="button" onClick={() => setGeneratorOpen(true)}>调整要求</button>
-            </section>
-          )}
-          {streamState !== null && (
-            <div className="draft-stream-panel" role="status">
-              <div className="draft-stream-head">
-                <strong>{streamState.phase === 'reasoning' ? 'AI 正在思考…' : 'AI 正在生成正文…'}</strong>
-                <button className="secondary-button" type="button" onClick={() => { void cancelStreaming() }}>取消生成</button>
-              </div>
-              <p className="draft-stream-reasoning">AI 思考中…（已思考 {streamState.reasoningChars.toLocaleString('zh-CN')} 字，已耗时 {streamElapsedSeconds} 秒）</p>
-              {streamState.textPreview !== '' && (
-                <div className="draft-stream-preview">
-                  <MarkdownDocument body={streamState.textPreview} files={[]} />
-                </div>
-              )}
-            </div>
-          )}
-          {improvePhase === 'review' && (
-            <div className="improve-review-card">
-              <div className="card-heading"><div><p className="section-kicker">改进流程</p><h2>修改方案（先审阅，再生成）</h2></div></div>
               <div className="improve-plan-body"><MarkdownDocument body={improvePlan} files={[]} /></div>
-            </div>
-          )}
-          {bankEnabled && (
-            <div className="improve-bank-section" aria-label="题库候选题过目">
-                  <div className="card-heading">
-                    <div><p className="section-kicker">AI 自动选题</p><h2>题库候选（先过目，再生成）</h2></div>
-                    <div className="prep-bank-controls">
-                      <PrepBankOptions
-                        bankTargetCount={bankTargetCount}
-                        onTargetCountChange={(count) => {
-                          setBankTargetCount(count)
-                          clearBankSelection()
-                        }}
-                        dualVersionEnabled={dualVersionEnabled}
-                        onDualVersionChange={setDualVersionEnabled}
-                        disabled={bankPlanBusy || busyAction !== '' || improveBusy}
-                      />
-                      {bankPlanBusy ? <span className="count-label">正在选题…</span> : null}
-                    </div>
+              {bankEnabled && (
+                <div className="prep-stage-bank" aria-label="题库候选题过目">
+                  <div className="prep-stage-bank-head">
+                    <b>题库候选（可剔除或调整后重选）</b>
+                    {bankPlanBusy && <span className="count-label">正在选题…</span>}
                   </div>
                   {bankPlan === null ? (
-                    <p className="inline-notice" role="status">
+                    <p className="prep-stage-bank-note" role="status">
                       {bankNotice !== '' ? bankNotice : '尚未完成题库选题；确认生成将不使用题库候选。'}
                     </p>
                   ) : (
@@ -1378,60 +1136,335 @@ export default function DraftPanel({
                       </p>
                     </>
                   )}
-          </div>
-          )}
-          {improvePhase === 'review' && (
-            <div className="improve-review-actions">
-                {prepMode === 'new' && <label className="improve-kind-label">生成类型
-                  <select value={improveKind} onChange={(event) => setImproveKind(event.target.value as DraftKind)} disabled={improveBusy}>
-                    <option value="lecture">讲义</option>
-                    <option value="example">例题</option>
-                    <option value="homework">作业</option>
-                  </select>
-                </label>}
-                <button className="primary-button" type="button" onClick={() => void confirmPlanAndGenerate(plannedDraftKind)} disabled={improveBusy}>{improveBusy ? '生成中…' : prepMode === 'lesson' ? '确认并生成完整新版本' : '确认方案并生成'}</button>
-                <button className="secondary-button" type="button" onClick={() => void startImprovePlan()} disabled={improveBusy}>重新出方案</button>
-                <button className="secondary-button" type="button" onClick={abandonImprove} disabled={improveBusy}>放弃改进</button>
-            </div>
-          )}
-          {selectedNote === undefined ? (
-            <div className="workspace-card draft-content-empty" role="status">
-              {prepMode === 'new'
-                ? <p>先添加生成依据（或直接写要求），点「生成讲义」即可出第一版；生成后节点出现在左侧修改记录里，随时回看与继续修改。</p>
-                : <p>修改方案生成后先在这里审阅，确认后才会生成新副本；节点会出现在左侧修改记录里。</p>}
-            </div>
-          ) : (
-            <div className="workspace-card prep-doc-card">
+                </div>
+              )}
+              <div className="prep-stage-actions">
+                <button className="primary-button" type="button" onClick={() => void confirmPlanAndGenerate(plannedDraftKind)} disabled={improveBusy}>{improveBusy ? '生成中…' : '✓ 确认并生成'}</button>
+                <button className="secondary-button" type="button" onClick={() => void startImprovePlan()} disabled={improveBusy}>让 AI 调整</button>
+                <button className="secondary-button" type="button" onClick={abandonImprove} disabled={improveBusy}>放弃</button>
+              </div>
+            </section>
+          ) : streamState !== null ? (
+            <section className="workspace-card prep-stage is-streaming" role="status" aria-label="AI 正在生成">
+              <div className="draft-stream-head">
+                <strong>{streamState.phase === 'reasoning' ? 'AI 正在思考…' : 'AI 正在生成正文…'}</strong>
+                <button className="secondary-button" type="button" onClick={() => { void cancelStreaming() }}>取消生成</button>
+              </div>
+              <p className="draft-stream-reasoning">AI 思考中…（已思考 {streamState.reasoningChars.toLocaleString('zh-CN')} 字，已耗时 {streamElapsedSeconds} 秒）</p>
+              {streamState.textPreview !== '' && (
+                <div className="draft-stream-preview">
+                  <MarkdownDocument body={streamState.textPreview} files={[]} />
+                </div>
+              )}
+            </section>
+          ) : selectedNote !== undefined ? (
+            <section className="workspace-card prep-stage is-result" aria-label="AI 修改成果">
               {restoreNoticeVisible && selectedNote.draftStatus === 'draft' && (
                 <div className="draft-restore-notice" role="status">
                   <span>已恢复最近的工作副本：修改尚未发布，不会改变正式课件与已确认成果。</span>
                   <button className="secondary-button" type="button" onClick={() => setRestoreNoticeVisible(false)}>知道了</button>
                 </div>
               )}
-              <div className="draft-content-header">
-                <div><p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '修改中 · 尚未发布' : '已确认 · 本次课次成果'}</p><h2>{modificationNodeLabel(selectedNote)}{selectedVariant === 'teacher' ? '（教师版）' : selectedVariant === 'student' ? '（学生版）' : ''}</h2></div>
-                <div className="draft-content-actions">
-                  {editing ? <><button className="secondary-button" type="button" onClick={cancelEditing} disabled={busyAction !== ''}>取消编辑</button><button className="secondary-button" type="button" onClick={() => void saveModification()} disabled={busyAction !== ''}>保存修改</button></> : <button className="secondary-button" type="button" onClick={startEditing} disabled={busyAction !== ''}>编辑</button>}
-                  <button className="secondary-button" type="button" onClick={() => void regenerate()} disabled={busyAction !== ''}>重新生成</button>
-                  {improveBase !== null && <button className="secondary-button" type="button" onClick={() => setCompareOpen((current) => !current)} disabled={busyAction !== ''}>{compareOpen ? '关闭新旧对比' : '新旧对比'}</button>}
-                  {selectedNote.draftStatus === 'draft' && <button className="primary-button" type="button" onClick={() => void saveToLesson()} disabled={busyAction !== ''}>保存到本次课次</button>}
-                  <button className="secondary-button" type="button" onClick={() => void publishVersion()} disabled={busyAction !== ''}>保存为新版本</button>
-                  {onOpenCourseware !== undefined && <button className="secondary-button" type="button" onClick={onOpenCourseware} disabled={busyAction !== ''}>查看课件</button>}
+              <div className="prep-stage-head">
+                <div>
+                  <p className="section-kicker">{selectedNote.draftStatus === 'draft' ? '未发布' : '已确认'}</p>
+                  <h3>{modificationNodeLabel(selectedNote)}{selectedVariant === 'teacher' ? '（教师版）' : selectedVariant === 'student' ? '（学生版）' : ''}</h3>
+                </div>
+                <div className="prep-stage-actions">
+                  {editing ? (
+                    <>
+                      <span className="prep-stage-hint">编辑中 · 保存直接更新这份修改节点</span>
+                      <button className="link-button" type="button" onClick={() => { void saveModification() }} disabled={busyAction !== ''}>保存修改</button>
+                    </>
+                  ) : compareOpen ? (
+                    <>
+                      <span className="prep-stage-hint">新旧对比</span>
+                      <button className="secondary-button" type="button" onClick={() => setCompareOpen(false)} disabled={busyAction !== ''}>退出对比</button>
+                    </>
+                  ) : (
+                    <>
+                      <button className="secondary-button" type="button" onClick={startEditing} disabled={busyAction !== ''}>✎ 编辑</button>
+                      {improveBase !== null && <button className="secondary-button" type="button" onClick={() => setCompareOpen(true)} disabled={busyAction !== ''}>⇄ 新旧对比</button>}
+                      {selectedNote.draftStatus === 'draft' && <button className="primary-button" type="button" onClick={() => void publishVersion()} disabled={busyAction !== ''}>⬆ 保存为新版本</button>}
+                      {selectedNote.draftStatus !== 'draft' && <button className="secondary-button" type="button" onClick={() => void saveToLesson()} disabled={busyAction !== ''}>保存到本次课次</button>}
+                      <div className="prep-result-menu">
+                        <button className="secondary-button prep-result-menu-btn" type="button" onClick={() => setResultMenuOpen((open) => !open)} disabled={busyAction !== ''} aria-expanded={resultMenuOpen} aria-haspopup="menu">⋯</button>
+                        {resultMenuOpen && (
+                          <div className="prep-result-menu-list" role="menu">
+                            <button type="button" role="menuitem" onClick={() => { void regenerate() }} disabled={busyAction !== ''}>重新生成</button>
+                            {selectedNote.draftStatus === 'draft' && <button type="button" role="menuitem" onClick={() => { void saveToLesson() }} disabled={busyAction !== ''}>保存到本次课次</button>}
+                            {onOpenCourseware !== undefined && <button type="button" role="menuitem" onClick={onOpenCourseware} disabled={busyAction !== ''}>查看课件</button>}
+                            {selectedNote.draftStatus === 'draft' && (
+                              <button type="button" role="menuitem" className="is-danger" onClick={() => { void deleteDraft(selectedNote) }} disabled={busyAction !== ''}>删除草稿</button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
-              {compareOpen && improveBase !== null && (
+              {compareOpen && improveBase !== null ? (
                 <div className="draft-compare-grid">
                   <div className="draft-compare-pane"><p className="section-kicker">参考课件：{improveBase.title}</p><MarkdownDocument body={improveBase.body} files={[]} /></div>
-                  <div className="draft-compare-pane"><p className="section-kicker">新工作副本（未发布）</p>{editing ? <textarea aria-label="编辑新工作副本" value={editBody} onChange={(event) => setEditBody(event.target.value)} rows={16} disabled={busyAction !== ''} /> : <MarkdownDocument body={selectedNote.bodyMd} files={[]} />}</div>
+                  <div className="draft-compare-pane"><p className="section-kicker">新工作副本（未发布）</p><MarkdownDocument body={selectedNote.bodyMd} files={[]} /></div>
+                </div>
+              ) : editing ? (
+                <div className="prep-stage-editor">
+                  <MdEditor
+                    key={selectedNote.id}
+                    files={lessonFiles}
+                    initialBody={selectedNote.bodyMd}
+                    storageKey={`md-editor-draft:note:${selectedNote.id}`}
+                    onBodyChange={setEditBody}
+                    onSaveBody={async (bodyMd) => {
+                      await window.teacherWorkbench.core.updateNote({ noteId: selectedNote.id, bodyMd })
+                      setEditing(false)
+                      setEditBody('')
+                      setMessage('修改已保存。')
+                      await reload()
+                    }}
+                    onCancel={cancelEditing}
+                  />
+                </div>
+              ) : (
+                <div className="draft-content-body is-preview">
+                  <MarkdownDocument body={selectedNote.bodyMd} files={[]} />
                 </div>
               )}
-              <div className={`draft-content-body${editing ? ' is-editing' : ' is-preview'}`}>
-                {editing ? <textarea aria-label="编辑生成结果" value={editBody} onChange={(event) => setEditBody(event.target.value)} rows={24} disabled={busyAction !== ''} /> : <MarkdownDocument body={selectedNote.bodyMd} files={[]} />}
-              </div>
+            </section>
+          ) : (
+            <div className="workspace-card draft-content-empty" role="status">
+              {prepMode === 'new'
+                ? <p>还没有生成内容。右侧添加依据或直接写要求，点「✦ 发送」开始从零生成；生成后节点会出现在「修改记录」里。</p>
+                : <p>还没有修改方案。右侧说清这次要改什么，点「✦ 发送」先出方案，确认后才会生成新副本。</p>}
             </div>
           )}
         </section>
+        {/* V19-A（D55）：对话栏——与 AI 对话（依据区 + 对 AI 说 + 发送），窄窗折叠为摘要条 */}
+        <aside className="workspace-card prep-chat" aria-label="与 AI 对话">
+          {chatCollapsed ? (
+            <button className="prep-chat-collapsed" type="button" onClick={() => setChatCollapsed(false)}>
+              <b>✦ 对话栏已折叠</b>
+              <span>
+                {prepMode === 'new'
+                  ? `从零生成 · 已选 ${selectedReferenceFiles.length} 份依据`
+                  : prepMode === 'single'
+                    ? `改《${targetFile?.originalName ?? '尚未选择'}》`
+                    : `整个课件包（${lessonBaselineFiles.length} 份）`}
+                {requirement.trim() === '' ? ' · 要求未填写' : ` · 要求「${requirement.trim().slice(0, 12)}…」`}
+              </span>
+              <small>展开对话栏</small>
+            </button>
+          ) : (
+            <>
+              <div className="prep-chat-head">
+                <b>✦ 与 AI 对话</b>
+                <button className="prep-mini-btn" type="button" onClick={() => setChatCollapsed(true)}>折叠</button>
+              </div>
+              {prepMode === 'new' ? (
+                <div className="prep-chat-basis prep-chat-new" aria-label="生成依据">
+                  {files === null ? <div className="material-reader-state">正在读取本次资料…</div> : selectedReferenceFileIds.length > 0 ? (
+                    <>
+                      {selectedReferenceFiles.map((file) => (
+                        <span key={file.id} className="prep-chip">
+                          <span>{file.originalName}</span>
+                          <button className="prep-chip-remove" type="button" aria-label={`移除依据 ${file.originalName}`} disabled={busyAction !== ''} onClick={() => toggleReferenceFile(file.id)}>✕</button>
+                        </span>
+                      ))}
+                      <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={() => setRefPickerOpen((current) => !current)}>＋ 本课资料</button>
+                      {refPickerOpen && (
+                        <ScopeFileList files={referenceCandidates} selection="checkbox" selectedIds={selectedReferenceFileIds} onSelect={toggleReferenceFile} currentVersionId={classifiedFiles.currentVersion?.id} charCounts={referenceCharCounts} emptyText="本课没有可作生成依据的课内资料。" />
+                      )}
+                      <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={onBrowseExternal}>＋ 外部资料</button>
+                      <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={onBrowseMaterials}>＋ 素材库</button>
+                    </>
+                  ) : (
+                    <div className="prep-add-cards">
+                      <button className="prep-add-card" type="button" disabled={busyAction !== ''} onClick={onBrowseExternal}>
+                        <span className="prep-add-card-plus" aria-hidden="true">＋</span>
+                        <b>从外部资料添加</b>
+                        <small>从已登记的外部资料根目录中选择文件作为生成依据</small>
+                      </button>
+                      <button className="prep-add-card" type="button" disabled={busyAction !== ''} onClick={onBrowseMaterials}>
+                        <span className="prep-add-card-plus" aria-hidden="true">＋</span>
+                        <b>从素材库添加</b>
+                        <small>从素材库挑取素材插入本课资料</small>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="prep-chat-basis" aria-label="这次改什么">
+                  <p className="prep-chat-basis-label">这次改什么</p>
+                  <label className={`prep-scope-option${prepMode === 'single' ? ' is-active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="prep-chat-scope"
+                      checked={prepMode === 'single'}
+                      disabled={busyAction !== '' || improveBusy || aiEditableCurrentFiles.length === 0}
+                      onChange={() => selectChatScope('single')}
+                    />
+                    <span className="prep-scope-option-main">
+                      <b>这份讲义</b>
+                      <small>自动挂当前讲义，AI 只改这份，未提及部分保持不变</small>
+                    </span>
+                    <span className="prep-auto-badge" aria-label="自动选择当前讲义">自动</span>
+                  </label>
+                  <label className={`prep-scope-option${prepMode === 'lesson' ? ' is-active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="prep-chat-scope"
+                      checked={prepMode === 'lesson'}
+                      disabled={busyAction !== '' || improveBusy || appGeneratedCurrentFiles.length === 0}
+                      onChange={() => selectChatScope('lesson')}
+                    />
+                    <span className="prep-scope-option-main">
+                      <b>整个课件包</b>
+                      <small>{appGeneratedCurrentFiles.length} 份当前版课件全部重做（讲义 + 例题 + 练习 + 作业）</small>
+                    </span>
+                  </label>
+                  {prepMode === 'single' && (
+                    scopePickerOpen ? (
+                      <>
+                        <ScopeFileList files={modifiableCurrentFiles} selection="radio" selectedIds={targetFile === null ? [] : [targetFile.id]} onSelect={selectTargetFile} currentVersionId={classifiedFiles.currentVersion?.id} charCounts={referenceCharCounts} emptyText="本课还没有 Markdown 课件，可先导入 md 讲义或用 AI 生成第一版课件。" />
+                        <button className="prep-mini-btn" type="button" onClick={() => setScopePickerOpen(false)}>收起</button>
+                      </>
+                    ) : (
+                      <div className="prep-target-card">
+                        <span className="prep-file-glyph" aria-hidden="true">MD</span>
+                        <span className="prep-target-meta">
+                          <b>{targetFile?.originalName ?? '尚未选择'}</b>
+                          <small>
+                            {targetFile === null ? '—' : `${(referenceCharCounts.get(targetFile.id) ?? 0).toLocaleString('zh-CN')} 字`}
+                            {targetFile !== null && targetFile.id === classifiedFiles.currentVersion?.id ? ' · 当前版' : ''} · {kindLabels[plannedDraftKind]}
+                          </small>
+                        </span>
+                        {modifiableCurrentFiles.length > 1 && (
+                          <button className="prep-mini-btn" type="button" disabled={busyAction !== '' || improveBusy} onClick={() => setScopePickerOpen(true)}>更换</button>
+                        )}
+                      </div>
+                    )
+                  )}
+                  <p className="prep-chat-ref-label">补充参考（AI 只用来理解要求）</p>
+                  {selectedReferenceFiles.map((file) => (
+                    <span key={file.id} className="prep-chip">
+                      <span>{file.originalName}</span>
+                      <button className="prep-chip-remove" type="button" aria-label={`移除参考 ${file.originalName}`} disabled={busyAction !== ''} onClick={() => toggleReferenceFile(file.id)}>✕</button>
+                    </span>
+                  ))}
+                  <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={() => setRefPickerOpen((current) => !current)}>＋ 本课资料</button>
+                  {refPickerOpen && (
+                    <ScopeFileList files={referenceCandidates} selection="checkbox" selectedIds={selectedReferenceFileIds} onSelect={toggleReferenceFile} currentVersionId={classifiedFiles.currentVersion?.id} charCounts={referenceCharCounts} emptyText="本课没有可作参考的额外资料。" />
+                  )}
+                  <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={onBrowseExternal}>＋ 外部资料</button>
+                  <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={onBrowseMaterials}>＋ 素材库</button>
+                </div>
+              )}
+              <div className="prep-chat-basis">
+                <label className={`prep-switch-row${(bankSummary?.installed ?? false) ? '' : ' is-disabled'}`} title={(bankSummary?.installed ?? false) ? undefined : '先在题库页导入 .tqbank'}>
+                  参考题库
+                  <input
+                    className="prep-switch-input"
+                    type="checkbox"
+                    checked={bankEnabled}
+                    disabled={!(bankSummary?.installed ?? false) || busyAction !== '' || improveBusy}
+                    onChange={toggleBankEnabled}
+                  />
+                  <span className="prep-switch" aria-hidden="true" />
+                </label>
+                {bankEnabled && (
+                  <div className="prep-bank-controls">
+                    <PrepBankOptions
+                      bankTargetCount={bankTargetCount}
+                      onTargetCountChange={(count) => {
+                        setBankTargetCount(count)
+                        clearBankSelection()
+                      }}
+                      dualVersionEnabled={dualVersionEnabled}
+                      onDualVersionChange={setDualVersionEnabled}
+                      disabled={bankPlanBusy || busyAction !== '' || improveBusy}
+                    />
+                  </div>
+                )}
+                <p className={`prep-chat-budget${referenceBudgetExceeded ? ' is-over' : ''}`} role="status">
+                  {referenceNotice !== '' ? `${referenceNotice} · ` : ''}
+                  依据与参考已用 {scopedCharTotal.toLocaleString('zh-CN')} / {DRAFT_DEFAULT_MAX_CHARS.toLocaleString('zh-CN')} 字 · 参考 {selectedReferenceFiles.length} / {DRAFT_MAX_REFERENCE_FILES} 份
+                  {bankEnabled && keptBankCandidates.length > 0 ? ` · 题库候选 ${keptBankCandidates.length} 题` : ''}
+                  {referenceFilesFull ? ` · 已选满 ${DRAFT_MAX_REFERENCE_FILES} 份` : ''}
+                  {referenceBudgetExceeded ? ' · 已超预算，生成时按预算截减并需确认' : ''}
+                </p>
+              </div>
+              <div className="prep-chat-say">
+                <p className="prep-chat-basis-label">对 AI 说</p>
+                <textarea value={requirement} onChange={(event) => setRequirement(event.target.value)} maxLength={DRAFT_REQUIREMENT_MAX_CHARS} rows={5} placeholder="例如：每个概念后配一道即时练习；平方根易错点整理成辨析表；这次完全不行，整个重做。" disabled={busyAction !== '' || improveBusy} />
+                <div className="prep-chat-send">
+                  <label className="improve-kind-label">Skill：
+                    <select value={selectedSkillId} onChange={(event) => setSelectedSkillId(event.target.value)} disabled={busyAction !== '' || improveBusy}>
+                      <option value="">不使用 Skill</option>
+                      {skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}
+                    </select>
+                  </label>
+                  {prepMode === 'new' && (
+                    <label className="improve-kind-label">生成类型：
+                      <select value={improveKind} onChange={(event) => setImproveKind(event.target.value as DraftKind)} disabled={busyAction !== '' || improveBusy}>
+                        <option value="lecture">讲义</option>
+                        <option value="example">例题</option>
+                        <option value="homework">作业</option>
+                      </select>
+                    </label>
+                  )}
+                  <button className="primary-button" type="button" onClick={() => { void (prepMode === 'new' ? generate(plannedDraftKind) : startImprovePlan()) }} disabled={busyAction !== '' || improveBusy || (prepMode !== 'new' && selectedFiles.length === 0)}>
+                    {busyAction !== '' || improveBusy ? '生成中…' : '✦ 发送'}
+                  </button>
+                </div>
+                {improveError !== '' && <p className="inline-error" role="alert">{improveError}</p>}
+                {prepMode === 'single' && aiEditableCurrentFiles.length === 0 && (
+                  <div className="inline-notice" role="status">
+                    本课还没有 Markdown 课件，可先导入 md 讲义或用 AI 生成第一版课件。
+                  </div>
+                )}
+                {prepMode === 'lesson' && appGeneratedCurrentFiles.length === 0 && (
+                  <div className="inline-notice" role="status">
+                    本课还没有应用内生成的课件版本，整个课件包重做需要先用 AI 生成第一版课件；单文件修改已支持外部导入的 md。
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </aside>
       </div>
+      {historyOpen && (
+        <div className="teaching-content-drawer-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setHistoryOpen(false) }}>
+          <aside className="teaching-content-drawer prep-history-drawer" aria-label="修改记录">
+            <header>
+              <div><span className="section-kicker">本课节点</span><h2>修改记录 {lessonResults.length} 份</h2></div>
+              <button className="modal-close" type="button" aria-label="关闭修改记录" onClick={() => setHistoryOpen(false)}>×</button>
+            </header>
+            <ul className="draft-result-list prep-history-list">
+              {lessonResults.map((note) => {
+                const kind = note.noteKind as DraftKind
+                const variant = draftNoteMetadata(note)?.variant
+                return (
+                  <li key={note.id} className={selectedNote?.id === note.id ? 'is-selected' : ''}>
+                    <button type="button" className="draft-result-select" onClick={() => { void selectResult(note); setHistoryOpen(false) }} disabled={busyAction !== ''}>
+                      <span className="draft-kind-icon" aria-hidden="true">{kindIcon(kind)}</span>
+                      <span><strong>{modificationNodeLabel(note)}</strong><small>{formatDateTime(note.updatedAt)}</small></span>
+                      <span className="draft-row-badges">
+                        {variant === 'teacher' && <span className="draft-variant-badge is-teacher">教师版</span>}
+                        {variant === 'student' && <span className="draft-variant-badge is-student">学生版</span>}
+                        <span className={`draft-status draft-status-${note.draftStatus}`}>{note.draftStatus === 'draft' ? '修改中' : '已确认'}</span>
+                      </span>
+                    </button>
+                    {note.draftStatus === 'draft' && <button className="danger-button" type="button" onClick={() => void deleteDraft(note)} disabled={busyAction !== ''}>删除</button>}
+                  </li>
+                )
+              })}
+              {lessonResults.length === 0 && <li className="empty-state">还没有修改节点。生成后每个节点都会出现在这里，AI 结果永不覆盖原件。</li>}
+            </ul>
+          </aside>
+        </div>
+      )}
     </section>
   )
 }

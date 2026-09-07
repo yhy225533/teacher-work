@@ -39,9 +39,9 @@ describe('V12-04 lesson files and prep renderer contract', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
     const managed = source('../src/renderer/managed-files-panel.tsx')
     const service = source('../src/main/files/managed-file-service.ts')
-    // V172-A（D33）：左栏配置节头删除，补充参考行迁入主区生成器（V172-B 细化）
-    expect(draft).toContain('补充参考')
-    expect(draft).toContain('AI 只改这份文件，未提及部分保持不变')
+    // V19-A（D55）：补充参考行迁入对话栏依据区（radio + chips + 三入口）
+    expect(draft).toContain('补充参考（AI 只用来理解要求）')
+    expect(draft).toContain('自动挂当前讲义，AI 只改这份，未提及部分保持不变')
     expect(draft).toContain('保存到本次课次')
     expect(draft).toContain('lessonId: context.lessonId')
     expect(managed).not.toContain('copyToStudent')

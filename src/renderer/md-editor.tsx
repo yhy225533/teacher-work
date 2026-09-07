@@ -17,18 +17,36 @@ import {
 import { MarkdownDocument } from './lesson-material-reader'
 import { toErrorMessage } from './ui-utils'
 
-/** D28/D29（V17-C）+ D36（V1.7.3）：零新依赖 md 编辑器——受控 textarea + 分屏 KaTeX 预览 + 数学模式公式引擎。 */
+/** D28/D29（V17-C）+ D36（V1.7.3）：零新依赖 md 编辑器——受控 textarea + 分屏 KaTeX 预览 + 数学模式公式引擎。
+ *  V19-A（D56）双用法：缺省 = 文件用法（read-text/write-version，课件区调用零变化）；
+ *  可选 initialBody + onSaveBody = 受控用法（AI 修改成果编辑，保存走 note 语义）。 */
 export default function MdEditor({
   file,
   files,
   onSaved,
   onCancel,
+  initialBody,
+  onSaveBody,
+  storageKey,
+  onBodyChange,
 }: {
-  readonly file: ManagedFileRecord
+  readonly file?: ManagedFileRecord
   readonly files: readonly ManagedFileRecord[]
-  readonly onSaved: (result: { readonly file: ManagedFileRecord; readonly version: number }) => void
+  readonly onSaved?: (result: { readonly file: ManagedFileRecord; readonly version: number }) => void
   readonly onCancel: () => void
+  readonly initialBody?: string
+  readonly onSaveBody?: (bodyMd: string) => Promise<void> | void
+  readonly storageKey?: string
+  readonly onBodyChange?: (bodyMd: string) => void
 }): React.JSX.Element {
+  // D56 双用法守卫：受控用法必给 initialBody + onSaveBody；文件用法必给 file（课件区现调用零变化）。
+  const isControlled = initialBody !== undefined && file === undefined
+  if (initialBody !== undefined && file !== undefined) {
+    throw new Error('MdEditor 不允许同时提供 file 与 initialBody。')
+  }
+  if (!isControlled && file === undefined) {
+    throw new Error('MdEditor 需要提供文件用法（file）或受控用法（initialBody + onSaveBody）。')
+  }
   const [body, setBody] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -45,9 +63,14 @@ export default function MdEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const previewRef = useRef<HTMLDivElement>(null)
   const previewScrollArmed = useRef(false)
-  const draftKey = `md-editor-draft:${file.id}`
-  const viewKey = `md-editor-view:${file.id}`
-  const splitKey = `md-editor-split:${file.id}`
+  const editorName = file?.originalName ?? 'AI 修改成果'
+  const draftKey = storageKey !== undefined
+    ? storageKey
+    : `md-editor-draft:${file?.id ?? 'controlled'}`
+  // D56：文件用法沿用原 per-file 记忆键；受控用法按 note 隔离（draftKey 同源）。
+  const noteMemoryId = draftKey.replace('md-editor-draft:', '')
+  const viewKey = file !== undefined ? `md-editor-view:${file.id}` : `md-editor-view:${noteMemoryId}`
+  const splitKey = file !== undefined ? `md-editor-split:${file.id}` : `md-editor-split:${noteMemoryId}`
   // 撤销/重做：快照栈（含光标），textarea 原生输入外的工具栏插入走此栈
   const undoStack = useRef<readonly string[]>([])
   const redoStack = useRef<readonly string[]>([])
@@ -56,7 +79,21 @@ export default function MdEditor({
     let cancelled = false
     setLoading(true)
     setError('')
-    void window.teacherWorkbench.files.readText({ fileId: file.id })
+    if (isControlled) {
+      // 受控用法（D56）：正文来自 note（initialBody），不走文件读取
+      const hot = readHotDraft(draftKey)
+      if (hot !== null) {
+        setBody(initialBody)
+        window.sessionStorage.setItem(`${draftKey}:hot`, hot)
+        setRecoverPrompt(true)
+      } else {
+        setBody(initialBody)
+      }
+      setLoading(false)
+      return () => { cancelled = true }
+    }
+    const fileId = file!.id
+    void window.teacherWorkbench.files.readText({ fileId })
       .then((result) => {
         if (cancelled) return
         const hot = readHotDraft(draftKey)
@@ -73,7 +110,7 @@ export default function MdEditor({
       })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [draftKey, file.id])
+  }, [draftKey, file?.id, initialBody, isControlled])
 
   // 热保存：250ms 防抖写 localStorage，失败静默（D28 基准）
   useEffect(() => {
@@ -112,7 +149,8 @@ export default function MdEditor({
     redoStack.current = []
   }, [])
 
-  /** D37：按文件恢复三视图与分栏比例（非法/缺失回退默认 split / 0.5）。 */
+  // D37：按文件恢复三视图与分栏比例（非法/缺失回退默认 split / 0.5）。
+  // V19-A（D56）：文件用法与受控用法共用同一恢复逻辑；受控用法按 note 记忆（viewKey/splitKey 走 note 分支）。
   useEffect(() => {
     try {
       const savedView = window.localStorage.getItem(viewKey)
@@ -402,8 +440,20 @@ export default function MdEditor({
     setError('')
     setNotice('')
     try {
+      if (isControlled) {
+        // 受控用法（D56）：保存 = onSaveBody 回调（note 语义），不走 files:write-version
+        await onSaveBody!(body)
+        try {
+          window.localStorage.removeItem(draftKey)
+          window.sessionStorage.removeItem(`${draftKey}:hot`)
+        } catch {
+          // 静默
+        }
+        return
+      }
+      const fileId = file!.id
       const result = await window.teacherWorkbench.files.writeVersion({
-        fileId: file.id,
+        fileId,
         bodyMd: body,
       })
       try {
@@ -412,7 +462,7 @@ export default function MdEditor({
       } catch {
         // 静默
       }
-      onSaved(result)
+      onSaved!(result)
     } catch (saveError) {
       setError(toErrorMessage(saveError, '保存失败，请稍后重试。'))
     } finally {
@@ -431,12 +481,17 @@ export default function MdEditor({
     () => files.filter((candidate) => candidate.mimeType.startsWith('image/')),
     [files],
   )
+  // D56：正文镜像回调——受控用法下宿主（draft-panel）用它跟踪 dirty 状态；文件用法缺省不传。
+  useEffect(() => {
+    onBodyChange?.(body)
+  }, [body, onBodyChange])
+
   const canSave = !loading && !saving && !recoverPrompt && body.trim() !== ''
   // 预览源：防抖值优先；防抖尚未首刷时直接用 body（首次载入不闪"空文档"占位）
   const previewSource = previewBody !== '' ? previewBody : body !== '' ? body : '（空文档）'
 
   return (
-    <div className="md-editor" aria-label={`编辑 ${file.originalName}`}>
+    <div className="md-editor" aria-label={`编辑 ${editorName}`}>
       {error !== '' && <div className="inline-error" role="alert">{error}</div>}
       {notice !== '' && <div className="inline-notice" role="status">{notice}</div>}
       {recoverPrompt && (
@@ -580,7 +635,7 @@ export default function MdEditor({
             value={body}
             disabled={loading || saving}
             spellCheck={false}
-            aria-label={`${file.originalName} 正文编辑`}
+            aria-label={`${editorName} 正文编辑`}
             onChange={(event) => {
               setBody(event.currentTarget.value)
               syncMathMode()
@@ -614,17 +669,23 @@ export default function MdEditor({
         )}
       </div>
       <footer className="md-editor-actions">
-        <span className="md-editor-hint">保存为**新版本**：旧版保留在历史版本，原件永不被改写。公式内输入缩写（frac、sum、int…）+ 空格自动展开；x 紧跟 / 自动分式；Tab 跳槽位；空行输入 / 唤出模板菜单。</span>
+        {isControlled ? (
+          <span className="md-editor-hint">保存会直接更新这份修改成果（AI 修改节点），不会改动正式课件。公式内输入缩写（frac、sum、int…）+ 空格自动展开；x 紧跟 / 自动分式；Tab 跳槽位；空行输入 / 唤出模板菜单。</span>
+        ) : (
+          <span className="md-editor-hint">保存为**新版本**：旧版保留在历史版本，原件永不被改写。公式内输入缩写（frac、sum、int…）+ 空格自动展开；x 紧跟 / 自动分式；Tab 跳槽位；空行输入 / 唤出模板菜单。</span>
+        )}
         <div>
           <button className="secondary-button" type="button" disabled={saving} onClick={onCancel}>取消</button>
           <button
             className="primary-button"
             type="button"
             disabled={!canSave}
-            title={body.trim() === '' ? '正文为空' : '保存为新版本（版本链出“ · 第 N+1 版.md”，外部 md 出“原名（编辑版）.md”）'}
+            title={isControlled
+              ? '保存本次编辑（直接更新这份 AI 修改节点）'
+              : body.trim() === '' ? '正文为空' : '保存为新版本（版本链出“ · 第 N+1 版.md”，外部 md 出“原名（编辑版）.md”）'}
             onClick={() => { void saveAsNewVersion() }}
           >
-            {saving ? '正在保存…' : '保存为新版本'}
+            {saving ? '正在保存…' : isControlled ? '保存修改' : '保存为新版本'}
           </button>
         </div>
       </footer>

@@ -11,12 +11,11 @@ describe('V152-C improvement flow contract', () => {
   it('proposes a reviewable plan before generating and embeds the confirmed plan', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
     const scope = source('../src/renderer/draft-scope.ts')
-    expect(draft).toContain('✦ 生成单文件修改方案')
-    expect(draft).toContain('✦ 生成整课重做方案')
-    expect(draft).toContain('修改方案（先审阅，再生成）')
-    expect(draft).toContain('确认方案并生成')
-    expect(draft).toContain('重新出方案')
-    expect(draft).toContain('放弃改进')
+    // V19-A（D55）：方案/确认按钮随舞台重排——发送即出方案，三键确认条在方案卡底部
+    expect(draft).toContain('修改方案（确认后生成）')
+    expect(draft).toContain('✓ 确认并生成')
+    expect(draft).toContain('让 AI 调整')
+    expect(draft).toContain('放弃')
     expect(scope).toContain('【老师已确认的修改方案（请严格按方案修改）】')
     expect(draft).toContain('window.teacherWorkbench.ai.requestText')
     expect(draft).toContain("window.teacherWorkbench.files.readContent({ fileId: file.id })")

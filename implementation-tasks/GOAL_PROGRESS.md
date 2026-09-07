@@ -1534,3 +1534,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 任务链重排：`implementation-tasks/v1.9-tasks/` 原 V19-A/B/C（导出）经 **git mv** 重排为 V19-D/E/F（历史保留）；新建 V19-A（备课工作台对话式重做）/ V19-B（课件区双头合并）/ V19-C（课程页当前课次行动头）；实施顺序 V19-A → B → C → D → E → F，V19-F 为唯一全量验收点（验收文档统一 `docs/v1.9-acceptance.md`，含 UI 方案 §8 八条 + 导出方案 §11 八条双清单）。UI 节点零 migration / 零新 IPC / 零新依赖。
 - 记账同步：`STATUS.md` V1.9 段改双基准六节点；`VERSION_CONTROL.md` V1.9 行改六节点双基准（范围扩容提交沿用 `plan(V1.9)` 前缀）；`docs/v1.9-pdf-export-plan.md` §4 入口改为工具行三主键位、§9 任务链重排、§12 立项说明补范围扩容记录。
 - Git：本地提交 `plan(V1.9): teaching ui restructure merged into v1.9, decisions D55-D60`；随后 push（沿用 GitHub 授权）。
+
+## 2026-09-07 · V19-A 备课工作台对话式重做完成（D55/D56/D59 落地）
+
+- **结构**：draft-panel 重排为「对话栏 + 主舞台」两栏（grid `minmax(0,1fr) 302px`，1100px 堆叠 + 对话栏折叠摘要条）；页面头 = kicker「AI 修改」+ `阶段 · 课次` 标题 + `🕘 修改记录 N` 浮层按钮 + 「退出修改，回到课件」；撤 prep-mode-bar / prep-rail 左轨 / prep-generator 生成器卡（含收起规则 1-5）/ 独立题库候选卡 / 独立确认条 / 预算长文案行。
+- **对话栏**：依据区 radio「这次改什么：这份讲义（自动徽标 + 目标卡 + 更换）｜ 整个课件包 N 份」→ selectChatScope → changePrepMode（`prepMode` 合同字段保留，仅 UI 收敛）；无 md 课次沿用 prep-add-cards 冷启动大卡；补充参考 chips + 三入口；题库开关行（唯一 PrepBankOptions 实例，new 模式挂「生成类型」select）；「对 AI 说」textarea rows=5（`DRAFT_REQUIREMENT_MAX_CHARS` 不变）+ Skill + `✦ 发送`（按 prepMode 路由 generate/startImprovePlan，生成中禁用）；预算一行小字 + 超预算红态（D25 确认弹窗零改动）。
+- **主舞台四态同卡替换**（不编号不步骤链，页面零跳动）：方案态（正文 + 题库候选就地 prep-stage-bank 列表逐题剔除/调整重选 + `✓ 确认并生成`/`让 AI 调整`/`放弃`）→ 流式态（思考行秒表 + 逐字正文 + 取消，V1.6 通道零改动）→ 成果态（未发布/已确认徽标 + `✎ 编辑`/`⇄ 新旧对比`/`⬆ 保存为新版本`(draft primary；saved 降为保存到本次课次) + `⋯` 菜单[重新生成/保存到本次课次/查看课件/删除草稿红区底部]）→ 对比分栏（退出对比键）；恢复提示置顶保留；空态分模式文案。
+- **修改记录浮层（D56）**：默认收起 0 占版面 → Drawer（teaching-content-drawer 视觉复用，backdrop 点击关闭），条目 = 原 rail 行全量语义（节点名/时间/教师版·学生版徽标/修改中·已确认/删除带确认），选择即加载并关闭；DraftInbox（context=null 草稿箱）零改动。
+- **MdEditor 双用法（D56）**：可选 `initialBody`/`onSaveBody`/`storageKey`/`onBodyChange`；文件用法（课件区）read-text/write-version/热保存键/视图分栏记忆全部零变化（v17-c/v1.7.3 钉测原样通过）；成果 ✎ 编辑接入受控用法（保存 = updateNote note 语义，热保存键 `md-editor-draft:note:<noteId>` 隔离，onBodyChange 镜像维持 dirty 离开确认，取消丢弃）；守卫拒绝双用法/空用法。
+- **测试**：新增 `tests/v1.9-prep-dialogue.test.ts` 16 例；演进 6 处既有钉测（v1.7.2-workspace-structure 按新结构重钉、static-render-v156-d、v1.5.2、v1.5.3.1、v1.2-prep-files-ui、v17-d），验收语义不改写。**门禁**：全量 84 files / 476 tests passed（1 skipped 既有）、typecheck、lint 全绿（任务门禁为相关测试+typecheck+lint，未含 build）。
+- Git：本地提交 `v1.9(V19-A): prep workspace dialogue rework`；随后 push（沿用 GitHub 授权）。下一节点 V19-B（课件区双头合并与操作收纳）。
