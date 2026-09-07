@@ -87,8 +87,10 @@ describe('material library curation and lesson removal UI', () => {
     expect(section).toContain("title: '从本课移除资料？'")
     expect(section).not.toContain('window.confirm')
     expect(dialogs).toContain('export function AppDialogProvider')
-    expect(reader).toContain('onRemoveFile?: (fileId: string) => void')
-    expect(reader).toContain('onRemoveFile(selectedFile.id)')
+    // V19-B（D57）：移除入口并入课件区工具行 ⋯ 菜单红区（removeFile 语义与确认弹窗不变）
+    expect(reader).not.toContain('onRemoveFile')
+    expect(section).toContain("kind: 'item', key: 'remove', label: '从本课移除'")
+    expect(section).toContain('danger: true')
     expect(managed).toContain('已经加入课程或学生的独立副本不会自动出现在这里')
     expect(managed).toContain('onDragStart')
     expect(managed).toContain('material-context-menu')

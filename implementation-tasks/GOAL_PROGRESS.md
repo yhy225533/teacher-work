@@ -1544,3 +1544,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **MdEditor 双用法（D56）**：可选 `initialBody`/`onSaveBody`/`storageKey`/`onBodyChange`；文件用法（课件区）read-text/write-version/热保存键/视图分栏记忆全部零变化（v17-c/v1.7.3 钉测原样通过）；成果 ✎ 编辑接入受控用法（保存 = updateNote note 语义，热保存键 `md-editor-draft:note:<noteId>` 隔离，onBodyChange 镜像维持 dirty 离开确认，取消丢弃）；守卫拒绝双用法/空用法。
 - **测试**：新增 `tests/v1.9-prep-dialogue.test.ts` 16 例；演进 6 处既有钉测（v1.7.2-workspace-structure 按新结构重钉、static-render-v156-d、v1.5.2、v1.5.3.1、v1.2-prep-files-ui、v17-d），验收语义不改写。**门禁**：全量 84 files / 476 tests passed（1 skipped 既有）、typecheck、lint 全绿（任务门禁为相关测试+typecheck+lint，未含 build）。
 - Git：本地提交 `v1.9(V19-A): prep workspace dialogue rework`；随后 push（沿用 GitHub 授权）。下一节点 V19-B（课件区双头合并与操作收纳）。
+
+## 2026-09-07 · V19-B 课件区双头合并与操作收纳完成（D57 落地）
+
+- **三层头部 → 单条工具行**：课件区（lesson-files-section）页面头 + 本课课件头 + 可读资料头并为 lesson-files-toolbar——左：课次标题（`periodTitle · lesson.title`，同屏只出现 1 次）+ 当前文件信息胶囊（文件名 · 当前徽标 · 大小 · 来源标签 lessonFileSourceLabel）；右：`✦ 修改这份`｜`✎ 编辑`（↔✓ 预览，md 时）｜`⬇ 导出 PDF`（占位注释，V19-E 接线后渲染）｜沉浸阅读｜`⋯`；无 md 新课次保留「AI 新建备课/继续上次备课」主键；只读课次仅 `⋯`（系统打开/所在文件夹）。可见按钮 11+ → 5。
+- **共用 ⋯ 菜单（app-menu.tsx 新组件）**：分组小标题（本课：刷新/继续上次修改/整个课件包重做[lesson 范围 intent]；本文件：设为讲义底稿/系统打开/所在文件夹/增强解析[MinerU 置灰引导+进行中文案]）+ —分隔线— 危险项底部红区（从本课移除，既有二次确认弹窗不动）；点击外部/Esc/窗口失焦/滚动关闭（素材库右键菜单先例）；aria-expanded/haspopup/role 语义；V19-C 课程页复用。
+- **阅读器头部退役（lesson-material-reader）**：material-reader-document-header/操作行删除；编辑态提升受控（editing/onToggleEditing 由工具行持有）；正文区/V1.8.1 分组树/来源标签/当前徽标/题图跟随/unsupported 兜底零变化；保存通知与 onFileSaved 零改动。
+- **styles.css**：工具行/胶囊/菜单样式；1100px 断点堆叠；退役旧头样式块；修复脚本写回导致的 CRLF 整体翻转（归一化回 LF，diff 仅内容级）。
+- **测试**：新增 `tests/v1.9-courseware-toolbar.test.ts` 9 例；演进 6 处既有钉测（material-library-ui、v1.2、v1.8.1、static-render-v156-d、v17-c、v1.5）——验收语义不改写（MinerU 置灰引导/移除确认/提讲义往返/分组树全部保留）。**门禁**：全量 85 files / 485 tests passed（1 skipped 既有）、typecheck、lint、production build 全绿。
+- Git：本地提交 `v1.9(V19-B): courseware merged toolbar and overflow menu`；随后 push（沿用 GitHub 授权）。下一节点 V19-C（课程页当前课次行动头）。

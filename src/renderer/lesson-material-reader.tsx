@@ -6,63 +6,54 @@ import MdEditor from './md-editor'
 import type { ManagedFileContent, ManagedFileRecord } from '../shared/file-contracts'
 import {
   buildLessonMaterialTree,
-  isLessonLectureFile,
   isSelectableLessonPrepFile,
   lessonFileSourceLabel,
   splitLessonFilesByRole,
   type LessonMaterialTreeNode,
 } from './lesson-prep-context'
 import { normalizeMarkdownImageReferences, normalizeRichText } from './rich-text'
-import { isMineruEnhanceableFile } from './managed-files-panel'
-import { formatBytes, toErrorMessage } from './ui-utils'
+import { toErrorMessage } from './ui-utils'
 
+/**
+ * V19-B（D57）：阅读器只保留正文区/树分组/题图/编辑态——文件头与操作行退役，操作并入
+ * lesson-files-section 合并工具行（三主键 + ⋯ 菜单）；编辑态提升为受控（editing/onToggleEditing）。
+ * onOpenFile 仅剩 unsupported 态的「用系统应用打开」按钮使用。
+ */
 export default function LessonMaterialReader({
   files,
   selectedFileId,
   onSelectFile,
   onOpenFile,
-  onShowInFolder,
-  onRemoveFile,
-  onEnhanceFile,
   editable = false,
   onFileSaved,
-  onPromoteFile,
-  mineruTokenConfigured = false,
-  mineruBusy = false,
-  mineruStatus,
   hideTree = false,
   treeTitle = '本课资料',
   grouped = false,
   currentLectureId = null,
+  editing = false,
+  onToggleEditing,
 }: {
   readonly files: readonly ManagedFileRecord[]
   readonly selectedFileId: string
   readonly onSelectFile: (fileId: string) => void
   readonly onOpenFile?: (fileId: string) => void
-  readonly onShowInFolder?: (fileId: string) => void
-  readonly onRemoveFile?: (fileId: string) => void
-  readonly onEnhanceFile?: (fileId: string) => void
-  /** D28（V17-C）：md 编辑入口（只读课次不传 = 不显示）。 */
   readonly editable?: boolean
   readonly onFileSaved?: (fileId: string) => void
-  /** V1.8.1/D46：设为讲义底稿入口（不传 = 不显示）。 */
-  readonly onPromoteFile?: (fileId: string) => void
-  readonly mineruTokenConfigured?: boolean
-  readonly mineruBusy?: boolean
-  readonly mineruStatus?: { readonly state: 'queued' | 'running' | 'done' | 'failed'; readonly message?: string } | null
   readonly hideTree?: boolean
   readonly treeTitle?: string
   /** V1.8.1/D46：课件区目录树讲义/材料分组（默认不分，既有调用零改动）。 */
   readonly grouped?: boolean
   /** V1.8.1/D46：当前讲义文件 id（用于"当前"徽标；由 lesson-files-section 按版本链最新版派生）。 */
   readonly currentLectureId?: string | null
+  /** V19-B（D57）：编辑态受控——工具行 ✎ 编辑主键切换。 */
+  readonly editing?: boolean
+  readonly onToggleEditing?: () => void
 }): React.JSX.Element {
   const selectedFile = files.find((file) => file.id === selectedFileId) ?? null
   const preferredFile = useMemo(() => choosePreferredFile(files), [files])
   const [content, setContent] = useState<ManagedFileContent | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [editing, setEditing] = useState(false)
   const [editSavedNotice, setEditSavedNotice] = useState('')
 
   useEffect(() => {
@@ -96,18 +87,12 @@ export default function LessonMaterialReader({
     return () => { cancelled = true }
   }, [selectedFile?.id])
 
-  // 切换文件或树中不再可见时退出编辑态
+  // 切换文件或树中不再可见时清除编辑提示（编辑态本体由工具行持有）
   useEffect(() => {
-    setEditing(false)
     setEditSavedNotice('')
   }, [selectedFileId])
 
   const canEditSelectedFile = editable && selectedFile !== null && selectedFile.mimeType === 'text/markdown'
-  /** V1.8.1/D46：可提为讲义底稿 = 材料区的 md（非讲义命名）且本区域可编辑。 */
-  const canPromoteSelectedFile = onPromoteFile !== undefined
-    && selectedFile !== null
-    && selectedFile.mimeType === 'text/markdown'
-    && !isLessonLectureFile(selectedFile)
 
   return (
     <div className={`material-reader${hideTree ? ' is-single' : ''}`}>
@@ -124,59 +109,6 @@ export default function LessonMaterialReader({
         </aside>
       )}
       <section className="material-reader-document" aria-label="资料正文">
-        <header className="material-reader-document-header">
-          <div>
-            <span className="section-kicker">可读资料</span>
-            <h3>{selectedFile === null ? '请选择一份资料' : displayFileName(selectedFile.originalName)}</h3>
-            {selectedFile !== null && <small>{selectedFile.originalName} · {formatBytes(selectedFile.sizeBytes)}</small>}
-          </div>
-          {selectedFile !== null && (onOpenFile !== undefined || onShowInFolder !== undefined) && (
-            <div className="material-reader-actions">
-              {canEditSelectedFile && (
-                <button
-                  className={editing ? 'link-button is-active' : 'link-button'}
-                  type="button"
-                  aria-pressed={editing}
-                  onClick={() => { setEditing((current) => !current); setEditSavedNotice('') }}
-                >
-                  {editing ? '✓ 预览' : '✎ 编辑'}
-                </button>
-              )}
-              {canPromoteSelectedFile && (
-                <button
-                  className="link-button"
-                  type="button"
-                  title="复制为“基名 · 第 N 版.md”进入本课讲义版本链，原件保留在材料区"
-                  onClick={() => onPromoteFile?.(selectedFile.id)}
-                >
-                  ↥ 设为讲义底稿
-                </button>
-              )}
-              {onOpenFile !== undefined && <button className="link-button" type="button" onClick={() => onOpenFile(selectedFile.id)}>系统打开</button>}
-              {onShowInFolder !== undefined && <button className="link-button" type="button" onClick={() => onShowInFolder(selectedFile.id)}>所在文件夹</button>}
-              {onEnhanceFile !== undefined && isMineruEnhanceableFile(selectedFile) && mineruStatus?.state !== 'done' && (
-                <button
-                  className="link-button"
-                  type="button"
-                  disabled={!mineruTokenConfigured || mineruBusy || mineruStatus?.state === 'running' || mineruStatus?.state === 'queued'}
-                  title={!mineruTokenConfigured
-                    ? '扫描件增强解析需先在设置中配置 MinerU token（会配置后此处即可点击）'
-                    : mineruBusy || mineruStatus?.state === 'running' || mineruStatus?.state === 'queued'
-                      ? '增强解析进行中'
-                      : '上传到 MinerU 云端解析，公式转 LaTeX、扫描件识别'}
-                  onClick={() => onEnhanceFile(selectedFile.id)}
-                >
-                  {!mineruTokenConfigured
-                    ? '增强解析（需配置 token）'
-                    : mineruBusy || mineruStatus?.state === 'running' || mineruStatus?.state === 'queued'
-                      ? '增强解析中…'
-                      : '增强解析'}
-                </button>
-              )}
-              {onRemoveFile !== undefined && <button className="danger-button" type="button" onClick={() => onRemoveFile(selectedFile.id)}>从本课移除</button>}
-            </div>
-          )}
-        </header>
         <div className="material-reader-scroll">
           {loading && <div className="material-reader-state">正在打开资料…</div>}
           {editSavedNotice !== '' && <div className="inline-notice" role="status">{editSavedNotice}</div>}
@@ -189,11 +121,11 @@ export default function LessonMaterialReader({
                 setEditSavedNotice(chain
                   ? `已保存为第 ${result.version} 版《${result.file.originalName}》，旧版保留在历史版本。`
                   : `已保存为编辑版副本《${result.file.originalName}》，原件未改动。`)
-                setEditing(false)
+                onToggleEditing?.()
                 onFileSaved?.(result.file.id)
                 onSelectFile(result.file.id)
               }}
-              onCancel={() => { setEditing(false) }}
+              onCancel={() => { onToggleEditing?.() }}
             />
           )}
           {!loading && error !== '' && <div className="inline-error" role="alert">{error}</div>}

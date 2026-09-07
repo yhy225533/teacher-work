@@ -75,12 +75,10 @@ describe('V1.8.1 课件区讲义/材料分组（方案 A）', () => {
     expect(service).toContain('setLessonFileRole(fileId: string)')
     expect(service).toContain('原件不动（材料区保留）')
 
-    const reader = source('src/renderer/lesson-material-reader.tsx')
-    expect(reader).toContain('设为讲义底稿')
-    expect(reader).toContain('isLessonLectureFile(selectedFile)')
-    expect(reader).toContain('onPromoteFile')
-
+    // V19-B（D57）：设为讲义底稿入口并入课件区工具行 ⋯ 菜单（判定与语义不变）
     const section = source('src/renderer/lesson-files-section.tsx')
+    expect(section).toContain('设为讲义底稿')
+    expect(section).toContain('isLessonLectureFile(selectedFile)')
     expect(section).toContain('promoteToLecture')
     expect(section).toContain('原件保留在材料区')
   })

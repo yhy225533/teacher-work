@@ -1,4 +1,6 @@
 import { createElement } from 'react'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -21,7 +23,6 @@ import ManagedFilesPanel, {
 } from '../src/renderer/managed-files-panel'
 import { LessonsSection } from '../src/renderer/course-detail'
 import { buildCourseSummaries } from '../src/renderer/course-view-model'
-import LessonMaterialReader from '../src/renderer/lesson-material-reader'
 import { createLessonPrepContext } from '../src/renderer/lesson-prep-context'
 
 const stamp = '2026-09-01T00:00:00.000Z'
@@ -199,54 +200,20 @@ describe('V156-D static render upgrades (additive)', () => {
 
     it('keeps the reader enhance entry visible with setup guidance before a token is saved', () => {
       // 基准要求"token 未配置置灰 + 引导设置"：入口不得整体消失，否则老师无从得知该能力。
-      const scan = materialFile('file-scan', '扫描件.pdf', 'application/pdf')
-      const markdown = materialFile('file-md', '讲义.md', 'text/markdown')
-      const baseProps = {
-        files: [scan, markdown],
-        selectedFileId: 'file-scan',
-        onSelectFile: () => {},
-        onOpenFile: () => {},
-        onEnhanceFile: () => {},
-        mineruBusy: false,
-        mineruStatus: null,
-      }
+      // V19-B（D57）：阅读器头部操作行退役，MinerU 入口并入课件区工具行 ⋯ 菜单——
+      // 源码钉测改验菜单条目构造（lesson-files-section），语义（置灰/引导/进行中/done 隐藏）不变。
+      const section = readFileSync(fileURLToPath(new URL('../src/renderer/lesson-files-section.tsx', import.meta.url)), 'utf8')
 
-      const locked = renderToStaticMarkup(createElement(LessonMaterialReader, {
-        ...baseProps,
-        mineruTokenConfigured: false,
-      }))
-      expect(locked).toContain('增强解析（需配置 token）')
-      expect(locked).toContain('disabled=""')
-
-      const ready = renderToStaticMarkup(createElement(LessonMaterialReader, {
-        ...baseProps,
-        mineruTokenConfigured: true,
-      }))
-      expect(ready).toContain('增强解析')
-      expect(ready).not.toContain('需配置 token')
-
-      // 进行中状态：按钮禁用并显示"增强解析中…"
-      const running = renderToStaticMarkup(createElement(LessonMaterialReader, {
-        ...baseProps,
-        mineruTokenConfigured: true,
-        mineruStatus: { state: 'running' },
-      }))
-      expect(running).toContain('增强解析中…')
-      expect(running).toContain('disabled=""')
-
-      // 非 office/pdf/图片文件（如 md）不显示入口；已完成（done）不再重复展示
-      const mdOnly = renderToStaticMarkup(createElement(LessonMaterialReader, {
-        ...baseProps,
-        selectedFileId: 'file-md',
-        mineruTokenConfigured: true,
-      }))
-      expect(mdOnly).not.toContain('增强解析')
-      const done = renderToStaticMarkup(createElement(LessonMaterialReader, {
-        ...baseProps,
-        mineruTokenConfigured: true,
-        mineruStatus: { state: 'done' },
-      }))
-      expect(done).not.toContain('增强解析')
+      expect(section).toContain('增强解析（需配置 token）')
+      expect(section).toContain("title: !mineruTokenConfigured\n            ? '扫描件增强解析需先在设置中配置 MinerU token（会配置后此处即可点击）'")
+      expect(section).toContain("label: !mineruTokenConfigured\n            ? '增强解析（需配置 token）'\n            : mineruRunning\n              ? '增强解析中…'\n              : '增强解析'")
+      // 置灰：token 未配置 / 进行中均禁用（busy 连锁）
+      expect(section).toContain('disabled: !mineruTokenConfigured || mineruRunning || busy')
+      // 只对可增强文件展示（isMineruEnhanceableFile）且 done 后不再重复展示
+      expect(section).toContain('isMineruEnhanceableFile(selectedFile)')
+      expect(section).toContain("mineruStatus?.state !== 'done'")
+      // V19-B 菜单仍然挂接 enhanceWithMineru（通道不变）
+      expect(section).toContain('void enhanceWithMineru(selectedFile.id)')
     })
   })
 

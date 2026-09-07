@@ -220,7 +220,7 @@ describe('V19-A 对话式备课工作台', () => {
       expect(reader).toContain('<MdEditor')
       expect(reader).toContain('file={selectedFile}')
       expect(reader).toContain('onSaved={(result)')
-      expect(reader).toContain('onCancel={() => { setEditing(false) }}')
+      expect(reader).toContain('onCancel={() => { onToggleEditing?.() }}')
     })
 
     it('renders the controlled usage with initialBody + onSaveBody and note-namespaced hot-draft key', () => {

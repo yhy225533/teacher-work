@@ -27,7 +27,9 @@ describe('V12-04 lesson files and prep renderer contract', () => {
     expect(detail).toContain('latestLessonDraft(overview, viewedLesson.id)')
     expect(detail).toContain("viewedDraft === null ? '开始备课' : '继续备课'")
     expect(files).toContain('✦ 修改这份')
-    expect(files).toContain('整课重做')
+    // V19-B（D57）：整课重做按钮收进 ⋯ 菜单（lesson 范围 intent 不变）
+    expect(files).toContain("label: '整个课件包重做'")
+    expect(files).toContain('onSelect: rebuildLesson')
     expect(files).toContain('AI 新建备课')
     expect(files).toContain('继续上次修改')
     expect(files).not.toContain('setCurrentLesson')

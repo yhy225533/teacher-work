@@ -2117,39 +2117,11 @@ button:disabled {
   background: #fff;
 }
 
-.material-reader-document-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  border-bottom: 1px solid #eef2f7;
-  padding: 13px 17px 11px;
-}
-
-.material-reader-document-header > div:first-child {
+/* V19-B（D57）：阅读器头部操作行退役——文件名/大小/操作并入课件区工具行（lesson-files-toolbar） */
+.material-reader-document {
   min-width: 0;
-  max-width: 100%;
-}
-
-.material-reader-document-header h3 {
-  margin: 2px 0 4px;
-  overflow: hidden;
-  color: #172554;
-  font-size: 16px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.material-reader-document-header small {
-  color: var(--color-text-faint);
-  font-size: 10px;
-}
-
-.material-reader-actions {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
+  flex-direction: column;
 }
 
 .material-reader-scroll {
@@ -2461,7 +2433,7 @@ button:disabled {
 
 .lesson-files-section { display: grid; min-width: 0; gap: 14px; padding: 15px; }
 .lesson-files-section.is-immersive { padding: 8px 0 0; }
-.lesson-files-section.is-immersive .lesson-files-header { padding: 0 4px; }
+.lesson-files-section.is-immersive .lesson-files-toolbar { padding: 0 4px; }
 .lesson-files-section .material-reader { grid-template-columns: minmax(220px, 250px) minmax(0, 1fr); }
 .lesson-files-section.is-immersive .material-reader { border: 0; border-radius: 0; }
 .lesson-files-section.is-immersive .material-reader.is-single { grid-template-columns: minmax(0, 1fr); }
@@ -2471,10 +2443,17 @@ button:disabled {
 .lesson-files-empty { min-height: 360px; place-items: center; align-content: center; color: var(--color-text-muted); text-align: center; }
 .lesson-files-empty h3 { margin: 0; color: var(--color-text-strong); }
 .lesson-files-empty p { margin: 6px 0 0; }
-.lesson-files-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
-.lesson-files-header h3 { margin: 3px 0 5px; color: #172554; }
-.lesson-files-header > div > p:last-child { margin: 0; color: var(--color-text-muted); font-size: 12px; }
-.lesson-files-actions,
+/* V19-B（D57）：课件区单条合并工具行——课次标题 + 当前文件信息胶囊 ｜ 三主键 + 沉浸 + ⋯ */
+.lesson-files-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 14px; padding: 2px 2px 0; }
+.lesson-files-toolbar-main { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; min-width: 0; }
+.lesson-files-toolbar h3 { margin: 0; color: #172554; font-size: 16px; }
+.lesson-file-capsule { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; overflow: hidden; border: 1px solid var(--color-border); border-radius: 999px; padding: 3px 10px; background: #f8fafc; }
+.lesson-file-capsule b { overflow: hidden; color: #1e293b; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.lesson-file-capsule small { flex-shrink: 0; color: var(--color-text-faint); font-size: 10px; }
+.lesson-file-capsule small.is-current { border-radius: 999px; padding: 0 6px; background: #eef2ff; color: #4338ca; font-weight: 600; }
+.lesson-file-capsule small.is-source { border-radius: 999px; padding: 0 6px; background: #f1f5f9; color: #475569; }
+.lesson-file-capsule.is-empty { border-style: dashed; color: var(--color-text-faint); font-size: 11px; }
+.lesson-files-toolbar-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .lesson-file-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .lesson-file-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .lesson-file-list > li:not(.empty-state) { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--color-border); border-radius: 9px; padding: 11px 12px; background: #f8fafc; }
@@ -2830,8 +2809,9 @@ button.quick-status { cursor: pointer; }
     padding: 10px 0;
   }
 
-  .lesson-files-header {
+  .lesson-files-toolbar {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .lesson-files-section .material-reader {
@@ -4369,4 +4349,59 @@ button.quick-status { cursor: pointer; }
   background: #fff;
   border: 1px dashed #cbd5e1;
   color: #64748b;
+}
+
+/* V19-B（D57）：无 md 新课次引导文案（工具行内） */
+.lesson-files-guide { color: var(--color-text-faint); font-size: 11px; }
+
+/* V19-B（D57）：共用 ⋯ 收纳菜单（课件区 / 课程页共用；素材库右键菜单交互先例） */
+.app-menu { position: relative; display: inline-flex; }
+
+.app-menu-btn { min-width: 34px; }
+
+.app-menu-list {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  min-width: 200px;
+  max-width: min(260px, calc(100vw - 16px));
+  max-height: min(420px, calc(100vh - 16px));
+  overflow-y: auto;
+  border: 1px solid #dbe3ef;
+  border-radius: 9px;
+  padding: 4px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgb(15 23 42 / 18%);
+}
+
+.app-menu-list.is-right { left: auto; right: 0; }
+
+.app-menu-list > button {
+  border: 0;
+  padding: 8px 10px;
+  color: var(--color-text-strong);
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
+.app-menu-list > button:hover:not(:disabled) { background: #f8fafc; }
+.app-menu-list > button:disabled { cursor: not-allowed; opacity: 0.45; }
+
+.app-menu-list > button.is-danger {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.app-menu-separator { height: 1px; margin: 4px 0; border: 0; background: var(--color-border); }
+
+.app-menu-group {
+  margin: 6px 2px 2px;
+  color: var(--color-text-faint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }

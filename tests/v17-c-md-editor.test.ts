@@ -167,13 +167,16 @@ describe('V17-C md-editor（D28 零新依赖编辑器）', () => {
 describe('V17-C 阅读器接线（lesson-material-reader / lesson-files-section）', () => {
   it('gates the edit entry on markdown + editable, and switches edit/preview per state', () => {
     const readerSource = source('../src/renderer/lesson-material-reader.tsx')
+    const sectionSource = source('../src/renderer/lesson-files-section.tsx')
     expect(readerSource).toContain("editable && selectedFile !== null && selectedFile.mimeType === 'text/markdown'")
-    expect(readerSource).toContain('aria-pressed')
-    expect(readerSource).toContain('✎ 编辑')
-    expect(readerSource).toContain('✓ 预览')
+    // V19-B（D57）：✎ 编辑主键迁至课件区工具行（aria-pressed/文案在 section），编辑态经 props 受控
+    expect(sectionSource).toContain('aria-pressed')
+    expect(sectionSource).toContain('✎ 编辑')
+    expect(sectionSource).toContain('✓ 预览')
+    expect(readerSource).toContain('readonly editing?: boolean')
     expect(readerSource).toContain('<MdEditor')
     // 非编辑态才渲染 MarkdownDocument 预览
-    expect(readerSource).toContain('setEditing(false)')
+    expect(readerSource).toContain('!editing && content?.kind')
   })
 
   it('shows per-branch save notice and selects the newly written file', () => {
