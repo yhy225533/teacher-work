@@ -1,10 +1,10 @@
-# V19-A · 导出合同、IPC 与 Main 导出服务
+# V19-D · 导出合同、IPC 与 Main 导出服务
 
 状态：TODO
 
 ## 目标
 
-建立导出合同、三条 `export:*` IPC 白名单通道与 Main `ExportService`（校验、载荷组装、隐藏打印窗编排、printToPDF、保存端口、超时清理）。Renderer 侧零 UI 改动（入口属 V19-B）。
+建立导出合同、三条 `export:*` IPC 白名单通道与 Main `ExportService`（校验、载荷组装、隐藏打印窗编排、printToPDF、保存端口、超时清理）。Renderer 侧零 UI 改动（入口属 V19-E，挂在 V19-B 落地的课件区工具行）。
 
 ## 前置产物
 
@@ -35,10 +35,10 @@
 
 ## 边界
 
-- 不改 `MarkdownDocument` / `lesson-material-reader` / `lesson-files-section`（V19-B 范围）；
+- 不改 `MarkdownDocument` / `lesson-material-reader` / `lesson-files-section`（V19-E 入口范围；V19-B 合并工具行不动导出）；
 - 不登记 files 表、不进索引/备份、不触发 contentChanged；不需要 activityGate 暂停；
 - 零新依赖、零 migration；日志只记 fileId / 阶段 / 错误码（正文、文件清单、路径不进日志）；
-- `?print=1` 加载同一 bundle——Renderer 分支渲染属 V19-B，本任务先允许通道无消费者（Main 侧超时兜底可测）。
+- `?print=1` 加载同一 bundle——Renderer 分支渲染属 V19-E，本任务先允许通道无消费者（Main 侧超时兜底可测）。
 
 ## 验证
 

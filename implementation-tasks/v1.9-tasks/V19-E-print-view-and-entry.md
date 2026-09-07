@@ -1,14 +1,15 @@
-# V19-B · 打印视图与课件区入口
+# V19-E · 打印视图与课件区入口
 
 状态：TODO
 
 ## 目标
 
-打印视图（复用 `MarkdownDocument` 所见即所得）+ 课件区阅读器「导出 PDF」入口 + A4 打印版式落地。Main 侧零改动（消费 V19-A 通道）。
+打印视图（复用 `MarkdownDocument` 所见即所得）+ 课件区「导出 PDF」入口 + A4 打印版式落地。Main 侧零改动（消费 V19-D 通道）。
 
 ## 前置产物
 
-- V19-A 全部通道与服务（`window.teacherWorkbench.export.*`）；
+- V19-D 全部通道与服务（`window.teacherWorkbench.export.*`）；
+- **V19-B 合并工具行**（入口位置 = 工具行三主键之一，`⬇ 导出 PDF` 在本节点接线后才渲染）；
 - 既有可复用：`MarkdownDocument`（`lesson-material-reader.tsx` 导出，含 KaTeX 渲染与 `ManagedMarkdownImage` data URL 图片）、`katex/dist/katex.min.css` 导入先例、`lesson-files-section.tsx` 阅读器接线模式、`link-button` / `inline-notice` / `inline-error` 样式。
 
 ## 任务内容
@@ -35,7 +36,7 @@
 
 - 不改 `MarkdownDocument` / `parseBlocks` / `renderInline` / `ManagedMarkdownImage` 的任何渲染语义（打印视图只消费）；
 - 主窗 App、路由、导航、备课工作台零变化（除阅读器入口）；
-- 不改 V19-A 已冻结的通道与服务；不新增 IPC/依赖；
+- 不改 V19-D 已冻结的通道与服务；不新增 IPC/依赖；
 - 阅读器既有「✎ 编辑 / 系统打开 / 所在文件夹 / 从本课移除 / MinerU / 设为讲义底稿」入口全部不动。
 
 ## 验证
