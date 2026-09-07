@@ -1506,3 +1506,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 已知限制：1100px 以下堆叠走查（媒体查询 V172-A 已改写）并入 V172-D 隔离 Windows 冒烟执行；收起态摘要与规则 4-5 为 V172-A 已落地行为，本任务只补钉测。
 - 下一任务可依赖的接口：无新增接口；V172-D 直接进入全量门禁 + 冒烟 + 验收文档。
 
+
+## 2026-09-07 16:20 · V172-D · 自动门 DONE（走查待产品负责人）
+
+- 关键改动：V1.7.2 唯一全量验收点执行完毕。全量门禁 + 隔离 Windows 冒烟 + `docs/v1.7.2-acceptance.md` 验收记录。
+- 修改文件：`docs/v1.7.2-acceptance.md`（新）、`implementation-tasks/STATUS.md`、`implementation-tasks/v1.7.2-tasks/V172-D-final-gate.md`、本文件。
+- 验证命令与结果：`npm test` ✅ 83 files / 462 tests passed（1 skipped 既有）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅；`git diff --check` ✅；未运行 portable/installer（符合约束）。
+- 隔离 Windows 冒烟（`tmp/v172-smoke/run-smoke.mjs`，production `out/main/index.js` + 独立 `TEACHER_WORKBENCH_L01_SMOKE_APP_DATA` + `--user-data-dir` + 本机 `127.0.0.1:18771` fake OpenAI-compatible（**流式 SSE 与非流式 JSON 按请求 `stream` 分流**，V16-C 合同）+ DevTools 协议驱动，默认安全配置）：**16/16 通过**——①外部资料根目录预登记（隔离库 `external_roots` singleton 行直写；`chooseRoot` 通道需系统对话框无法自动化，为同表等价写入）；②外部 md 经白名单 `externalLibrary.copyToLesson` 复制进课次；③真实 UI 导航（搜索↔课程切换 + 页面刷新——共享 overview 缓存不随后建数据自动刷新 + 课程卡"开始备课"）→ single 模式；④左轨/目标卡（"当前版"徽标与"更换"为条件渲染，断言按条件语义）/参考行 chips 入口/预算行/空态分模式卡片化；⑤fake AI 流式生成 + `drafts.publishToLesson` → `有理数混合运算 · 第 1 版.md`；⑥退出重进后选中节点 → 生成器自动收起（摘要 `✦ 修改对象 … · 要求（未填写） · 参考 0 份 · 题库关`）→ "调整要求"重展开；⑦未装题库开关置灰 + title；生成器内无"目标题数"；⑧视口 1000px 单列堆叠（主窗口 `minWidth: 960` 物理无法压到 1100px 断点内 → DevTools `Emulation.setDeviceMetricsOverride` 仿真验证，rail `position: static`）；⑨fake provider 收到课次上下文；stderr 无致命；进程全终止 + 临时目录清理（tasklist/TEMP 双复核）。
+- 人工/真实环境验证：产品负责人走查清单见 `docs/v1.7.2-acceptance.md` §五（六条，对应方案 §11）；确认后创建 `checkpoint-V1.7.2-pass`。
+- Git 任务提交：`v1.7.2(V172-D): full gates, smoke and acceptance record`。**不创建 `checkpoint-V1.7.2-pass`**——待产品负责人最终确认后创建（与 `checkpoint-V1.7-pass` 分别创建、互不替代）。
+- 已知限制：冒烟覆盖 single 模式全链 + 收起/展开规则 + 题库未装分支 + 视口断点；整课重做（lesson）与题库开启后的候选区头部参数交互走单元钉测覆盖（v1.7.2-workspace-structure 15 例），未在冒烟重复（fake AI 无检索计划 JSON 能力，题库候选链路已由 V17-D/V18 冒烟覆盖过同批组件）。
+
