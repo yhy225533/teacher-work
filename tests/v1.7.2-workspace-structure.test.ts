@@ -128,13 +128,13 @@ describe('V172-A 工作台骨架：左轨 / 生成器范围行 / 收起态', () 
   it('V172-fix: new-prep mode keeps external and materials add entries wired', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
 
-    // 三种模式都必须能进入外部资料/素材库 picker：single/lesson 参考行 + new 生成依据行（V172-A 遗漏回归的防再犯钉）
-    expect(draft.match(/onClick=\{onBrowseExternal\}/g)).toHaveLength(2)
-    expect(draft.match(/onClick=\{onBrowseMaterials\}/g)).toHaveLength(2)
+    // 三种模式都必须能进入外部资料/素材库 picker：single/lesson 参考行 + new 选中态小入口 + new 冷启动大卡（V172-B）
+    expect(draft.match(/onClick=\{onBrowseExternal\}/g)).toHaveLength(3)
+    expect(draft.match(/onClick=\{onBrowseMaterials\}/g)).toHaveLength(3)
     // new 模式入口不依赖课内资料存在（冷启动课次无文件时仍可添加）
     const newRow = draft.slice(draft.indexOf("{prepMode === 'new' && ("), draft.indexOf('<div className="prep-gen-req">'))
-    expect(newRow).toContain('＋ 外部资料')
-    expect(newRow).toContain('＋ 素材库')
+    expect(newRow).toContain('从外部资料添加')
+    expect(newRow).toContain('从素材库添加')
   })
 
   it('V1.7.2: scope file rows render a source badge from lessonFileSourceLabel', () => {
@@ -150,5 +150,52 @@ describe('V172-A 工作台骨架：左轨 / 生成器范围行 / 收起态', () 
     // AI 版本链（含学生版）与编辑版命名不标来源
     expect(context).toContain('appGeneratedNamePattern')
     expect(styles).toContain('.prep-source-badge {')
+  })
+
+  it('V172-B: bank options live in the candidates-section header only', () => {
+    const draft = source('../src/renderer/draft-panel.tsx')
+    const styles = source('../src/renderer/styles.css')
+
+    // 唯一 PrepBankOptions 实例位于 improve-bank-section 头部 prep-bank-controls（§5.8）
+    expect(draft.match(/<PrepBankOptions/g)).toHaveLength(1)
+    const bankSection = draft.slice(draft.indexOf('improve-bank-section'), draft.indexOf('<p className="improve-bank-plan">'))
+    expect(bankSection).toContain('prep-bank-controls')
+    expect(bankSection).toContain('<PrepBankOptions')
+    expect(bankSection).toContain('正在选题…')
+    // 生成器参考行/生成依据行不再渲染题库参数（过渡态退役）
+    const generator = draft.slice(draft.indexOf('prep-generator" aria-label'), draft.indexOf('<div className="prep-gen-req">'))
+    expect(generator).not.toContain('PrepBankOptions')
+    expect(generator).not.toContain('目标题数')
+    // 旧行内块 CSS 退役，count-input 保留
+    expect(styles).not.toContain('.prep-bank-toggle')
+    expect(styles).not.toContain('.prep-bank-options')
+    expect(styles).toContain('.prep-bank-controls')
+    expect(styles).toContain('.prep-bank-count-input')
+  })
+
+  it('V172-B: new-mode cold start renders two big add cards, selected renders chips', () => {
+    const draft = source('../src/renderer/draft-panel.tsx')
+    const styles = source('../src/renderer/styles.css')
+
+    // 冷启动（0 选中）：两张 prep-add-card 大卡（§5.6），取代常驻勾选列表与小按钮行
+    const newRow = draft.slice(draft.indexOf("{prepMode === 'new' && ("), draft.indexOf('<div className="prep-gen-req">'))
+    expect(newRow).toContain('prep-add-cards')
+    expect(newRow).toContain('从外部资料添加')
+    expect(newRow).toContain('从已登记的外部资料根目录中选择文件作为生成依据')
+    expect(newRow).toContain('从素材库添加')
+    expect(newRow).toContain('从素材库挑取素材插入本课资料')
+    // 大卡下方一行：muted 提示 + （有候选时）"＋ 从本课资料选择" + 题库开关
+    expect(newRow).toContain('已选 0 份 · 也可以只靠要求直接生成')
+    expect(newRow).toContain('＋ 从本课资料选择')
+    expect(newRow).toContain('prep-switch-row')
+    // 有选中：与参考行同构的 chips（✕ = toggleReferenceFile）＋ 三个小入口 ＋ 题库开关（§5.6 第一条）
+    expect(newRow).toContain('selectedReferenceFileIds.length > 0 ? (')
+    expect(newRow).toContain('移除依据')
+    expect(newRow).toContain('onClick={() => toggleReferenceFile(file.id)}')
+    expect(newRow).toContain('＋ 本课资料')
+    // 大卡 CSS 落地
+    expect(styles).toContain('.prep-add-cards {')
+    expect(styles).toContain('.prep-add-card {')
+    expect(styles).toContain('.prep-add-card-plus {')
   })
 })

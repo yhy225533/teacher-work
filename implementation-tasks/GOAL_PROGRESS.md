@@ -1488,3 +1488,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 版本控制协议已追加 V1.9 行（`plan(V1.9)` / `v1.9(V19-XX)`；`checkpoint-V1.9-pass` 待产品负责人走查确认后创建，与既有 pass 互不替代）。
 - 实施节奏：本立项只冻结方案与任务链骨架；V19-A 待产品负责人完成 V1.8 / V1.8.1 走查确认（`checkpoint-V1.8-pass` / `checkpoint-V1.8.1-pass` 创建）后开始。
 - Git：本地提交 `plan(V1.9): pdf export via hidden print window and printToPDF`；随后 push（沿用 GitHub 授权）。
+
+## 2026-09-07 14:50 · V172-B · DONE
+
+- 关键改动：new（新建备课）冷启动改为两张 `prep-add-card` 大卡（0 选中时取代常驻勾选列表与小按钮行；有选中时切回 chips + ＋本课资料/外部资料/素材库三小入口 + 题库开关，与参考行同构）+ 大卡下方一行"已选 0 份 · 也可以只靠要求直接生成 / ＋ 从本课资料选择 / 题库开关"；`PrepBankOptions` 唯一实例迁入 `improve-bank-section` 头部 `prep-bank-controls`（与"正在选题…"同处，disabled 含 bankPlanBusy），参考行/生成依据行行内过渡态删除；CSS：新增 `.prep-add-cards/.prep-add-card/.prep-add-card-plus/.prep-bank-controls/.prep-bank-controls-inner`，退役 `.prep-bank-toggle/.prep-bank-options`（`.prep-bank-count-input` 保留）。
+- 修改文件：`src/renderer/draft-panel.tsx`、`src/renderer/styles.css`、`tests/v1.7.2-workspace-structure.test.ts`（新增 2 例 + 演进入口钉 2→3）、`tests/static-render-v156-d.test.ts`（加载态断言按真实行为演进：`files === null` 时仅"正在读取本次资料…"，大卡在资料就绪后渲染）、`implementation-tasks/STATUS.md`、本文件。
+- 验证命令与结果：`npm test` ✅ 83 files / 459 tests passed（1 skipped 既有）；`npm run typecheck` ✅；`npm run lint` ✅；`npm run build` ✅（风险补充，纯展示层改动）。
+- 已知限制：new 模式"＋ 从本课资料选择"在 0 选中时才显示（有选中时由 chips 区"＋ 本课资料"承担，方案 §5.6 同构语义）；`prep-gen-note` 的选中计数文案（已选 n/10 份）随 chips 同步显示。
+- 下一任务可依赖的接口：V172-C 空态分模式文案可直接按 prepMode 分支渲染（draft-content-empty 处）；improve-review-card 已有独立边框（V172-C 只需核查确认）。
+

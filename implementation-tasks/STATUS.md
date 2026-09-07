@@ -183,7 +183,7 @@
 | 里程碑 | 状态 | 计划内容 |
 |---|---|---|
 | V172-A 工作台骨架与左轨 | DONE | draft-panel 重排为 prep-rail（左轨·修改记录时间线+空态文案+脚注）+ prep-main（生成器卡/收起条/成果卡）；范围行 single 目标卡（文件名/字数/当前版/更换展开 radio 收起）/lesson 自动徽标；新 state targetPickerOpen/refPickerOpen/generatorOpen 与规则 1-5（选中自动收起、调整要求展开）；参考行 chips/题库 CSS switch/meter 预算行按方案提前落地（题库参数过渡态暂留行内，V172-B 迁候选区）；删除 prep-ref-panel/prep-work-panel/prep-scope-strip/prep-auto-scope/旧节头/draft-prompt-block；grid 250px、媒体查询 .prep-rail 堆叠；新增 v1.7.2-workspace-structure 7 例 + 演进 5 处钉测；全量 77 files / 369 tests、typecheck、lint 通过 |
-| V172-B 参考行与题库迁移 | TODO | 参考行 chips（✕ 移除）+ ＋本课资料/外部资料/素材库入口 + 参考题库 CSS switch 行；new 冷启动两张添加卡；预算行 meter + 文案拼接规则；题库"目标题数/学生版"迁移到候选区头部；§8 文案对照全量落地 |
+| V172-B 参考行与题库迁移 | DONE | 参考行 chips/三入口/题库 switch/预算 meter 已随 V172-A 提前落地；本任务完成剩余两项——new 冷启动两张 prep-add-card 大卡（0 选中大卡 + "已选 0 份"提示/从本课资料选择/题库开关行，有选中切回 chips + 三小入口 + 开关同构）与 PrepBankOptions 唯一实例迁题库候选区头部 prep-bank-controls（行内过渡态删除、prep-bank-toggle/options CSS 退役、count-input 保留）；钉测演进 3 处（新增 2 例、入口钉 2→3、static-render 加载态按真实行为）；全量 83 files / 459 tests、typecheck、lint、production build 通过 |
 | V172-C 收起态与空态引导 | TODO | 收起态摘要三模式规则与"调整要求"展开；选中自动收起/取消强制展开；主区空态分模式文案卡片化；improve-review-card 独立成卡核查；1100px 堆叠走查 |
 | V172-D 最终门禁与验收 | TODO | 全量测试、typecheck、lint、production build、diff check；隔离 Windows 冒烟三模式走查（fake provider，不要求真实 DeepSeek）；`docs/v1.7.2-acceptance.md`；产品负责人 §11 走查确认后创建 `checkpoint-V1.7.2-pass` |
 

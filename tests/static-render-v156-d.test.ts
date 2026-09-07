@@ -343,10 +343,10 @@ describe('V156-D static render upgrades (additive)', () => {
       expect(markup).toContain('prep-rail')
       expect(markup).toContain('<b>修改记录</b>')
       expect(markup).toContain('生成依据')
+      // V172-B（D33/§5.6）：资料加载完成前生成依据行只有加载态；外部资料/素材库入口
+      // （冷启动大卡）在 files 就绪后渲染，防再犯钉测移至 v1.7.2-workspace-structure（源码断言）
       expect(markup).toContain('正在读取本次资料…')
-      // V172-fix：新建备课模式必须保有外部资料/素材库添加入口（V172-A 删除左栏大按钮时遗漏导致冷启动无法加资料）
-      expect(markup).toContain('＋ 外部资料')
-      expect(markup).toContain('＋ 素材库')
+      expect(markup).not.toContain('prep-add-card')
     })
   })
 

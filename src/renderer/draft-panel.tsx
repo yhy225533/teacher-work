@@ -1127,7 +1127,46 @@ export default function DraftPanel({
                   )}
                   {prepMode === 'new' && (
                     files === null ? <div className="material-reader-state">正在读取本次资料…</div> : (
-                      <ScopeFileList files={referenceCandidates} selection="checkbox" selectedIds={selectedReferenceFileIds} onSelect={toggleReferenceFile} emptyText="先从外部资料或素材库添加生成依据。" />
+                      selectedReferenceFileIds.length > 0 ? (
+                        <>
+                          {selectedReferenceFiles.map((file) => (
+                            <span key={file.id} className="prep-chip">
+                              <span>{file.originalName}</span>
+                              <button className="prep-chip-remove" type="button" aria-label={`移除依据 ${file.originalName}`} disabled={busyAction !== ''} onClick={() => toggleReferenceFile(file.id)}>✕</button>
+                            </span>
+                          ))}
+                          <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={() => setRefPickerOpen((current) => !current)}>＋ 本课资料</button>
+                          {refPickerOpen && (
+                            <ScopeFileList files={referenceCandidates} selection="checkbox" selectedIds={selectedReferenceFileIds} onSelect={toggleReferenceFile} currentVersionId={classifiedFiles.currentVersion?.id} charCounts={referenceCharCounts} emptyText="本课没有可作生成依据的课内资料。" />
+                          )}
+                          <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={onBrowseExternal}>＋ 外部资料</button>
+                          <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={onBrowseMaterials}>＋ 素材库</button>
+                          <label className={`prep-switch-row${(bankSummary?.installed ?? false) ? '' : ' is-disabled'}`} title={(bankSummary?.installed ?? false) ? undefined : '先在题库页导入 .tqbank'}>
+                            参考题库
+                            <input
+                              className="prep-switch-input"
+                              type="checkbox"
+                              checked={bankEnabled}
+                              disabled={!(bankSummary?.installed ?? false) || busyAction !== '' || improveBusy}
+                              onChange={toggleBankEnabled}
+                            />
+                            <span className="prep-switch" aria-hidden="true" />
+                          </label>
+                        </>
+                      ) : (
+                        <div className="prep-add-cards">
+                          <button className="prep-add-card" type="button" disabled={busyAction !== ''} onClick={onBrowseExternal}>
+                            <span className="prep-add-card-plus" aria-hidden="true">＋</span>
+                            <b>从外部资料添加</b>
+                            <small>从已登记的外部资料根目录中选择文件作为生成依据</small>
+                          </button>
+                          <button className="prep-add-card" type="button" disabled={busyAction !== ''} onClick={onBrowseMaterials}>
+                            <span className="prep-add-card-plus" aria-hidden="true">＋</span>
+                            <b>从素材库添加</b>
+                            <small>从素材库挑取素材插入本课资料</small>
+                          </button>
+                        </div>
+                      )
                     )
                   )}
                 </div>
@@ -1160,35 +1199,20 @@ export default function DraftPanel({
                       />
                       <span className="prep-switch" aria-hidden="true" />
                     </label>
-                    {bankEnabled && (
-                      <PrepBankOptions
-                        bankTargetCount={bankTargetCount}
-                        onTargetCountChange={(count) => {
-                          setBankTargetCount(count)
-                          clearBankSelection()
-                        }}
-                        dualVersionEnabled={dualVersionEnabled}
-                        onDualVersionChange={setDualVersionEnabled}
-                        disabled={busyAction !== '' || improveBusy}
-                      />
-                    )}
                   </div>
                 </div>
               )}
-              {prepMode === 'new' && (
+              {prepMode === 'new' && selectedReferenceFileIds.length === 0 && files !== null && (
                 <div className="prep-gen-row">
                   <span className="prep-gen-label" />
                   <div className="prep-gen-field">
-                    {files !== null && referenceCandidates.length > 0 && (
+                    {referenceCandidates.length > 0 && (
                       <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={() => setRefPickerOpen((current) => !current)}>＋ 从本课资料选择</button>
                     )}
                     {refPickerOpen && (
                       <ScopeFileList files={referenceCandidates} selection="checkbox" selectedIds={selectedReferenceFileIds} onSelect={toggleReferenceFile} currentVersionId={classifiedFiles.currentVersion?.id} charCounts={referenceCharCounts} emptyText="本课没有可作生成依据的课内资料。" />
                     )}
-                    {/* V172-fix：新建备课模式必须保有外部/素材入口（V172-A 删除左栏大按钮时此处遗漏，冷启动无法加资料） */}
-                    <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={onBrowseExternal}>＋ 外部资料</button>
-                    <button className="prep-add-mini" type="button" disabled={busyAction !== ''} onClick={onBrowseMaterials}>＋ 素材库</button>
-                    <span className="prep-gen-note">已选 {selectedReferenceFiles.length} 份 · 也可以只靠要求直接生成</span>
+                    <span className="prep-gen-note">已选 0 份 · 也可以只靠要求直接生成</span>
                     <label className={`prep-switch-row${(bankSummary?.installed ?? false) ? '' : ' is-disabled'}`} title={(bankSummary?.installed ?? false) ? undefined : '先在题库页导入 .tqbank'}>
                       参考题库
                       <input
@@ -1200,18 +1224,6 @@ export default function DraftPanel({
                       />
                       <span className="prep-switch" aria-hidden="true" />
                     </label>
-                    {bankEnabled && (
-                      <PrepBankOptions
-                        bankTargetCount={bankTargetCount}
-                        onTargetCountChange={(count) => {
-                          setBankTargetCount(count)
-                          clearBankSelection()
-                        }}
-                        dualVersionEnabled={dualVersionEnabled}
-                        onDualVersionChange={setDualVersionEnabled}
-                        disabled={busyAction !== '' || improveBusy}
-                      />
-                    )}
                   </div>
                 </div>
               )}
@@ -1300,7 +1312,22 @@ export default function DraftPanel({
           )}
           {bankEnabled && (
             <div className="improve-bank-section" aria-label="题库候选题过目">
-                  <div className="card-heading"><div><p className="section-kicker">AI 自动选题</p><h2>题库候选（先过目，再生成）</h2></div>{bankPlanBusy ? <span className="count-label">正在选题…</span> : null}</div>
+                  <div className="card-heading">
+                    <div><p className="section-kicker">AI 自动选题</p><h2>题库候选（先过目，再生成）</h2></div>
+                    <div className="prep-bank-controls">
+                      <PrepBankOptions
+                        bankTargetCount={bankTargetCount}
+                        onTargetCountChange={(count) => {
+                          setBankTargetCount(count)
+                          clearBankSelection()
+                        }}
+                        dualVersionEnabled={dualVersionEnabled}
+                        onDualVersionChange={setDualVersionEnabled}
+                        disabled={bankPlanBusy || busyAction !== '' || improveBusy}
+                      />
+                      {bankPlanBusy ? <span className="count-label">正在选题…</span> : null}
+                    </div>
+                  </div>
                   {bankPlan === null ? (
                     <p className="inline-notice" role="status">
                       {bankNotice !== '' ? bankNotice : '尚未完成题库选题；确认生成将不使用题库候选。'}
@@ -1430,7 +1457,7 @@ function PrepBankOptions({ bankTargetCount, onTargetCountChange, dualVersionEnab
   }
 
   return (
-    <span className="prep-bank-options">
+    <span className="prep-bank-controls-inner">
       <label>目标题数：
         <input
           className="prep-bank-count-input"
