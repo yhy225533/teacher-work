@@ -208,12 +208,14 @@
 | V18-A 反馈合同与 Main 服务 | DONE | feedback-contracts（常量/四接口/守卫）、`feedback:read-transcript`（选 .txt/.md 读文本不登记 files，30k 头截 + truncated，取消返回 null）、`feedback:generate`（skill prompt 或默认三段 FEEDBACK_PROMPT_VERSION + 学生/课程/课次/反馈日期上下文 → 非流式草稿不落库；反馈日期 = scheduled_at 本地日期 ?? 当天）；NoteRecord.aiMetadata 双轨合同（DraftNoteMetadata | FeedbackNoteMetadata）与 core-data mapNote/draft-scope/draft-view-model/draft-panel/draft-service 收窄；ipc-security 未锁通道清单、三新测试文件 18 例 + 4 处钉测演进；全量 82 files / 414 tests passed（1 skipped）、typecheck、lint 通过 |
 | V18-B 确认已上内嵌反馈与可见性 | DONE | confirm-lesson-taught-modal 重做完成（内嵌 LessonFeedbackSection + 主按钮软强制 gating + 跳过原因单选/红色二次确认 + upsert 编辑态预填最新一条 + 保存编排 createNote/updateNote→confirmLessonTaught + occurredOn=scheduledAt 本地日期 + 无学生退化纯确认）；lessonFeedbackStatus 派生（taught/complete/每生 hasFeedback+latestNote，deleted/draft 类不计）；课次行已反馈绿/缺反馈黄徽标（仅已上且有在读学生）；Viewed Lesson 黄条+补写入口/摘要行（首行 40 字+已挂到×××名下）；lesson-feedback-modal 补写弹窗（共享反馈区、无 Current Lesson/确认按钮）；styles.css 反馈区样式；新增 v1.8-feedback-ui 18 例；全量 83 files / 432 tests passed（1 skipped）、typecheck、lint、production build 通过 |
 | V18-C 班课反馈与转写转反馈 | DONE | LessonFeedbackSection 班课折叠列表完成（attendance.getLesson 到课/请假/缺席徽标、未点名不显示；待写/已写✓；请假/缺席虚线"可跳过"可写可跳；N/M 已写徽章分母=到课学生）；确认弹窗班课 gating=≥1 到课学生有内容、首次点击 missing-inline 黄条点名、再次点击按已写保存未写跳过、请假学生填写也保存；rec-flow 折叠块（路径 A 选 .txt/.md → read-transcript → 自动 generate → 草稿落 textarea + 文件 chip/字数/截断提示 + 两段进度 + 取消令牌防迟到回写；路径 B 纯录音置灰"未配置语音模型·后续版本"）；反馈 Skill select（全部 active Skill + 不使用 Skill（默认结构），仅影响下一次 generate）；草稿来源标签"AI 草稿·请人工修改"→"已人工修改 ✓"（绿）、生成中该生 textarea 与主按钮禁用；CreateNoteRequest 追加可选 aiMetadata（FeedbackNoteMetadata，core-ipc 透传 → core-data 落 ai_metadata_json；手写不写）+ create-note 往返钉测；v1.8-feedback-ui 追加 11 例（共 29）；全量 83 files / 444 tests passed（1 skipped）、typecheck、lint、production build、diff check 通过 |
-| V18-D 最终门禁与验收 | 自动门 DONE / 真实自测待产品负责人 | 全量 83 files / 444 tests passed（1 skipped）、typecheck、lint、production build、diff check 通过；隔离 Windows 冒烟 16/16（一对一 保存含 aiMetadata→确认→occurredOn=排课日期、跳过→缺反馈→补写→绿、upsert 不重复建行、班课 3 学生 1 请假 每人一条、徽标/黄条派生、generate 不登记 files、学生时间线 occurredOn 降序、fake provider 收到三段提示词+学生上下文、stderr 无致命、进程全终止+临时目录清理）；`docs/v1.8-acceptance.md` 已建；DeepSeek 真实自测（预估 ≤ ¥1）与最终体验确认交产品负责人，通过后创建 `checkpoint-V1.8-pass` |
+| V18-D 最终门禁与验收 | DONE | 全量 83 files / 444 tests passed（1 skipped）、typecheck、lint、production build、diff check 通过；隔离 Windows 冒烟 16/16（一对一 保存含 aiMetadata→确认→occurredOn=排课日期、跳过→缺反馈→补写→绿、upsert 不重复建行、班课 3 学生 1 请假 每人一条、徽标/黄条派生、generate 不登记 files、学生时间线 occurredOn 降序、fake provider 收到三段提示词+学生上下文、stderr 无致命、进程全终止+临时目录清理）；`docs/v1.8-acceptance.md`；**2026-09-07 产品负责人走查最终确认通过，`checkpoint-V1.8-pass` 已创建于最终确认提交** |
+
+**V1.8 已冻结在 `checkpoint-V1.8-pass`（基线 `checkpoint-V1.5.6-pass` 之后链上 V1.7/V1.7.2/V1.7.3 自动门亦过、其 pass 标签待各自走查确认）。**
 
 
 ## V1.8.1 已立项（课件区讲义/材料分组方案 A + 设为讲义底稿）
 
-基线：V1.8 自动门已过（走查确认与 `checkpoint-V1.8-pass` 待产品负责人，互不阻塞）。方案 `docs/v1.8.1-courseware-lecture-material-split-plan.md`，决策 D46/D47（`implementation-tasks/V1_8_DECISIONS.md`）；任务链 `implementation-tasks/v1.8.1-tasks/`；零 migration、零新依赖，新 IPC 仅 `files:set-lesson-role` 一条；不运行 portable/installer。
+基线：V1.8 自动门已过（**2026-09-07 产品负责人走查最终确认通过，已冻结在 `checkpoint-V1.8-pass`**）。方案 `docs/v1.8.1-courseware-lecture-material-split-plan.md`，决策 D46/D47（`implementation-tasks/V1_8_DECISIONS.md`）；任务链 `implementation-tasks/v1.8.1-tasks/`；零 migration、零新依赖，新 IPC 仅 `files:set-lesson-role` 一条；不运行 portable/installer。
 
 | 里程碑 | 状态 | 计划内容 |
 |---|---|---|
@@ -223,7 +225,7 @@
 
 ## V1.9 已立项（教学界面信息密度收口 + 课件导出可打印 PDF）
 
-基线：V1.8.1 自动门已过（走查确认与 `checkpoint-V1.8.1-pass` 待产品负责人，互不阻塞 V1.9）。2026-09-07 范围扩容：产品负责人三轮界面评审（备课工作台 / 课件区 / 课程页 / 编辑器评估）拍板 UI 重做并入 V1.9。**双设计基准**：`docs/v1.9-teaching-ui-restructure-plan.md`（UI，V19-A/B/C，实施在先）+ `docs/v1.9-pdf-export-plan.md`（导出，V19-D/E/F，原 A/B/C 经 git mv 重排）；决策 D48–D60（`implementation-tasks/V1_9_DECISIONS.md`）。任务链 `implementation-tasks/v1.9-tasks/`，实施顺序 V19-A → B → C → D → E → F，同一时刻最多一个 `IN_PROGRESS`；V19-F 为唯一全量验收点（验收文档 `docs/v1.9-acceptance.md`）。UI 节点零 migration / 零新 IPC / 零新依赖（纯 Renderer 重排，prepMode 与生成合同字段保留仅 UI 收敛）；导出节点零 migration、零新依赖、零 AI 调用，新 IPC 仅 `export:print-to-pdf` / `export:get-print-payload` / `export:print-ready` 三条（载荷通道带 sender 校验）；PDF 不登记 files 表、不进索引/备份；不运行 portable/installer；实施待产品负责人完成 V1.8 / V1.8.1 走查确认后开始。
+基线：V1.8.1 自动门已过（走查确认与 `checkpoint-V1.8.1-pass` 待产品负责人，互不阻塞 V1.9）；**V1.8 已于 2026-09-07 走查确认冻结在 `checkpoint-V1.8-pass`**。2026-09-07 范围扩容：产品负责人三轮界面评审（备课工作台 / 课件区 / 课程页 / 编辑器评估）拍板 UI 重做并入 V1.9。**双设计基准**：`docs/v1.9-teaching-ui-restructure-plan.md`（UI，V19-A/B/C，实施在先）+ `docs/v1.9-pdf-export-plan.md`（导出，V19-D/E/F，原 A/B/C 经 git mv 重排）；决策 D48–D60（`implementation-tasks/V1_9_DECISIONS.md`）。任务链 `implementation-tasks/v1.9-tasks/`，实施顺序 V19-A → B → C → D → E → F，同一时刻最多一个 `IN_PROGRESS`；V19-F 为唯一全量验收点（验收文档 `docs/v1.9-acceptance.md`）。UI 节点零 migration / 零新 IPC / 零新依赖（纯 Renderer 重排，prepMode 与生成合同字段保留仅 UI 收敛）；导出节点零 migration、零新依赖、零 AI 调用，新 IPC 仅 `export:print-to-pdf` / `export:get-print-payload` / `export:print-ready` 三条（载荷通道带 sender 校验）；PDF 不登记 files 表、不进索引/备份；不运行 portable/installer；实施待产品负责人完成 V1.8.1 走查确认后开始。
 
 | 里程碑 | 状态 | 计划内容 |
 |---|---|---|

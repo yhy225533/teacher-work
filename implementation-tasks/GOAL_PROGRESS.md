@@ -1469,6 +1469,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 已知限制：无 BLOCKED 项。`AGENTS.md` 活动增量段仍写 V1.7（由产品负责人自行维护，方案 §9 已列明更新要点）。
 
 
+## 2026-09-07 · V1.8 最终验收通过（record final acceptance）
+
+- 产品负责人走查最终确认通过（原话"V1.8 是确认 ok 的了"）；V18-D 状态由"真实自测待产品负责人"转 DONE。
+- 更新文件：`docs/v1.8-acceptance.md`（结论行与 §6/§7 记录确认通过与日期）、`implementation-tasks/v1.8-tasks/V18-D-final-gate.md`（状态转 DONE + 标签已创建）、`implementation-tasks/STATUS.md`（V18-D 行转 DONE + V1.8 冻结句）、本文件。
+- Git：最终确认提交 `v1.8(V18-D): record final acceptance` 与通过标签 `checkpoint-V1.8-pass`（附注式，先例 `checkpoint-V1.6-pass`）一并创建；push（沿用 GitHub 授权）。未移动任何既有 checkpoint。
+- 后续：V1.8.1 走查与 `checkpoint-V1.8.1-pass` 仍待产品负责人（V1.9 实施门槛剩 V1.8.1 一项；V1.7/V1.7.2/V1.7.3 各自 pass 标签待各自走查，互不替代）。
+
+
 ## 2026-09-07 00:10 · V1.8.1 · 自动门 DONE（走查待产品负责人）
 
 - 关键改动：课件区目录树讲义/材料分组（方案 A，产品负责人 2026-09-06 拍板"左侧这个可以！"）+ 材料区 md「设为讲义底稿」一键纳管版本链。零 migration、零新依赖；新 IPC 仅 `files:set-lesson-role`。

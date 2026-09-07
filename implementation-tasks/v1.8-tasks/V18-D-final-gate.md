@@ -1,6 +1,6 @@
 # V18-D · 最终门禁与验收
 
-**状态：** `DONE`（自动门；DeepSeek 真实自测与最终体验确认待产品负责人）
+**状态：** `DONE`（自动门 + 2026-09-07 产品负责人走查最终确认；`checkpoint-V1.8-pass` 已创建）
 
 前置：V18-A/B/C 均 `DONE`。V1.8 唯一全量验收点。
 
@@ -18,4 +18,4 @@
 ## 验收与标签
 
 - 全部门禁绿 + `docs/v1.8-acceptance.md` 齐备 = 自动门完成；
-- 产品负责人完成真实自测与最终体验确认后，才可在最终提交创建 `checkpoint-V1.8-pass`（与 `checkpoint-V1.7-pass`、`checkpoint-V1.7.2-pass`、`checkpoint-V1.7.3-pass` 互不替代、分别创建）。
+- **2026-09-07 产品负责人走查最终确认通过**（原话"V1.8 是确认 ok 的了"）；`checkpoint-V1.8-pass` 创建于最终确认提交（与 `checkpoint-V1.7-pass`、`checkpoint-V1.7.2-pass`、`checkpoint-V1.7.3-pass` 互不替代、分别创建）。
