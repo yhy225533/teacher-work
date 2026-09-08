@@ -1,6 +1,6 @@
 # V19-F · 最终门禁与验收（全工作流）
 
-状态：TODO
+状态：DONE
 
 ## 目标
 
@@ -30,4 +30,12 @@ V1.9 唯一全量验收点（UI 重做 + PDF 导出全工作流）。自动质�
 
 ## 完成记录
 
-（待实施）
+2026-09-08 完成（全链六节点收官）：
+
+- **自动门全绿**：`npm test` 92 files / 521 tests passed（1 skipped 既有；含冒烟缺陷修复新增 chips 计数钉测）、typecheck、lint、production build、`git diff --check`；portable/installer 未运行（符合约束）。
+- **隔离 Windows 冒烟 21/21 全绿**（production `out/main/index.js` + 独立 `TEACHER_WORKBENCH_L01_SMOKE_APP_DATA`/`--user-data-dir`/`--remote-debugging-port` + 本机 fake OpenAI-compatible + external_roots 预插 + CDP 仿真窄窗）：UI 走查（行动卡 crumb/chips/行动键/⋯ 三分组红区；直达课件区工具行/胶囊/三主键/⋯ 分组红区；备课工作台对话式 + single 自动挂载；**fake AI 对话流端到端**：要求→方案（同卡）→确认→流式→成果；MdEditor 编辑态；修改记录浮层开合；1000px 堆叠无破版；快速建课回归抽查）+ 导出走查（导出按钮 md 可用 + title；Main 二次校验两条稳定中文拒绝；`?print=1` 真实渲染 PrintDocumentView；sender 校验端到端拒冒充取载荷；stderr 健康检查）。
+- **双复核通过**：无残留 electron 进程；`teacher-workbench-v19-smoke-*` 临时目录全部清理（含调试轮残留）。
+- **冒烟发现并修复真实缺陷**：课程页文件计数 chips 停更——外部资料 importToLesson 不发 contentChanged，`course-detail.tsx` 补 core overview 结构变化（overviewRevision）兜底重拉；`tests/v1.9-course-hero-card.test.ts` 新增双线计数钉测。external-library-ipc 行为零变化（V1.7 冻结语义）。
+- **自动化边界（如实记录）**：原生保存对话框为 Windows 模态，保存/取消/占用路径由 export-service/export-ipc 注入测试 20 例覆盖 + 人工走查；CDP Page.printToPDF 在本应用 Electron 调试协议未实现（-32601），编排参数已注入测试同参钉测，字节级保真归人工走查；错误码跨 contextBridge 不存活为既有行为（UI 只消费 message，冒烟实测确认）。
+- **验收记录**：`docs/v1.9-acceptance.md`（实施表六节点、自动门、冒烟 21/21、安全边界复核、产品负责人双清单）。
+- `checkpoint-V1.9-pass` 未创建——待产品负责人按双清单走查确认（与 V1.8.1 走查标签同批，互不阻塞）。

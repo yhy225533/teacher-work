@@ -75,13 +75,16 @@ export default function CourseDetail({
     setExpandedPeriodIds(new Set())
   }, [summary?.course.id])
 
+  // 文件计数跟随两条线：files.onContentChanged（编辑/发布）+ core overview 变化（外部资料
+  // importToLesson 不触发 contentChanged，课次树/进度刷新时兜底重拉一次计数）。
+  const overviewRevision = overview.nodes.length + overview.lessonSessions.length
   useEffect(() => {
     let cancelled = false
     window.teacherWorkbench.files.getOverview()
       .then((files) => { if (!cancelled) setFilesOverview(files) })
       .catch(() => { if (!cancelled) setFilesOverview(null) })
     return () => { cancelled = true }
-  }, [])
+  }, [overviewRevision])
 
   useEffect(
     () => window.teacherWorkbench.files.onContentChanged(() => {

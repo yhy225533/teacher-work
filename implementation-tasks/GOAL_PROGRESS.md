@@ -1587,3 +1587,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **课件区入口（lesson-files-section）**：三主键位「⬇ 导出 PDF」真实按钮（非 md 置灰 + title 引导；busy「导出中…」；成功「已导出：原名.pdf」/取消「已取消导出。」/失败 inline-error）；只读（已结束课程）分支 = 导出 + ⋯；`exportHeaderText` 一对一「学生名 · 课次标题」/班课课次标题/100 字截断；请求只带 fileId/lessonId/headerText。
 - **测试**：新增 `tests/v1.9-export-ui.test.ts` 7 例；演进 v1.9-courseware-toolbar 占位钉测 1 处（语义不变）。**门禁**：全量 91 files / 519 tests passed（1 skipped 既有）、typecheck、lint 全绿。
 - Git：本地提交 `v1.9(V19-E): print view and courseware export entry`；随后 push（沿用 GitHub 授权）。下一节点 V19-F（最终门禁与验收）。
+
+## V1.9 · V19-F 最终门禁与验收（2026-09-08 DONE）
+
+设计基准 `docs/v1.9-teaching-ui-restructure-plan.md` §8 + `docs/v1.9-pdf-export-plan.md` §10/§11。V1.9 唯一全量验收点，六节点收官。
+
+- **自动门**：全量 92 files / 521 tests passed（1 skipped 既有）、typecheck、lint、production build、`git diff --check` 全绿；portable/installer 未运行（符合约束）。
+- **隔离 Windows 冒烟 21/21 全绿**（production out/main/index.js + 独立 `TEACHER_WORKBENCH_L01_SMOKE_APP_DATA`/`--user-data-dir`/`--remote-debugging-port` + 本机 fake OpenAI-compatible + external_roots 预插 + CDP 窄窗仿真）：UI 走查（课程页行动卡 crumb/chips/行动键/⋯ 三分组红区、直达课件区工具行/胶囊/三主键、备课工作台对话式 + single 自动挂载、**fake AI 对话流端到端**：填要求→✦发送→方案同卡→✓确认并生成→流式→成果「单文件修订」→✎编辑 MdEditor、修改记录浮层开合、1000px 行动卡堆叠无破版、快速建课回归抽查）+ 导出走查（导出按钮 md 可用 + title、Main 二次校验「只能读取文本类托管文件」「没有挂到指定课次」两条稳定拒绝、`?print=1` 真实渲染 PrintDocumentView、sender 校验拒冒充取载荷「导出载荷读取失败，本次导出已中止。」、stderr 无致命错误）。双复核：无残留 electron、v19-smoke 临时目录全清。
+- **冒烟发现并修复真实缺陷**：课程页 chips 文件计数停更——外部资料 importToLesson 只 enqueueIndex 不发 contentChanged；`course-detail.tsx` 补 core overview 结构变化（overviewRevision = nodes+lessonSessions 数量）兜底重拉 `files.getOverview`；`tests/v1.9-course-hero-card.test.ts` 新增双线计数钉测。external-library-ipc V1.7 冻结语义零变化。
+- **自动化边界（如实记录）**：① 保存对话框（Windows 模态）→ 注入测试 20 例（export-service/export-ipc：保存/取消/占用/超时/并发 BUSY/打印窗销毁）+ 人工走查；② CDP Page.printToPDF 未实现（-32601，page/flat 双会话实测）→ printToPdfOptions 注入测试同参钉测 + 人工走查；③ 错误码跨 contextBridge 不存活（Electron 重建 Error）为既有行为，UI 只消费 message（冒烟实测确认）。
+- **验收记录**：`docs/v1.9-acceptance.md`（实施表六节点 + 自动门 + 冒烟 21/21 + 安全边界复核 + 产品负责人双清单 16 条）。
+- Git：本地提交 `v1.9(V19-F): final gates, smoke and acceptance record`；随后 push（沿用 GitHub 授权）。`checkpoint-V1.9-pass` 待产品负责人双清单走查确认后创建（与 V1.8.1 走查标签同批，互不阻塞）。

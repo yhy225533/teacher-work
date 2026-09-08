@@ -135,6 +135,19 @@ describe('V19-C 课程页当前课次行动头', () => {
     expect(dashboard).toContain('进入第 1 课备课')
   })
 
+  it('keeps chips file counts fresh on both refresh lines: contentChanged + core overview revision', () => {
+    // 冒烟 R6-7 发现并修复：外部资料 importToLesson 不发 contentChanged，停在课程页时讲义/材料
+    // 计数不更新。钉测 CourseDetail 的计数跟随合同——两条线缺一不可。
+    const detail = source('../src/renderer/course-detail.tsx')
+    // 线 1：files.onContentChanged（编辑/发布）→ 重拉 getOverview
+    expect(detail).toContain('files.onContentChanged(() => {')
+    // 线 2：core overview 结构变化（节点/课次数）触发兜底重拉（外部资料 importToLesson 场景）
+    expect(detail).toContain('const overviewRevision = overview.nodes.length + overview.lessonSessions.length')
+    expect(detail).toContain('}, [overviewRevision])')
+    // 计数来源仍是 filesOverview（与 V1.8.1 分组语义一致的单一来源）
+    expect(detail).toContain('filesOverview === null || hero === null')
+  })
+
   it('styles: hero card / chips / minimal head present; retired name-card selectors removed', () => {
     const styles = source('../src/renderer/styles.css')
     expect(styles).toContain('.lesson-hero-card')
