@@ -1576,3 +1576,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **main/index.ts 接线**：registerExportIpc（只读流程，无 activityGate）；打印窗 = windowWebPreferences + preload + applyWindowNavigationGuard + show:false + loadURL `?print=1`；保存对话框主窗 parent + PDF 过滤器；before-quit 注销 + dispose。
 - **测试**：export-contracts 5 + export-service 9 + export-ipc 6，全部注入 fake（窗口端口/保存端口/printToPDF/节点 fs）；fixture 关闭 workspace 句柄避免 Windows EPERM。**门禁**：全量 90 files / 512 tests passed（1 skipped 既有）、typecheck、lint 全绿。
 - Git：本地提交 `v1.9(V19-D): export contracts, main service and IPC`；随后 push（沿用 GitHub 授权）。下一节点 V19-E（打印视图与课件区入口）。
+
+## V1.9 · V19-E 打印视图与课件区入口（2026-09-08 DONE）
+
+设计基准 `docs/v1.9-pdf-export-plan.md` §3.1 步 5–7 / §4 / §5 + D50–D54。Main 侧零改动（消费 V19-D 通道）。
+
+- **打印窗分支（main.tsx）**：`?print=1` → `<PrintDocumentView />`（RendererErrorBoundary 包裹），不进 overview/路由/导航；主窗 `<App />` 路径零变化。
+- **PrintDocumentView（新）**：挂载取 `export.getPrintPayload()`；失败最小错误态（不重试，Main 60s 超时兜底销毁）；复用 `MarkdownDocument` 所见即所得（渲染管线函数零改动，只消费）；就绪协议 = `document.fonts.ready` + 全部 `<img>` load/error（失败占位不阻断）→ `export.printReady()`。
+- **print-document.css（新，仅打印窗加载）**：正文 11pt、标题层级缩放、微软雅黑字体栈；`.material-math-display`/图片/表/代码/引块 break-inside avoid，h1–h6 break-after avoid；图片 max-width:100%；白底黑字；无自动封面（D53）。主窗 styles.css 零改动。
+- **课件区入口（lesson-files-section）**：三主键位「⬇ 导出 PDF」真实按钮（非 md 置灰 + title 引导；busy「导出中…」；成功「已导出：原名.pdf」/取消「已取消导出。」/失败 inline-error）；只读（已结束课程）分支 = 导出 + ⋯；`exportHeaderText` 一对一「学生名 · 课次标题」/班课课次标题/100 字截断；请求只带 fileId/lessonId/headerText。
+- **测试**：新增 `tests/v1.9-export-ui.test.ts` 7 例；演进 v1.9-courseware-toolbar 占位钉测 1 处（语义不变）。**门禁**：全量 91 files / 519 tests passed（1 skipped 既有）、typecheck、lint 全绿。
+- Git：本地提交 `v1.9(V19-E): print view and courseware export entry`；随后 push（沿用 GitHub 授权）。下一节点 V19-F（最终门禁与验收）。

@@ -1,0 +1,98 @@
+/* V19-E（D50/D51，方案 §5）：隐藏打印窗专属 A4 版式——仅打印窗加载，主窗 styles.css 零改动。
+   printToPDF 提供 A4 纸张与页眉页脚；这里只管正文观感与防断裂。 */
+
+.print-document {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  color: #000;
+  background: #fff;
+  font-family: 'Microsoft YaHei', 'PingFang SC', 'Segoe UI', system-ui, sans-serif;
+  font-size: 11pt;
+  line-height: 1.65;
+}
+
+.print-loading,
+.print-error {
+  padding: 24px;
+  color: #475569;
+  font-size: 12pt;
+}
+
+/* 标题按层级缩放（不加自动封面/标题块，D53）。 */
+.print-document h1,
+.print-document h2,
+.print-document h3,
+.print-document h4,
+.print-document h5,
+.print-document h6 {
+  margin: 1.1em 0 0.45em;
+  color: #000;
+  font-weight: 700;
+  line-height: 1.35;
+  break-after: avoid;
+}
+
+.print-document h1 { font-size: 17pt; }
+.print-document h2 { font-size: 14.5pt; }
+.print-document h3 { font-size: 13pt; }
+.print-document h4 { font-size: 12pt; }
+.print-document h5,
+.print-document h6 { font-size: 11pt; }
+
+.print-document p { margin: 0.5em 0; }
+
+/* 防断裂：公式块 / 图片 / 表格 / 代码块 / 引块不跨页切断。 */
+.print-document .material-math-display,
+.print-document .material-markdown-image,
+.print-document table,
+.print-document pre,
+.print-document blockquote {
+  break-inside: avoid;
+}
+
+/* 图片等宽；加载失败沿用阅读器占位（占位不阻断导出）。 */
+.print-document .material-markdown-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.print-document .material-image-missing {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* KaTeX：主窗样式的行内公式基线与字号对齐打印（复用 katex.min.css，仅微调色彩）。 */
+.print-document .material-math { color: #000; }
+
+.print-document code,
+.print-document pre {
+  font-family: Consolas, 'Courier New', monospace;
+  background: #f4f4f5;
+}
+
+.print-document pre {
+  overflow-wrap: break-word;
+  padding: 8px 10px;
+  border: 1px solid #e4e4e7;
+}
+
+.print-document table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.print-document th,
+.print-document td {
+  border: 1px solid #d4d4d8;
+  padding: 5px 8px;
+  text-align: left;
+}
+
+.print-document blockquote {
+  margin: 0.6em 0;
+  padding: 2px 12px;
+  border-left: 3px solid #a1a1aa;
+  color: #3f3f46;
+}

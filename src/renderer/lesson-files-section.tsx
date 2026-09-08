@@ -53,6 +53,8 @@ export default function LessonFilesSection({
   const [mineruTokenConfigured, setMineruTokenConfigured] = useState(false)
   const [mineruStatus, setMineruStatus] = useState<{ state: 'queued' | 'running' | 'done' | 'failed'; message?: string } | null>(null)
   const [mineruBusy, setMineruBusy] = useState(false)
+  // V19-E：课件导出 PDF（单导出串行，Main 侧 BUSY 兜底）。
+  const [exportBusy, setExportBusy] = useState(false)
   const lessonFiles = useMemo(
     () => overview === null || lesson === null ? [] : filterLessonMaterialFiles(
       listLessonPrepFiles(overview, lesson.id),
@@ -155,6 +157,37 @@ export default function LessonFilesSection({
   function modifySelectedFile(): void {
     if (prepContext === null || selectedFile === null || !isAiEditableFile(selectedFile)) return
     onStartPrep(prepContext, { mode: 'single', targetFileId: selectedFile.id })
+  }
+
+  /** V19-E：headerText = 「学生名 · 课次标题」（一对一取关联学生；班课只取课次标题；≤100 字）。 */
+  function exportHeaderText(): string {
+    if (prepContext === null) return ''
+    const studentName = prepContext.courseMode === 'one_to_one' ? prepContext.studentNames[0] : ''
+    const text = studentName === '' ? prepContext.lessonTitle : `${studentName} · ${prepContext.lessonTitle}`
+    return Array.from(text).slice(0, 100).join('')
+  }
+
+  async function exportSelectedPdf(): Promise<void> {
+    if (selectedFile === null || !isAiEditableFile(selectedFile) || prepContext === null) return
+    setBusy(true)
+    setExportBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const result = await window.teacherWorkbench.export.printToPdf({
+        fileId: selectedFile.id,
+        lessonId: prepContext.lessonId,
+        headerText: exportHeaderText(),
+      })
+      setNotice(result.saved
+        ? `已导出：${selectedFile.originalName.replace(/\.md$/u, '')}.pdf`
+        : '已取消导出。')
+    } catch (exportError) {
+      setError(toErrorMessage(exportError, '导出失败，请稍后重试。'))
+    } finally {
+      setExportBusy(false)
+      setBusy(false)
+    }
   }
 
   async function enhanceWithMineru(fileId: string): Promise<void> {
@@ -326,12 +359,35 @@ export default function LessonFilesSection({
                   {editing ? '✓ 预览' : '✎ 编辑'}
                 </button>
               )}
-              {/* V19-E 接线后渲染：⬇ 导出 PDF（本节点仅占位） */}
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={busy || exportBusy || !canModifySelectedFile}
+                title={canModifySelectedFile
+                  ? `导出${selectedFile?.originalName}为 PDF`
+                  : '仅支持导出 Markdown 文件'}
+                onClick={() => { void exportSelectedPdf() }}
+              >
+                {exportBusy ? '导出中…' : '⬇ 导出 PDF'}
+              </button>
               <AppMenuButton label="⋯" entries={menuEntries} align="right" disabled={busy} title="更多操作（本课 / 本文件）" />
             </>
           )}
           {readOnly && (
-            <AppMenuButton label="⋯" entries={menuEntries} align="right" disabled={busy} title="更多操作（本文件）" />
+            <>
+              {canModifySelectedFile && (
+                <button
+                  className="secondary-button"
+                  type="button"
+                  disabled={busy || exportBusy}
+                  title={`导出${selectedFile?.originalName}为 PDF`}
+                  onClick={() => { void exportSelectedPdf() }}
+                >
+                  {exportBusy ? '导出中…' : '⬇ 导出 PDF'}
+                </button>
+              )}
+              <AppMenuButton label="⋯" entries={menuEntries} align="right" disabled={busy} title="更多操作（本文件）" />
+            </>
           )}
         </div>
       </header>

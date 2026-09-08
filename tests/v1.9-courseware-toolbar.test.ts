@@ -56,14 +56,16 @@ describe('V19-B 课件区合并工具行与 ⋯ 收纳', () => {
       expect(styles).toContain('.lesson-file-capsule small.is-source {')
     })
 
-    it('keeps five visible actions: 修改这份 / 编辑 / 导出PDF占位 / 沉浸阅读 / ⋯', () => {
+    it('keeps five visible actions: 修改这份 / 编辑 / 导出PDF / 沉浸阅读 / ⋯', () => {
       const section = source('../src/renderer/lesson-files-section.tsx')
 
-      // 三主键中的前两个 + 沉浸 + ⋯；⬇ 导出 PDF 本节点仅占位注释（V19-E 接线后渲染）
+      // 三主键 + 沉浸 + ⋯；⬇ 导出 PDF 已由 V19-E 接线为真实按钮（占位注释退役）
       expect(section).toContain('✦ 修改这份')
       expect(section).toContain("aria-pressed={editing}")
       expect(section).toContain("{editing ? '✓ 预览' : '✎ 编辑'}")
-      expect(section).toContain('V19-E 接线后渲染：⬇ 导出 PDF（本节点仅占位）')
+      expect(section).toContain("⬇ 导出 PDF")
+      expect(section).toContain("{exportBusy ? '导出中…' : '⬇ 导出 PDF'}")
+      expect(section).not.toContain('本节点仅占位')
       expect(section).toContain("label=\"⋯\"")
       expect(section).not.toContain('>刷新</button>')
       expect(section).not.toContain('继续上次修改</button>')
