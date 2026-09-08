@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
 import type { CoreOverview, LessonSessionSummary, NodeRecord, NoteRecord } from '../shared/core-contracts'
+import type { ManagedFileOverview } from '../shared/file-contracts'
+import { AppMenuButton, type AppMenuEntry } from './app-menu'
 import {
   formatLocalDateOnly,
   formatLocalDateTime,
@@ -11,7 +13,7 @@ import {
   toDateTimeLocalValue,
   type CourseSummary,
 } from './course-view-model'
-import { createLessonPrepContext, type LessonPrepContext } from './lesson-prep-context'
+import { createLessonPrepContext, listLessonPrepFiles, splitLessonFilesByRole, type LessonPrepContext } from './lesson-prep-context'
 import LessonFeedbackModal from './lesson-feedback-modal'
 import Modal from './modal'
 
@@ -25,6 +27,8 @@ export default function CourseDetail({
   summary,
   viewedLessonId,
   busy,
+  courseCount,
+  draftCount,
   onViewLesson,
   onStartPrep,
   onOpenDraft,
@@ -32,12 +36,18 @@ export default function CourseDetail({
   onConfirmTaught,
   onOpenStudent,
   onOpenTeachingContent,
+  onOpenDraftInbox,
+  onQuickCourse,
+  onCreateCourse,
+  onReload,
   onAction,
 }: {
   readonly overview: CoreOverview
   readonly summary: CourseSummary | null
   readonly viewedLessonId: string
   readonly busy: boolean
+  readonly courseCount: number
+  readonly draftCount: number
   readonly onViewLesson: (lessonId: string) => void
   readonly onStartPrep: (context: LessonPrepContext) => void
   readonly onOpenDraft: (context: LessonPrepContext, noteId: string) => void
@@ -45,6 +55,10 @@ export default function CourseDetail({
   readonly onConfirmTaught: (lessonId: string) => void
   readonly onOpenStudent: (studentId: string) => void
   readonly onOpenTeachingContent: (context: LessonPrepContext) => void
+  readonly onOpenDraftInbox: () => void
+  readonly onQuickCourse: () => void
+  readonly onCreateCourse: () => void
+  readonly onReload: () => void
   readonly onAction: (action: () => Promise<void>, successMessage: string) => Promise<boolean>
 }): React.JSX.Element {
   const [tab, setTab] = useState<Exclude<CourseTab, 'materials'>>('lessons')
@@ -54,10 +68,29 @@ export default function CourseDetail({
   const [progressOpen, setProgressOpen] = useState(false)
   const [feedbackLessonId, setFeedbackLessonId] = useState<string | null>(null)
   const [expandedPeriodIds, setExpandedPeriodIds] = useState<ReadonlySet<string>>(new Set())
+  // V19-C（D58）：行动卡讲义/材料 chips 计数——复用既有 files:get-overview 通道，零新增 IPC。
+  const [filesOverview, setFilesOverview] = useState<ManagedFileOverview | null>(null)
 
   useEffect(() => {
     setExpandedPeriodIds(new Set())
   }, [summary?.course.id])
+
+  useEffect(() => {
+    let cancelled = false
+    window.teacherWorkbench.files.getOverview()
+      .then((files) => { if (!cancelled) setFilesOverview(files) })
+      .catch(() => { if (!cancelled) setFilesOverview(null) })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(
+    () => window.teacherWorkbench.files.onContentChanged(() => {
+      window.teacherWorkbench.files.getOverview()
+        .then(setFilesOverview)
+        .catch(() => { /* 保留上次计数，下一次内容变更再刷新。 */ })
+    }),
+    [],
+  )
 
   useEffect(() => {
     if (summary === null) return
@@ -72,6 +105,10 @@ export default function CourseDetail({
         <div>
           <h2>选择一门课程</h2>
           <p>在左侧课程列表中选择课程，右侧会显示阶段、课次、学生和资料入口。</p>
+          <div className="course-empty-actions">
+            <button className="secondary-button" type="button" disabled={busy} onClick={onCreateCourse}>仅创建课程</button>
+            <button className="primary-button" type="button" disabled={busy} onClick={onQuickCourse}>+ 快速建课</button>
+          </div>
         </div>
       </section>
     )
@@ -80,42 +117,118 @@ export default function CourseDetail({
   const viewedLesson = summary.lessons.find((lesson) => lesson.id === viewedLessonId) ?? null
   const viewedDraft = viewedLesson === null ? null : latestLessonDraft(overview, viewedLesson.id)
 
+  // V19-C（D58）：行动卡主角 = Viewed Lesson，缺省回落 Current Lesson；chips/行动键全部指向主角课次。
+  const hero = viewedLesson ?? summary.currentLesson
+  const heroSession = hero === null ? undefined : overview.lessonSessions.find((candidate) => candidate.lessonId === hero.id)
+  const heroPeriod = summary.periods.find((period) => period.id === hero?.parentId) ?? null
+  const heroNumber = hero !== null && hero.parentId !== null
+    ? getLessonNumber(summary.lessons, hero.parentId, hero.id)
+    : null
+  const heroFilesByRole = filesOverview === null || hero === null
+    ? null
+    : splitLessonFilesByRole(listLessonPrepFiles(filesOverview, hero.id))
+  const previousTaught = previousTaughtLesson(overview, summary, hero?.id ?? null)
+  const heroFeedbackChip = (() => {
+    if (previousTaught === null) return null
+    const feedback = lessonFeedbackStatus(overview, summary, previousTaught.id)
+    if (feedback.students.length === 0) return null
+    return (
+      <span className={feedback.complete ? 'hero-chip is-feedback-done' : 'hero-chip is-missing'}>
+        上节反馈 {feedback.complete ? '✓' : '✍ 待补写'}
+      </span>
+    )
+  })()
+  // ⋯ 收纳菜单（D58）：本课 / 本课程 / 全局三分组；危险项分隔线后置底红区。统计与建课入口收进"全局"组。
+  const heroMenuEntries: AppMenuEntry[] = summary.ended ? [
+    { kind: 'group', key: 'hero-group-course', label: '本课程' },
+    { kind: 'item', key: 'hero-students', label: '学生名单', onSelect: () => { setTab('students') } },
+    { kind: 'item', key: 'hero-drafts', label: `修改记录 ${draftCount}`, onSelect: onOpenDraftInbox },
+    { kind: 'separator', key: 'hero-sep-global' },
+    { kind: 'group', key: 'hero-group-global', label: '全局' },
+    { kind: 'item', key: 'hero-all-courses', label: `全部课程 ${courseCount}`, disabled: true, title: '工作台内课程总数（统计）', onSelect: () => {} },
+    { kind: 'item', key: 'hero-quick-course', label: '+ 快速建课', onSelect: onQuickCourse },
+    { kind: 'item', key: 'hero-create-course', label: '+ 仅创建课程', onSelect: onCreateCourse },
+    { kind: 'item', key: 'hero-reload', label: '刷新', onSelect: onReload },
+    { kind: 'separator', key: 'hero-sep-danger' },
+    { kind: 'item', key: 'hero-reopen', label: '重新开启课程', danger: true, disabled: busy, onSelect: () => {
+      void onAction(
+        async () => { await window.teacherWorkbench.core.reopenCourse({ courseId: summary.course.id }).then(() => undefined) },
+        '课程已重新开启，原有效进度位置已保留。',
+      )
+    } },
+  ] : [
+    { kind: 'group', key: 'hero-group-lesson', label: '本课' },
+    { kind: 'item', key: 'hero-progress', label: '调整当前课次', disabled: busy || summary.lessons.length === 0, onSelect: () => { setProgressOpen(true) } },
+    { kind: 'item', key: 'hero-schedule', label: '设置时间', disabled: busy || hero === null, onSelect: () => { if (hero !== null) setScheduleLessonId(hero.id) } },
+    { kind: 'separator', key: 'hero-sep-course' },
+    { kind: 'group', key: 'hero-group-course', label: '本课程' },
+    { kind: 'item', key: 'hero-students', label: '学生名单', onSelect: () => { setTab('students') } },
+    { kind: 'item', key: 'hero-drafts', label: `修改记录 ${draftCount}`, onSelect: onOpenDraftInbox },
+    { kind: 'separator', key: 'hero-sep-global' },
+    { kind: 'group', key: 'hero-group-global', label: '全局' },
+    { kind: 'item', key: 'hero-all-courses', label: `全部课程 ${courseCount}`, disabled: true, title: '工作台内课程总数（统计）', onSelect: () => {} },
+    { kind: 'item', key: 'hero-quick-course', label: '+ 快速建课', onSelect: onQuickCourse },
+    { kind: 'item', key: 'hero-create-course', label: '+ 仅创建课程', onSelect: onCreateCourse },
+    { kind: 'item', key: 'hero-reload', label: '刷新', onSelect: onReload },
+    { kind: 'separator', key: 'hero-sep-danger' },
+    { kind: 'item', key: 'hero-end-course', label: '结束课程', danger: true, disabled: busy, onSelect: () => {
+      void onAction(
+        async () => { await window.teacherWorkbench.core.endCourse({ courseId: summary.course.id }).then(() => undefined) },
+        '课程已结束，课程树和历史记录均已保留。',
+      )
+    } },
+  ]
+
   return (
     <section className="course-detail-pane" aria-label="课程详情">
-      <header className="course-detail-header">
-        <div>
-          <span className="course-detail-mode">{summary.course.courseMode === 'one_to_one' ? '一对一' : '班课'}</span>
-          <h2>{summary.course.title}</h2>
-          <p>{courseStudentsLine(summary)}</p>
-          <p>{currentLessonLine(summary)}</p>
-        </div>
-        <div className="course-detail-actions">
-          {!summary.ended && summary.lessons.length > 0 && (
-            <button className="secondary-button" type="button" disabled={busy} onClick={() => setProgressOpen(true)}>
-              调整当前课次
-            </button>
-          )}
-          {summary.ended ? (
-            <button
-              className="secondary-button"
-              type="button"
-              disabled={busy}
-              onClick={() => void onAction(
-                async () => window.teacherWorkbench.core.reopenCourse({ courseId: summary.course.id }).then(() => undefined),
-                '课程已重新开启，原有效进度位置已保留。',
-              )}
-            >
-              重新开启课程
-            </button>
+      {/* V19-C（D58）：静态课程名片退役 → 当前课次行动卡。 */}
+      <header className="lesson-hero-card">
+        <div className="lesson-hero-main">
+          <p className="lesson-hero-crumb">
+            {summary.course.title} · {summary.course.courseMode === 'one_to_one' ? '一对一' : '班课'} · {heroPeriod?.title ?? '未分组'} · 共 {summary.lessons.length} 课{heroNumber === null ? '' : `（第 ${heroNumber} 课）`}
+          </p>
+          {hero === null ? (
+            <h2 className="lesson-hero-title">还没有课次<span className="hero-hint">先创建阶段与课次；第一课创建后会设为 Current Lesson。</span></h2>
           ) : (
-            <details className="course-more-menu">
-              <summary>更多</summary>
-              <button className="danger-button" type="button" disabled={busy} onClick={() => void onAction(
-                async () => window.teacherWorkbench.core.endCourse({ courseId: summary.course.id }).then(() => undefined),
-                '课程已结束，课程树和历史记录均已保留。',
-              )}>结束课程</button>
-            </details>
+            <h2 className="lesson-hero-title">
+              {hero.title}
+              {summary.currentLesson?.id === hero.id && !summary.ended && <em className="is-current">Current</em>}
+              {heroSession?.taughtConfirmedAt != null && <em>已上</em>}
+              {summary.ended && <em>已结束</em>}
+            </h2>
           )}
+          {hero !== null && (
+            <div className="lesson-hero-chips">
+              <span className="hero-chip">🕘 {formatSessionSchedule(heroSession)}</span>
+              <span className="hero-chip">👤 {heroStudentLine(summary)}</span>
+              {heroFilesByRole !== null && <span className="hero-chip">📘 讲义 {heroFilesByRole.lecture.length}</span>}
+              {heroFilesByRole !== null && <span className="hero-chip">📎 材料 {heroFilesByRole.materials.length}</span>}
+              {heroFeedbackChip}
+            </div>
+          )}
+        </div>
+        <div className="lesson-hero-actions">
+          {hero === null && !summary.ended && (
+            <button className="primary-button" type="button" disabled={busy} onClick={() => setCreatePeriodOpen(true)}>+ 新建阶段</button>
+          )}
+          {hero !== null && (
+            <button
+              className="primary-button"
+              type="button"
+              onClick={() => onOpenTeachingContent(createLessonPrepContext(summary.course, hero, summary.activeStudents, heroPeriod?.title))}
+            >
+              {summary.ended ? '查看教学内容' : '▶ 进入教学内容'}
+            </button>
+          )}
+          {hero !== null && (
+            <button className="secondary-button" type="button" disabled={busy || summary.ended} onClick={() => onOpenAttendance(hero.id)}>
+              {heroSession?.attendanceRecordedAt == null ? '点名' : '修改点名'}
+            </button>
+          )}
+          {hero !== null && heroSession?.taughtConfirmedAt == null && (
+            <button className="secondary-button" type="button" disabled={busy || summary.ended} onClick={() => onConfirmTaught(hero.id)}>确认本课已上</button>
+          )}
+          <AppMenuButton label="⋯" entries={heroMenuEntries} align="right" />
         </div>
       </header>
 
@@ -639,9 +752,30 @@ function ProgressModal({ overview, summary, viewedLessonId, busy, onClose, onAct
   )
 }
 
-function courseStudentsLine(summary: CourseSummary): string {
-  if (summary.activeStudents.length === 0) return '学生：未关联在读学生'
-  return `学生：${summary.activeStudents.map((student) => student.name).join('、')}`
+function heroStudentLine(summary: CourseSummary): string {
+  if (summary.course.courseMode === 'one_to_one') {
+    return summary.activeStudents.length === 0 ? '未关联学生' : summary.activeStudents[0]!.name
+  }
+  return `在读 ${summary.activeStudents.length} 人`
+}
+
+/** 行动卡「上节反馈」chip 的主角：主角课次之前最近一节已上过的课次（无则不显示 chip）。 */
+function previousTaughtLesson(
+  overview: CoreOverview,
+  summary: CourseSummary,
+  heroLessonId: string | null,
+): NodeRecord | null {
+  const taught = new Set(overview.lessonSessions
+    .filter((session) => session.taughtConfirmedAt !== null)
+    .map((session) => session.lessonId))
+  const heroIndex = heroLessonId === null
+    ? summary.lessons.length
+    : summary.lessons.findIndex((lesson) => lesson.id === heroLessonId)
+  for (let index = (heroIndex === -1 ? summary.lessons.length : heroIndex) - 1; index >= 0; index -= 1) {
+    const lesson = summary.lessons[index]!
+    if (taught.has(lesson.id)) return lesson
+  }
+  return null
 }
 
 function formatSessionSchedule(session: LessonSessionSummary | undefined): string {
@@ -650,12 +784,6 @@ function formatSessionSchedule(session: LessonSessionSummary | undefined): strin
     return `${formatLocalDateOnly(session.scheduledOn)} · ${session.scheduledAt === null ? '时间未记录' : formatLocalDateTime(session.scheduledAt)}`
   }
   return formatLocalDateTime(session.scheduledAt)
-}
-
-function currentLessonLine(summary: CourseSummary): string {
-  if (summary.ended) return '状态：已结束'
-  if (summary.currentLesson === null) return summary.lessons.length === 0 ? '当前：尚未创建课次' : '当前：等待老师选择下一课'
-  return `当前：${summary.currentPeriod?.title ?? '未命名阶段'} / ${summary.currentLesson.title}`
 }
 
 function latestLessonDraft(overview: CoreOverview, lessonId: string): NoteRecord | null {

@@ -15,7 +15,9 @@ describe('V12-02 course renderer contract', () => {
     expect(dashboard).toContain('<CourseList')
     expect(dashboard).toContain('<CourseDetail')
     expect(dashboard).toContain('今日待点名')
-    expect(dashboard).toContain('修改记录 {draftCount}')
+    // V19-C（D58）：course-page-header 统计条退役——修改记录入口收进行动卡 ⋯"本课程"组（course-detail 渲染）。
+    expect(dashboard).toContain('courseCount={summaries.length}')
+    expect(dashboard).toContain('draftCount={draftCount}')
     expect(app).toContain('onOpenDraft={openDraft}')
     expect(app).toContain('onOpenDraftInbox={() => openTeachingContent(createDraftInboxTarget())}')
     expect(styles).toMatch(/\.course-workspace-layout\s*\{[^}]*grid-template-columns:\s*minmax\(280px, 320px\) minmax\(0, 1fr\)/s)
@@ -27,7 +29,8 @@ describe('V12-02 course renderer contract', () => {
     const confirmation = source('../src/renderer/confirm-lesson-taught-modal.tsx')
     expect(detail).toContain('Viewed Lesson')
     expect(detail).toContain('调整当前课次')
-    expect(detail).toContain('className="course-more-menu"')
+    // V19-C（D58）：课程级"更多"菜单退役，改用共用 app-menu（课件区/课程页一致）；课次行"更多"保留。
+    expect(detail).toContain('<AppMenuButton')
     expect(detail).toContain('className="lesson-more-menu"')
     expect(detail).toContain("['lessons', '课次']")
     expect(detail).toContain("['students', '学生']")

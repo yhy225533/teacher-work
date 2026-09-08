@@ -2256,9 +2256,7 @@ button:disabled {
 .material-image-preview { display: grid; min-width: 0; max-width: 100%; min-height: 300px; place-items: center; overflow: hidden; padding: 24px; background: #f8fafc; }
 .material-image-preview img { display: block; width: auto; max-width: 100%; height: auto; max-height: 620px; object-fit: contain; }
 
-/* V1.2 course information architecture */
-.course-page-header,
-.course-detail-header,
+/* V1.2 course information architecture（V19-C：course-page-header 统计条退役） */
 .section-toolbar,
 .viewed-lesson-panel,
 .today-attendance-row,
@@ -2273,38 +2271,51 @@ button:disabled {
   gap: 12px;
 }
 
-.course-page-header {
-  min-height: 58px;
+/* V19-C（D58）：未选课程时的最小页头——刷新 + 建课。 */
+.course-minimal-head {
+  min-height: 52px;
   border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 10px 14px;
   background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.course-page-stats,
-.course-page-actions,
-.course-detail-actions,
+.course-minimal-head > strong { color: var(--color-text-strong); font-size: 15px; }
+.course-minimal-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+/* V19-C（D58）：当前课次行动卡——crumb + 大字 + chips + 行动键。 */
+.lesson-hero-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #fff;
+}
+
+.lesson-hero-main { min-width: 0; }
+.lesson-hero-crumb { margin: 0; color: var(--color-text-muted); font-size: 12px; }
+.lesson-hero-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; color: #172554; font-size: 20px; }
+.lesson-hero-title .hero-hint { color: var(--color-text-muted); font-size: 12px; font-weight: 400; }
+.lesson-hero-title em { border-radius: 999px; padding: 2px 8px; color: #166534; background: #dcfce7; font-size: 11px; font-style: normal; font-weight: 700; }
+.lesson-hero-title em.is-current { color: var(--color-primary-active); background: #e0e7ff; }
+.lesson-hero-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.hero-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--color-border); border-radius: 999px; padding: 3px 10px; color: var(--color-text-muted); background: #f8fafc; font-size: 12px; }
+.hero-chip.is-missing { color: #92400e; background: #fef3c7; border-color: #fcd34d; }
+.hero-chip.is-feedback-done { color: #166534; background: #dcfce7; border-color: #bbf7d0; }
+.lesson-hero-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+
 .viewed-lesson-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.course-page-stats span,
-.course-page-stats button {
-  border: 0;
-  padding: 7px 10px;
-  color: var(--color-text-strong);
-  background: transparent;
-  font-size: 13px;
-}
-
-.course-page-stats button {
-  border-left: 1px solid var(--color-border);
-  color: var(--color-primary);
-  cursor: pointer;
-  font-weight: 700;
 }
 
 .today-attendance-strip {
@@ -2365,16 +2376,11 @@ button:disabled {
 
 .course-detail-pane { padding: 15px; }
 .course-detail-empty { display: grid; min-height: 520px; place-items: center; color: var(--color-text-muted); text-align: center; }
-.course-detail-header { align-items: flex-start; border-bottom: 1px solid var(--color-border); padding-bottom: 13px; }
-.course-detail-header h2 { margin: 4px 0 6px; color: #172554; font-size: 20px; }
-.course-detail-header p { margin: 3px 0; color: var(--color-text-muted); font-size: 12px; }
-.course-detail-mode { border-radius: 999px; padding: 3px 7px; color: var(--color-primary-active); background: var(--color-primary-soft); font-size: 11px; font-weight: 700; }
+.course-empty-actions { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+/* V19-C：course-detail-header/course-detail-mode/course-more-menu 随静态名片退役；课程页 ⋯ 菜单改用 app-menu，课次行"更多"保留 lesson-more-menu。 */
 .danger-outline-button { border: 1px solid #fecaca; border-radius: 9px; padding: 9px 12px; color: var(--color-danger); background: var(--color-danger-bg); cursor: pointer; font-size: 12px; font-weight: 700; }
-.course-more-menu,
 .lesson-more-menu { position: relative; color: var(--color-text-muted); font-size: 12px; }
-.course-more-menu summary,
 .lesson-more-menu summary { border: 1px solid #cbd5e1; border-radius: var(--radius-md); padding: 7px 10px; background: #fff; cursor: pointer; font-weight: 700; list-style: none; }
-.course-more-menu[open] > button,
 .lesson-more-menu[open] > button { position: absolute; z-index: 5; right: 0; top: calc(100% + 4px); min-width: 112px; border: 1px solid #fecaca; border-radius: var(--radius-md); padding: 8px 10px; background: #fff; box-shadow: 0 8px 22px rgb(15 23 42 / 12%); }
 
 .course-detail-tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--color-border); padding: 0 4px; }
@@ -2697,9 +2703,9 @@ button.quick-status { cursor: pointer; }
   .search-result { flex-direction: column; }
   .course-workspace-layout { grid-template-columns: minmax(250px, 290px) minmax(0, 1fr); }
   .students-workspace-layout { grid-template-columns: minmax(230px, 270px) minmax(0, 1fr); }
-  .course-detail-header,
+  .lesson-hero-card,
   .viewed-lesson-panel { flex-direction: column; }
-  .course-detail-actions,
+  .lesson-hero-actions,
   .viewed-lesson-actions { justify-content: flex-start; }
   .quick-course-backdrop { padding: 16px; }
   .quick-course-wizard { max-height: calc(100vh - 32px); }

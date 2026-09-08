@@ -1553,3 +1553,15 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **styles.css**：工具行/胶囊/菜单样式；1100px 断点堆叠；退役旧头样式块；修复脚本写回导致的 CRLF 整体翻转（归一化回 LF，diff 仅内容级）。
 - **测试**：新增 `tests/v1.9-courseware-toolbar.test.ts` 9 例；演进 6 处既有钉测（material-library-ui、v1.2、v1.8.1、static-render-v156-d、v17-c、v1.5）——验收语义不改写（MinerU 置灰引导/移除确认/提讲义往返/分组树全部保留）。**门禁**：全量 85 files / 485 tests passed（1 skipped 既有）、typecheck、lint、production build 全绿。
 - Git：本地提交 `v1.9(V19-B): courseware merged toolbar and overflow menu`；随后 push（沿用 GitHub 授权）。下一节点 V19-C（课程页当前课次行动头）。
+
+## V1.9 · V19-C 课程页当前课次行动头（2026-09-08 DONE）
+
+设计基准 `docs/v1.9-teaching-ui-restructure-plan.md` §5 + D58。打开课程页首屏 0 步回答"现在做哪一课、有哪些内容"，行动键上移约 200px。
+
+- **course-page-header 统计条退役**：全部课程统计/修改记录/刷新/仅创建课程/+ 快速建课收进行动卡 ⋯"全局"组；未选课程（`selectedSummary === null`）保留最小页头 `course-minimal-head`（刷新 + 建课）；空态面板补 `course-empty-actions` 建课入口。
+- **当前课次行动卡（lesson-hero-card）**：crumb（课程 · 一对一/班课 · 阶段 · 共 N 课（第 M 课））+ 大字主角课次（Current/已上/已结束徽标）+ chips 五项——🕘 排课时间（formatSessionSchedule，未排显示"未排时间"）、👤 学员（一对一学生名/班课在读 N 人）、📘 讲义 N、📎 材料 N（`files:get-overview` + `listLessonPrepFiles` + `splitLessonFilesByRole`，`files.onContentChanged` 跟随刷新，零新增 IPC）、上节反馈 ✓/✍ 待补写（`previousTaughtLesson` 主角前最近已上课次 + `lessonFeedbackStatus`，无在读学生不显示）；行动键 `▶ 进入教学内容`（primary）/ `点名·修改点名` / `确认本课已上`。
+- **主角规则**：`hero = viewedLesson ?? summary.currentLesson`——选中非当前课次时 chips/行动键指向该课次；已结束课程 primary 变"查看教学内容"、红区变"重新开启课程"；无课次课程显示建阶段主键。Viewed Lesson 卡保留（长列表操作入口，含撤销已上 lesson-more-menu），与行动卡共用 handler。
+- **⋯ 菜单（AppMenuButton 复用 V19-B 组件）**：本课（调整当前课次/设置时间）→ 本课程（学生名单[切学生 tab]/修改记录 N[onOpenDraftInbox 全局收件箱]）→ 全局（全部课程 N 统计置灰/快速建课/仅创建课程/刷新）→ 红区（结束课程 danger 底部）；endCourse/reopenCourse 自退役名片原样搬迁（v1.2 生命周期语义零变化）。
+- **退役**：`.course-page-header/.course-page-stats/.course-page-actions/.course-detail-header/.course-detail-actions/.course-detail-mode/.course-more-menu` + `courseStudentsLine/currentLessonLine`；1100px 断点改 `.lesson-hero-card` 堆叠。
+- **测试**：新增 `tests/v1.9-course-hero-card.test.ts` 7 例（统计条退役+最小页头/行动卡结构 crumb·大字·徽标·chips·行动键/菜单三分组红区底/chips 派生零新 IPC[files 通道白名单]/主角规则/冻结流程零回归/样式退役+断点）；演进 `tests/v1.2-course-ui.test.ts` 2 处（修改记录入口移 CourseDetail props、course-more-menu → AppMenuButton）。既有 LessonsSection/Viewed 卡/点名确认弹窗/V1.8 反馈链/快速建课集成钉测零改动通过。**门禁**：全量 86 files / 492 tests passed（1 skipped 既有）、typecheck、lint、production build 全绿。
+- Git：本地提交 `v1.9(V19-C): course page current-lesson action card`；随后 push（沿用 GitHub 授权）。下一节点 V19-D（导出合同与 Main 服务）。

@@ -187,17 +187,18 @@ export default function CourseDashboard({
         </div>
       )}
 
-      <header className="course-page-header">
-        <div className="course-page-stats">
-          <span><strong>全部课程 {summaries.length}</strong></span>
-          <button type="button" onClick={onOpenDraftInbox}>修改记录 {draftCount}</button>
-        </div>
-        <div className="course-page-actions">
-          <button className="secondary-button" type="button" disabled={busy} onClick={() => void reload()}>刷新</button>
-          <button className="secondary-button" type="button" disabled={busy} onClick={() => setCreateCourseOpen(true)}>仅创建课程</button>
-          <button className="primary-button" type="button" disabled={busy} onClick={() => { setQuickCourseSuccess(null); setQuickCourseOpen(true) }}>+ 快速建课</button>
-        </div>
-      </header>
+      {/* V19-C（D58）：course-page-header 统计条退役；选中课程时全局入口收进行动卡 ⋯"全局"组，
+          未选课程（无课程可建或未选）保留最小页头（刷新 + 建课）。 */}
+      {selectedSummary === null && (
+        <header className="course-minimal-head">
+          <strong>课程</strong>
+          <div className="course-minimal-actions">
+            <button className="secondary-button" type="button" disabled={busy} onClick={() => void reload()}>刷新</button>
+            <button className="secondary-button" type="button" disabled={busy} onClick={() => setCreateCourseOpen(true)}>仅创建课程</button>
+            <button className="primary-button" type="button" disabled={busy} onClick={() => { setQuickCourseSuccess(null); setQuickCourseOpen(true) }}>+ 快速建课</button>
+          </div>
+        </header>
+      )}
 
       {todayItems.length > 0 && (
         <section className="today-attendance-strip" aria-label="今日待点名">
@@ -246,6 +247,8 @@ export default function CourseDashboard({
             summary={selectedSummary}
             viewedLessonId={viewedLessonId}
             busy={busy}
+            courseCount={summaries.length}
+            draftCount={draftCount}
             onViewLesson={setViewedLessonId}
             onStartPrep={onStartPrep}
             onOpenDraft={onOpenDraft}
@@ -253,6 +256,10 @@ export default function CourseDashboard({
             onConfirmTaught={setConfirmLessonId}
             onOpenStudent={onOpenStudent}
             onOpenTeachingContent={onOpenTeachingContent}
+            onOpenDraftInbox={onOpenDraftInbox}
+            onQuickCourse={() => { setQuickCourseSuccess(null); setQuickCourseOpen(true) }}
+            onCreateCourse={() => setCreateCourseOpen(true)}
+            onReload={() => { void reload() }}
             onAction={runAction}
           />
         )}
