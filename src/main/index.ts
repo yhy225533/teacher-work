@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, shell, type OpenDialogOption
 import { release } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { rmSync, renameSync, writeFileSync } from 'node:fs'
 
 import { registerAppIpc } from './ipc/app-ipc'
 import { registerCoreIpc } from './ipc/core-ipc'
@@ -17,6 +18,7 @@ import { registerQuestionBankIpc } from './ipc/question-bank-ipc'
 import { registerMaterialLibraryIpc } from './ipc/material-library-ipc'
 import { registerMineruIpc } from './ipc/mineru-ipc'
 import { registerFeedbackIpc } from './ipc/feedback-ipc'
+import { registerExportIpc } from './ipc/export-ipc'
 import { MineruSettingsService } from './ai/mineru-settings-service'
 import { MineruService } from './parser/mineru-service'
 import { createElectronSecureStorage } from './ai/secure-storage'
@@ -39,6 +41,7 @@ import { ExternalLibraryService } from './external/external-library-service'
 import { SkillService } from './skills/skill-service'
 import { QuestionBankService } from './question-bank/question-bank-service'
 import { FeedbackService } from './feedback/feedback-service'
+import { ExportService, type ExportServicePorts, type PrintWindow } from './export/export-service'
 import { BACKUP_DIRECTORY_NAME } from './backup/backup-service'
 import { WorkspaceActivityError, WorkspaceActivityGate } from './workspace/activity-gate'
 import {
@@ -69,6 +72,7 @@ let unregisterQuestionBankIpc: (() => void) | null = null
 let unregisterMaterialLibraryIpc: (() => void) | null = null
 let unregisterMineruIpc: (() => void) | null = null
 let unregisterFeedbackIpc: (() => void) | null = null
+let unregisterExportIpc: (() => void) | null = null
 let aiSettingsService: AiSettingsService | null = null
 let aiGateway: AiGateway | null = null
 let draftService: DraftService | null = null
@@ -78,6 +82,7 @@ let skillService: SkillService | null = null
 let questionBankService: QuestionBankService | null = null
 let materialLibraryService: MaterialLibraryService | null = null
 let feedbackService: FeedbackService | null = null
+let exportService: ExportService | null = null
 let mineruSettingsService: MineruSettingsService | null = null
 let mineruService: MineruService | null = null
 const deferredIndexIds = new Set<string>()
@@ -274,6 +279,74 @@ function getFeedbackService(): FeedbackService {
     },
   })
   return feedbackService
+}
+
+// V19-D（D54）：课件导出 PDF——隐藏打印窗 + printToPDF。打印窗与主窗同安全基线
+//（windowWebPreferences + preload + 导航守卫，show:false）；保存对话框以主窗为 parent。
+function getExportService(): ExportService {
+  if (workspaceHandle === null) getWorkspaceInfo()
+  if (workspaceHandle === null) throw new Error('Workspace was not initialized')
+  exportService ??= new ExportService(
+    getManagedFiles(),
+    rendererIndexUrl(),
+    exportPorts(),
+  )
+  return exportService
+}
+
+function rendererIndexUrl(): string {
+  return process.env.ELECTRON_RENDERER_URL
+    ?? pathToFileURL(join(__dirname, '../renderer/index.html')).href
+}
+
+function exportPorts(): ExportServicePorts {
+  return {
+    createPrintWindow: (indexUrl) => createPrintWindowAdapter(indexUrl),
+    chooseSavePath: async (defaultFileName) => {
+      const result = mainWindow !== null && !mainWindow.isDestroyed()
+        ? await dialog.showSaveDialog(mainWindow, {
+          title: '导出 PDF',
+          defaultPath: defaultFileName,
+          filters: [{ name: 'PDF 文档', extensions: ['pdf'] }],
+        })
+        : await dialog.showSaveDialog({
+          title: '导出 PDF',
+          defaultPath: defaultFileName,
+          filters: [{ name: 'PDF 文档', extensions: ['pdf'] }],
+        })
+      return result.canceled || result.filePath === '' ? null : result.filePath
+    },
+    showInFolder: (savedPath) => shell.showItemInFolder(savedPath),
+    now: () => new Date(),
+    writeBuffer: (path, data) => { writeFileSync(path, data) },
+    renameFile: (source, destination) => { renameSync(source, destination) },
+    removePath: (path) => { rmSync(path, { force: true }) },
+  }
+}
+
+function createPrintWindowAdapter(indexUrl: string): PrintWindow {
+  const window = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      ...windowWebPreferences,
+      preload: join(__dirname, '../preload/index.js'),
+    },
+  })
+  const allowedUrls = process.env.ELECTRON_RENDERER_URL
+    ? [process.env.ELECTRON_RENDERER_URL]
+    : [pathToFileURL(join(__dirname, '../renderer/index.html')).href]
+  applyWindowNavigationGuard(window.webContents, allowedUrls)
+  void window.loadURL(indexUrl)
+  return {
+    webContentsId: window.webContents.id,
+    printToPdf: (options) => window.webContents.printToPDF(options),
+    destroy: () => { if (!window.isDestroyed()) window.destroy() },
+    onGone: (listener) => {
+      window.webContents.on('render-process-gone', (_event, details) => listener(details.reason))
+      window.on('closed', () => listener('closed'))
+    },
+    isDestroyed: () => window.isDestroyed(),
+  }
 }
 
 function enqueueIndex(fileId: string): void {
@@ -549,6 +622,11 @@ void app.whenReady().then(() => {
     { getService: getFeedbackService, activityGate },
     logger,
   )
+  unregisterExportIpc = registerExportIpc(
+    ipcMain,
+    { getService: getExportService },
+    logger,
+  )
   mainWindow = createMainWindow()
   refreshManagedFilesInBackground('workspace_startup')
   void getDocumentIndexWorker().rebuildPending().catch((error: unknown) => {
@@ -589,6 +667,9 @@ app.on('before-quit', (event) => {
   unregisterMaterialLibraryIpc?.()
   unregisterMineruIpc?.()
   unregisterFeedbackIpc?.()
+  unregisterExportIpc?.()
+  exportService?.dispose()
+  exportService = null
   mineruService?.close()
   mineruService = null
   mineruSettingsService = null

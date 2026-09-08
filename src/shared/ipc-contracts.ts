@@ -136,6 +136,13 @@ export const FEEDBACK_IPC_CHANNELS = {
   generate: 'feedback:generate',
 } as const
 
+/** V19-D 课件导出（D54 批准三条）：主窗请求导出 + 打印窗载荷/就绪（后两条带 sender 校验，只认本次打印窗）。 */
+export const EXPORT_IPC_CHANNELS = {
+  printToPdf: 'export:print-to-pdf',
+  getPrintPayload: 'export:get-print-payload',
+  printReady: 'export:print-ready',
+} as const
+
 export const FILE_IPC_EVENTS = {
   contentChanged: 'files:content-changed',
 } as const
@@ -155,6 +162,7 @@ export type IpcChannel =
   | (typeof MATERIAL_LIBRARY_IPC_CHANNELS)[keyof typeof MATERIAL_LIBRARY_IPC_CHANNELS]
   | (typeof MINERU_IPC_CHANNELS)[keyof typeof MINERU_IPC_CHANNELS]
   | (typeof FEEDBACK_IPC_CHANNELS)[keyof typeof FEEDBACK_IPC_CHANNELS]
+  | (typeof EXPORT_IPC_CHANNELS)[keyof typeof EXPORT_IPC_CHANNELS]
 
 export const IPC_ERROR_CODES = {
   INVALID_PAYLOAD: 'INVALID_PAYLOAD',
@@ -176,6 +184,9 @@ export const IPC_ERROR_CODES = {
   MATERIAL_LIBRARY_ERROR: 'MATERIAL_LIBRARY_ERROR',
   MINERU_ERROR: 'MINERU_ERROR',
   FEEDBACK_ERROR: 'FEEDBACK_ERROR',
+  EXPORT_BUSY: 'EXPORT_BUSY',
+  EXPORT_TIMEOUT: 'EXPORT_TIMEOUT',
+  EXPORT_ERROR: 'EXPORT_ERROR',
 } as const
 
 export type IpcErrorCode = (typeof IPC_ERROR_CODES)[keyof typeof IPC_ERROR_CODES]

@@ -1,6 +1,6 @@
 # V19-D · 导出合同、IPC 与 Main 导出服务
 
-状态：TODO
+状态：DONE
 
 ## 目标
 
@@ -47,4 +47,13 @@
 
 ## 完成记录
 
-（待实施）
+2026-09-08 完成：
+
+- `src/shared/export-contracts.ts`：常量（HEADER 100 / BODY 200_000 与 write-version 同限 / TIMEOUT 60_000）+ 四接口四守卫（ExportPrintRequest/Result/Payload + PrintReadyResult）；`isExportPrintResult` 只放行 `{saved: boolean}`（路径绝不进响应，V11-01）。
+- `src/shared/ipc-contracts.ts`：`EXPORT_IPC_CHANNELS` 三条（print-to-pdf / get-print-payload / print-ready）+ IpcChannel 联合 + `EXPORT_BUSY/EXPORT_TIMEOUT/EXPORT_ERROR` 错误码。
+- `src/shared/preload-api.ts` + `src/preload/index.ts`：`export` 命名空间三方法（runtime guards：isExportPrintResult/isExportPrintPayload/isPrintReadyResult），EXPORT_IPC_CHANNELS 经 preload-api 再导出。
+- `src/main/export/export-service.ts`：`exportLessonPdf` 编排——buildPayload Main 二次校验（readText 包错→EXPORT_FILE_INVALID 稳定映射、挂课关系比对、files 只含本课 active 文件）；隐藏打印窗（createPrintWindow 端口 + webContentsId 记录）；print-ready 单次（printReadySeen）；printToPdf A4 版式（margins 0.63/0.55、displayHeaderFooter + header/footer 模板、headerText HTML 转义防注入）；60s 总超时 + onGone（render-process-gone/closed）→ rejectPending 销毁清理；保存 = chooseSavePath 端口（取消→saved:false）→ 同目录临时文件 + 原子重命名（失败 removePath 清理→EXPORT_ERROR）；打印引擎错误统一 EXPORT_ERROR；dispose() 供 before-quit。
+- `src/main/ipc/export-ipc.ts`：三通道白名单注册/注销；get-print-payload / print-ready 带 `extractIpcSenderId` 比对（仅本次打印窗 webContents.id，防主窗冒充套取文件清单）；错误映射（IpcRequestError→INVALID_PAYLOAD、ServiceError 三码、其余 INTERNAL_ERROR）；日志只记通道 + 错误码。
+- `src/main/index.ts`：registerExportIpc 接线（无 activityGate——只读流程零 DB 写）；getExportService 工厂 + createPrintWindowAdapter（windowWebPreferences + preload + applyWindowNavigationGuard + show:false + loadURL `?print=1`）；exportPorts（chooseSavePath 主窗 parent + PDF 过滤器、showItemInFolder、节点 fs 原子写盘端口）；before-quit：unregisterExportIpc + exportService.dispose()。
+- 测试：`tests/export-contracts.test.ts` 5 例（常量钉死/请求边界 100±1/响应白名单拒路径/payload 上限与 files 形状/accepted 字面量）；`tests/export-service.test.ts` 9 例（注入 fake 窗口端口 + fake 保存端口：成功原子重命名+默认名+showInFolder+窗销毁/取消 saved:false/占用稳定错误+临时文件清理/超时销毁+fake timers/并发 BUSY/sender 校验+ready 单次/Main 校验非 md、未挂课、别课隔离/A4 模板+HTML 注入转义/命名规则）；`tests/export-ipc.test.ts` 6 例（三通道白名单注册注销/未知通道+载荷注入拒绝/全流程 dispatch/sender 冒充拒绝+无 sender 拒绝+ready 二次拒绝/BUSY+引擎错误映射+日志只码/senderId 提取器）。
+- 门禁：全量 90 files / 512 tests（1 skip 既有）+ typecheck + lint 全绿（本节点无 build 要求；既有 ipc-security/security-baseline 白名单测试零改动通过——新通道经 EXPORT_IPC_CHANNELS 常量注册，未锁清单）。

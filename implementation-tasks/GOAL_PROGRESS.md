@@ -1565,3 +1565,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **退役**：`.course-page-header/.course-page-stats/.course-page-actions/.course-detail-header/.course-detail-actions/.course-detail-mode/.course-more-menu` + `courseStudentsLine/currentLessonLine`；1100px 断点改 `.lesson-hero-card` 堆叠。
 - **测试**：新增 `tests/v1.9-course-hero-card.test.ts` 7 例（统计条退役+最小页头/行动卡结构 crumb·大字·徽标·chips·行动键/菜单三分组红区底/chips 派生零新 IPC[files 通道白名单]/主角规则/冻结流程零回归/样式退役+断点）；演进 `tests/v1.2-course-ui.test.ts` 2 处（修改记录入口移 CourseDetail props、course-more-menu → AppMenuButton）。既有 LessonsSection/Viewed 卡/点名确认弹窗/V1.8 反馈链/快速建课集成钉测零改动通过。**门禁**：全量 86 files / 492 tests passed（1 skipped 既有）、typecheck、lint、production build 全绿。
 - Git：本地提交 `v1.9(V19-C): course page current-lesson action card`；随后 push（沿用 GitHub 授权）。下一节点 V19-D（导出合同与 Main 服务）。
+
+## V1.9 · V19-D 导出合同、IPC 与 Main 导出服务（2026-09-08 DONE）
+
+设计基准 `docs/v1.9-pdf-export-plan.md` §3/§5/§6 + D48–D54。Renderer 侧零 UI 改动（入口属 V19-E）。
+
+- **合同层**：`export-contracts.ts` 常量 + 四守卫；响应只有 `{saved}`（V11-01：路径不回传）；`ipc-contracts.ts` 三通道 `export:print-to-pdf` / `export:get-print-payload` / `export:print-ready` + `EXPORT_BUSY/EXPORT_TIMEOUT/EXPORT_ERROR`；preload `export` 命名空间三方法。
+- **ExportService（src/main/export/export-service.ts）**：单导出串行（BUSY）；载荷组装不信任 Renderer——bodyMd 直读 managed 正文（readText 包错→EXPORT_FILE_INVALID），挂课关系 Main 二次校验，files 只含本课 active 清单（防别课泄漏）；隐藏打印窗经端口注入（webContentsId 供 sender 校验）；print-ready 单次；A4 版式参数（margins 0.63"/0.55"、页眉 headerText+日期 9px 灰、页脚第 X 页/共 Y 页、printBackground:false）；headerTemplate HTML 转义；60s 总超时 + render-process-gone/closed → 销毁清理；保存 = 临时文件 + 原子重命名，失败清理留稳定错误；打印引擎错误统一 EXPORT_ERROR。
+- **export-ipc**：三通道白名单注册/注销；载荷/就绪通道 `extractIpcSenderId` 只认本次打印窗 webContents.id（防主窗冒充套取文件清单）；日志只记通道+错误码（正文/清单/路径不进日志）。
+- **main/index.ts 接线**：registerExportIpc（只读流程，无 activityGate）；打印窗 = windowWebPreferences + preload + applyWindowNavigationGuard + show:false + loadURL `?print=1`；保存对话框主窗 parent + PDF 过滤器；before-quit 注销 + dispose。
+- **测试**：export-contracts 5 + export-service 9 + export-ipc 6，全部注入 fake（窗口端口/保存端口/printToPDF/节点 fs）；fixture 关闭 workspace 句柄避免 Windows EPERM。**门禁**：全量 90 files / 512 tests passed（1 skipped 既有）、typecheck、lint 全绿。
+- Git：本地提交 `v1.9(V19-D): export contracts, main service and IPC`；随后 push（沿用 GitHub 授权）。下一节点 V19-E（打印视图与课件区入口）。

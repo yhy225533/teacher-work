@@ -191,6 +191,12 @@ import {
   type GeneratedFeedback,
   type TranscriptResult,
 } from './feedback-contracts'
+import type {
+  ExportPrintPayload,
+  ExportPrintRequest,
+  ExportPrintResult,
+  PrintReadyResult,
+} from './export-contracts'
 
 export { AI_IPC_CHANNELS, ATTENDANCE_IPC_CHANNELS, BACKUP_IPC_CHANNELS, CORE_IPC_CHANNELS, DRAFT_IPC_CHANNELS, EXTERNAL_LIBRARY_IPC_CHANNELS, FEEDBACK_IPC_CHANNELS, FILE_IPC_EVENTS, FILE_IPC_CHANNELS, IPC_CHANNELS, MATERIAL_LIBRARY_IPC_CHANNELS, QUESTION_BANK_IPC_CHANNELS, SEARCH_IPC_CHANNELS, SKILL_IPC_CHANNELS } from './ipc-contracts'
 export type { BackupSummary, IpcChannel, RestoreSummary, WorkspaceInfo } from './ipc-contracts'
@@ -242,10 +248,17 @@ export type {
   WriteFileVersionResult,
 } from './file-contracts'
 export { isManagedFileContent } from './file-contracts'
+export type { ExportPrintPayload, ExportPrintRequest, ExportPrintResult, PrintReadyResult } from './export-contracts'
+export {
+  isExportPrintPayload,
+  isExportPrintRequest,
+  isExportPrintResult,
+  isPrintReadyResult,
+} from './export-contracts'
 export type { SearchHit, SearchIndexStatusSummary, SearchQuery, SearchRebuildResult } from './search-contracts'
 export type { AiCancelResult, AiConnectionTestResult, AiKeyStorageMode, AiRequestIdRequest, AiSettings, AiStreamEvent, AiTextRequest, AiTextResult, UpdateAiSettingsRequest } from './ai-contracts'
 export { isAiStreamEvent } from './ai-contracts'
-export { AI_IPC_EVENTS, MINERU_IPC_CHANNELS } from './ipc-contracts'
+export { AI_IPC_EVENTS, EXPORT_IPC_CHANNELS, MINERU_IPC_CHANNELS } from './ipc-contracts'
 export type {
   MineruConnectionTestResult,
   MineruEnhanceResult,
@@ -421,6 +434,11 @@ export interface TeacherWorkbenchApi {
   feedback: {
     readTranscript: () => Promise<TranscriptResult | null>
     generate: (request: GenerateFeedbackRequest) => Promise<GeneratedFeedback>
+  }
+  export: {
+    printToPdf: (request: ExportPrintRequest) => Promise<ExportPrintResult>
+    getPrintPayload: () => Promise<ExportPrintPayload>
+    printReady: () => Promise<PrintReadyResult>
   }
 }
 

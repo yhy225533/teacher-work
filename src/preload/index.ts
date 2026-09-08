@@ -16,6 +16,7 @@ import {
   QUESTION_BANK_IPC_CHANNELS,
   MATERIAL_LIBRARY_IPC_CHANNELS,
   MINERU_IPC_CHANNELS,
+  EXPORT_IPC_CHANNELS,
   FEEDBACK_IPC_CHANNELS,
   isFileActionResult,
   isManagedFileContent,
@@ -62,6 +63,9 @@ import {
   isMineruStatus,
   isGeneratedFeedback,
   isTranscriptResult,
+  isExportPrintPayload,
+  isExportPrintResult,
+  isPrintReadyResult,
   isMaterialFolder,
   isMaterialFolderItem,
   parseIpcResponse,
@@ -113,6 +117,7 @@ import {
   type QuestionBankLessonCopyRequest,
   type QuestionBankQuestionRequest,
   type QuestionBankSearchRequest,
+  type ExportPrintRequest,
 } from '../shared/preload-api'
 import type {
   MineruFileIdRequest,
@@ -321,6 +326,15 @@ const api = Object.freeze({
       request,
       isGeneratedFeedback,
     ),
+  }),
+  export: Object.freeze({
+    printToPdf: (request: ExportPrintRequest) => invoke(
+      EXPORT_IPC_CHANNELS.printToPdf,
+      request,
+      isExportPrintResult,
+    ),
+    getPrintPayload: () => invoke(EXPORT_IPC_CHANNELS.getPrintPayload, {}, isExportPrintPayload),
+    printReady: () => invoke(EXPORT_IPC_CHANNELS.printReady, {}, isPrintReadyResult),
   }),
 }) satisfies TeacherWorkbenchApi
 
