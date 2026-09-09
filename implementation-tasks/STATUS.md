@@ -247,7 +247,7 @@
 
 | 里程碑 | 状态 | 计划内容 |
 |---|---|---|
-| V111-A readContent binary 合同扩展 | TODO | ManagedFileContent 加 `{file, kind:'binary', dataUrl}` 分支（与 image 同构）+ 守卫演进 + Main 按 mime 白名单（pdf/docx）+ 12MB 上限返回；image/text/unsupported/超限零改动；测试：binary 往返 pdf/docx 各一 + 伪造 dataUrl 拒绝 + 既有分支零回归 |
+| V111-A readContent binary 合同扩展 | DONE | ManagedFileContent 加 `{file, kind:'binary', dataUrl}` 分支（与 image 同构）+ 守卫演进 + Main 按 mime 白名单（pdf/docx）+ 12MB 上限返回；image/text/unsupported/超限零改动；测试：binary 往返 pdf/docx 各一 + 伪造 dataUrl 拒绝 + 既有分支零回归。2026-09-10 完成：ManagedFileContent binary 分支 + 守卫（data: 前缀拒绝伪造）+ readContent isPreviewableBinary 白名单（pdf/docx，12MB 上限沿用）；新增 v1.11-readcontent-binary 5 例（docx fixture 为零依赖手写最小 zip）；全量 96 files / 544 tests（543 + 1 skip 既有）、typecheck、lint 全绿 |
 | V111-B PDF 应用内预览 | TODO | `npm i react-pdf`（pdfjs React 19 封装）+ PdfPreview 组件（Document/Page 连续滚动、Vite worker 配置）+ reader binary→PDF 分支接线 + 样式 + 失败态逃生门；门禁含 production build（worker 资产实跑验证） |
 | V111-C Word(docx) 应用内预览 | TODO | `npm i docx-preview` + DocxPreview 组件（renderAsync 到受控容器、卸载清空）+ reader docx 分支接线 + 样式；.doc/.pptx/.xlsx 维持 unsupported（钉测明示） |
 | V111-D 最终门禁与验收 | TODO | 全量测试、typecheck、lint、production build、diff check；隔离 Windows 冒烟（真实 PDF/docx fixture 渲染断言：canvas 非空白 + .docx-wrapper 含文本 + md/图片/unsupported 三分支零回归 + stderr + 双复核）；`docs/v1.11-acceptance.md`；`checkpoint-V1.11-pass` 待产品负责人走查确认后创建 |

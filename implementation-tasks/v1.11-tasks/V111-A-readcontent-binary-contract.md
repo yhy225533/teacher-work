@@ -1,6 +1,6 @@
 # V111-A · readContent binary 合同扩展
 
-状态：TODO
+状态：DONE
 
 ## 目标
 
@@ -23,4 +23,9 @@
 
 ## 完成记录
 
-（待实施）
+2026-09-10 完成：
+
+- **合同**：`file-contracts.ts` 的 `ManagedFileContent` 加 `{ file, kind: 'binary', dataUrl }` 分支（与 image 同构，附 D68 注释）；`isManagedFileContent` 守卫加 binary 判定（isNonEmptyString + `data:` 前缀，伪造前缀拒绝）；
+- **Main**：`managed-file-service.readContent` 在 image/text 之后、unsupported 之前插入 `isPreviewableBinary` 白名单分支（application/pdf + docx MIME，12MB 上限沿用超限 unsupported 路径）；其余四个路径逐字节不变；
+- **测试**：新增 `tests/v1.11-readcontent-binary.test.ts` 5 例——pdf/docx binary 往返（dataUrl 前缀 + 字节级 base64 还原）、.doc/.pptx/.bin 仍 unsupported、image/text/超限三分支零回归（超限 pdf 显式覆盖）、伪造 binary 载荷守卫拒绝（http 前缀/空串/data: 合法三态）。docx fixture 为测试内零依赖手写最小 zip（crc32 + local/central 目录结构）；
+- **门禁**：全量 96 files / 544 tests passed（543 + 1 skipped 既有）、typecheck、lint 全绿。

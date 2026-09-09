@@ -1664,3 +1664,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - 产品负责人走查反馈：**基本验收通过**（含 V1.10.1 维护增量——走查中报告的移除资料双 error 已修复并复验：冒烟 18/18、移除场景 stderr 零 `file_request_failed` / `mineru_request_failed`）；其余走查清单项无新反馈。
 - 确认提交 `v1.10(V110-D): record final acceptance`，`checkpoint-V1.10-pass` 创建于该提交（V1.10.1 按 V1.5.3.1 先例并入本验收，不单独建标签；与既有 pass 标签互不替代）。
 - `checkpoint-V1.9-pass` / `checkpoint-V1.8.1-pass` 仍待产品负责人按各自验收文档走查确认。
+
+## V1.11 · V111-A readContent binary 合同扩展（2026-09-10 DONE）
+
+设计基准 `docs/v1.11-office-pdf-preview-plan.md` §3 + D68。渲染端零改动（消费属 V111-B/C）。
+
+- **合同**：`ManagedFileContent` 新增 `{ file, kind: 'binary', dataUrl }`（与 image 分支同构 `data:<mime>;base64,` 载荷）；`isManagedFileContent` 守卫 binary 分支要求 isNonEmptyString + `data:` 前缀（伪造 http 前缀/空串拒绝）；preload / IPC 注册零改动（守卫即过滤器）。
+- **Main**：`readContent` 在 image/text 判定后、unsupported 之前加 `isPreviewableBinary` 白名单（application/pdf + docx MIME）返回 binary dataUrl；超 12MB 沿用超限 unsupported；image/text/unsupported/.doc/.pptx/.bin 路径逐字节不变。
+- **测试**：`tests/v1.11-readcontent-binary.test.ts` 5 例——pdf/docx 往返（前缀 + base64 字节还原）、.doc/.pptx/.bin unsupported、image/text/超限零回归（超限 pdf 显式覆盖）、守卫伪造三态。docx fixture = 测试内零依赖手写最小 zip（crc32 表 + local/central 目录 + EOCD）。
+- **门禁**：全量 96 files / 544 tests passed（543 + 1 skipped 既有）、typecheck、lint 全绿。
+- Git：本地提交 `v1.11(V111-A): readcontent binary contract and guard`；随后 push（沿用 GitHub 授权）。下一节点 V111-B（PDF 应用内预览）。

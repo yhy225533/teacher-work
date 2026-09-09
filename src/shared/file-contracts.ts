@@ -23,6 +23,12 @@ export type ManagedFileContent =
       readonly dataUrl: string
     }
   | {
+      /** V1.11（D68）：PDF/docx 预览载荷——与 image 同构的 dataUrl，渲染端解码为 ArrayBuffer。 */
+      readonly file: ManagedFileRecord
+      readonly kind: 'binary'
+      readonly dataUrl: string
+    }
+  | {
       readonly file: ManagedFileRecord
       readonly kind: 'unsupported'
       readonly message: string
@@ -109,6 +115,7 @@ export function isManagedFileContent(value: unknown): value is ManagedFileConten
   if (!isRecord(value) || !isManagedFileRecord(value.file)) return false
   if (value.kind === 'text') return typeof value.content === 'string'
   if (value.kind === 'image') return isNonEmptyString(value.dataUrl)
+  if (value.kind === 'binary') return isNonEmptyString(value.dataUrl) && value.dataUrl.startsWith('data:')
   return value.kind === 'unsupported' && isNonEmptyString(value.message)
 }
 

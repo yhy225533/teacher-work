@@ -160,6 +160,13 @@ export class ManagedFileService {
     if (isPreviewableText(file.mimeType)) {
       return { file, kind: 'text', content: content.toString('utf8') }
     }
+    if (isPreviewableBinary(file.mimeType)) {
+      return {
+        file,
+        kind: 'binary',
+        dataUrl: `data:${file.mimeType};base64,${content.toString('base64')}`,
+      }
+    }
     return {
       file,
       kind: 'unsupported',
@@ -888,6 +895,12 @@ const MAX_WRITE_BODY_CHARS = 200_000
 
 function isPreviewableText(mimeType: string): boolean {
   return mimeType.startsWith('text/') || mimeType === 'application/json'
+}
+
+/** V1.11（D68）：应用内预览的 office/pdf 白名单——pdfjs 与 docx-preview 的可渲染范围；.doc/.pptx/.xlsx 仍走 unsupported。 */
+function isPreviewableBinary(mimeType: string): boolean {
+  return mimeType === 'application/pdf' ||
+    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 }
 
 /** V17-B：非版本链修改目标（外部导入 md）发布时以其原名为版本链基名；解析失败或版本链目标回退 null（走课次标题）。 */
