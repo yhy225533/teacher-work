@@ -1620,3 +1620,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **DraftPanel 订阅**：新增 files.onContentChanged → reload()——保活期间新导入文件经广播重拉，reconcileSelectedLessonFileIds 并入新文件、既有选择原样保留（V1.7.2 新文件自动入选择语义不变）。
 - **测试**：v1.10-prep-state-keepalive 5 例 + external-library-ipc/file-ipc 广播断言演进。门禁：全量 92 files / 526 tests（1 skip 既有）、typecheck、lint 全绿。
 - Git：本地提交 `v1.10(V110-A): prep picker keep-alive and contentChanged broadcasts`；随后 push（沿用 GitHub 授权）。
+
+## V1.10 · V110-B 资料移除可达性（2026-09-09 DONE）
+
+设计基准 `docs/v1.10-walkthrough-fixes-plan.md` §3 + D62。问题 1（V19-B/D57 收纳副作用）修复。
+
+- **三层移除入口，零新 IPC**：树节点 hover ✕（MaterialTreeNodeRow，canRemove = onRemoveFile 存在 + removableFileIds 白名单；白名单 = 本课当前资料 − 当前讲义当前版——唯一正文只走 ⋯ 入口防误删）；批量管理（树标题「管理/完成」toggle → 管理态行首 checkbox + lesson-manage-bar「移除所选（N）」→ 确认弹窗列文件名清单 → 串行 softDeleteFile → 自动退出管理态）；🕘 历史版本折叠块每行 ✕（managed 副本，同一确认）。
+- **保护规则**：readOnly（已结束课程）零移除入口（✕/管理 toggle/历史 ✕ 全部 !readOnly 门控）；⋯ 菜单红区兜底保留；确认弹窗沿用 useAppDialog（destructive 红态 + 原件不受影响文案）。
+- **测试**：v1.10-remove-entry-points 5 例 + material-library-ui 钉测演进 1 处（V19-B 的"reader 无 onRemoveFile"按 D62 更新）。门禁：全量 93 files / 531 tests（1 skip 既有）、typecheck、lint 全绿。
+- Git：本地提交 `v1.10(V110-B): tree quick remove, batch manage and history removal`；随后 push（沿用 GitHub 授权）。

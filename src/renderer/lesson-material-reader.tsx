@@ -32,12 +32,28 @@ export default function LessonMaterialReader({
   currentLectureId = null,
   editing = false,
   onToggleEditing,
+  onRemoveFile,
+  manageMode = false,
+  manageSelectedIds = [],
+  onToggleManageId,
+  onToggleManageMode,
+  removableFileIds = null,
 }: {
   readonly files: readonly ManagedFileRecord[]
   readonly selectedFileId: string
   readonly onSelectFile: (fileId: string) => void
   readonly onOpenFile?: (fileId: string) => void
   readonly editable?: boolean
+  /** V1.10/D62：树节点 hover ✕（editable 时传入即启用；当前讲义当前版的保护在调用方）。 */
+  readonly onRemoveFile?: (fileId: string) => void
+  /** V1.10/D62：批量管理态（勾选多份批量移除）。 */
+  readonly manageMode?: boolean
+  readonly manageSelectedIds?: readonly string[]
+  readonly onToggleManageId?: (fileId: string) => void
+  /** V1.10/D62：树标题「管理/完成」toggle（未传即不显示）。 */
+  readonly onToggleManageMode?: () => void
+  /** V1.10/D62：可移除文件白名单（null = 全部可移除；当前讲义当前版由调用方排除）。 */
+  readonly removableFileIds?: ReadonlySet<string> | null
   readonly onFileSaved?: (fileId: string) => void
   readonly hideTree?: boolean
   readonly treeTitle?: string
@@ -105,6 +121,12 @@ export default function LessonMaterialReader({
             treeTitle={treeTitle}
             grouped={grouped}
             currentLectureId={currentLectureId}
+            onRemoveFile={onRemoveFile}
+            manageMode={manageMode}
+            manageSelectedIds={manageSelectedIds}
+            onToggleManageId={onToggleManageId}
+            onToggleManageMode={onToggleManageMode}
+            removableFileIds={removableFileIds}
           />
         </aside>
       )}
@@ -156,6 +178,12 @@ export function LessonMaterialTree({
   showHeading = true,
   grouped = false,
   currentLectureId = null,
+  onRemoveFile,
+  manageMode = false,
+  manageSelectedIds = [],
+  onToggleManageId,
+  onToggleManageMode,
+  removableFileIds = null,
 }: {
   readonly files: readonly ManagedFileRecord[]
   readonly selectedFileId: string
@@ -166,6 +194,16 @@ export function LessonMaterialTree({
   readonly showHeading?: boolean
   readonly grouped?: boolean
   readonly currentLectureId?: string | null
+  /** V1.10/D62：hover ✕ 移除回调（未传即不渲染 ✕）。 */
+  readonly onRemoveFile?: (fileId: string) => void
+  /** V1.10/D62：批量管理态——树内 checkbox 切换为管理勾选。 */
+  readonly manageMode?: boolean
+  readonly manageSelectedIds?: readonly string[]
+  readonly onToggleManageId?: (fileId: string) => void
+  /** V1.10/D62：树标题右侧「管理/完成」toggle（未传即不显示）。 */
+  readonly onToggleManageMode?: () => void
+  /** V1.10/D62：可移除文件白名单（null = 全部可移除；当前讲义当前版由调用方排除）。 */
+  readonly removableFileIds?: ReadonlySet<string> | null
 }): React.JSX.Element {
   const markdownFiles = useMemo(
     () => files.filter((file) => file.mimeType === 'text/markdown'),
@@ -239,6 +277,11 @@ export function LessonMaterialTree({
           <span className="material-reader-folder-icon" aria-hidden="true">▾</span>
           <strong>{treeTitle}</strong>
           <small>{files.length} 项</small>
+          {onToggleManageMode !== undefined && (
+            <button className="tree-manage-toggle" type="button" aria-pressed={manageMode} onClick={onToggleManageMode}>
+              {manageMode ? '✓ 完成' : '管理'}
+            </button>
+          )}
         </div>
       )}
       <ul className="material-reader-tree-list">
@@ -254,6 +297,11 @@ export function LessonMaterialTree({
               onSelectFile={onSelectFile}
               onToggleFile={onToggleFile}
               onToggleExpanded={toggleExpanded}
+              onRemoveFile={onRemoveFile}
+              manageMode={manageMode}
+              manageSelectedIds={manageSelectedIds}
+              onToggleManageId={onToggleManageId}
+              removableFileIds={removableFileIds}
             />
           ))
           : (
@@ -275,6 +323,11 @@ export function LessonMaterialTree({
                     onToggleFile={onToggleFile}
                     onToggleExpanded={toggleExpanded}
                     isCurrentLecture={node.file.id === currentLectureId}
+                    onRemoveFile={onRemoveFile}
+                    manageMode={manageMode}
+                    manageSelectedIds={manageSelectedIds}
+                    onToggleManageId={onToggleManageId}
+                    removableFileIds={removableFileIds}
                   />
                 ))}
               </ul>
@@ -299,6 +352,11 @@ export function LessonMaterialTree({
                   onToggleFile={onToggleFile}
                   onToggleExpanded={toggleExpanded}
                   sourceLabel={lessonFileSourceLabel(node.file)}
+                    onRemoveFile={onRemoveFile}
+                    manageMode={manageMode}
+                    manageSelectedIds={manageSelectedIds}
+                    onToggleManageId={onToggleManageId}
+                    removableFileIds={removableFileIds}
                 />
               ))}
             </ul>
@@ -321,6 +379,11 @@ function MaterialTreeNodeRow({
   onToggleExpanded,
   isCurrentLecture = false,
   sourceLabel = null,
+  onRemoveFile,
+  manageMode = false,
+  manageSelectedIds = [],
+  onToggleManageId,
+  removableFileIds = null,
 }: {
   readonly node: LessonMaterialTreeNode
   readonly selectedFileId: string
@@ -334,12 +397,26 @@ function MaterialTreeNodeRow({
   readonly isCurrentLecture?: boolean
   /** V1.8.1/D46：材料组来源标签（外部/素材库；工作台产物为 null 不显示）。 */
   readonly sourceLabel?: string | null
+  /** V1.10/D62：hover ✕（onRemoveFile 存在且文件在 removableFileIds 白名单内才渲染）。 */
+  readonly onRemoveFile?: (fileId: string) => void
+  readonly manageMode?: boolean
+  readonly manageSelectedIds?: readonly string[]
+  readonly onToggleManageId?: (fileId: string) => void
+  readonly removableFileIds?: ReadonlySet<string> | null
 }): React.JSX.Element {
   const hasChildren = node.children.length > 0
+  const canRemove = onRemoveFile !== undefined && (removableFileIds === null || removableFileIds.has(node.file.id))
   return (
     <li className="material-reader-tree-node">
       <div className="material-reader-tree-row">
-        {hasChildren ? (
+        {manageMode ? (
+          <input
+            aria-label={`勾选移除${node.file.originalName}`}
+            type="checkbox"
+            checked={manageSelectedIds.includes(node.file.id)}
+            onChange={() => onToggleManageId?.(node.file.id)}
+          />
+        ) : hasChildren ? (
           <button
             className="material-reader-tree-toggle"
             type="button"
@@ -369,6 +446,17 @@ function MaterialTreeNodeRow({
           {sourceLabel !== null && <small className="material-role-badge is-source">{sourceLabel}</small>}
           {hasChildren && <small>{node.children.length}</small>}
         </button>
+        {!manageMode && canRemove && (
+          <button
+            className="material-reader-tree-remove"
+            type="button"
+            aria-label={`移除${node.file.originalName}`}
+            title="从本课移除（素材库/外部原件不受影响）"
+            onClick={() => onRemoveFile?.(node.file.id)}
+          >
+            ✕
+          </button>
+        )}
       </div>
       {hasChildren && expanded && (
         <ul className="material-reader-tree-children">

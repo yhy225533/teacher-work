@@ -1,6 +1,6 @@
 # V110-B · 资料移除可达性（问题 1）
 
-状态：TODO
+状态：DONE
 
 ## 目标
 
@@ -24,4 +24,10 @@
 
 ## 完成记录
 
-（待实施）
+2026-09-09 完成：
+
+- **树 hover ✕（MaterialTreeNodeRow）**：非管理态 + canRemove（onRemoveFile 存在且在 removableFileIds 白名单内）渲染 `✕`；title 引导"从本课移除（素材库/外部原件不受影响）"；白名单 = 全部当前资料 − 当前讲义当前版（唯一正文保护，仍只走 ⋯ 入口）。
+- **批量管理**：树标题「管理/✓ 完成」toggle（readOnly 不显示）；管理态行首 checkbox（替换展开箭头位）+ 底部 `lesson-manage-bar`（已勾选 N + danger「移除所选（N）」+ 取消）；确认弹窗列文件名清单（confirm-file-list）+ 原件不受影响文案；串行逐份 softDeleteFile（无批量通道）；中途失败 reload + 部分成功提示；完成自动退出管理态。
+- **历史版本 ✕**：折叠块每行 ✕（readOnly 隐藏），走同一 removeFile 确认；「系统打开」保留。
+- **readOnly 零入口**：onRemoveFile/onToggleManageMode 按 !readOnly 传 undefined；历史 ✕ 同条件；⋯ 红区兜底保留（V19-B/D57）。
+- **测试**：新增 tests/v1.10-remove-entry-points.test.ts 5 例（✕ 条件矩阵/批量编排与白名单/readOnly 零入口/历史版本/样式）；演进 material-library-ui.test.ts 1 处（"reader 无 onRemoveFile"的 V19-B 钉测按 D62 更新为"reader 渲染 ✕、编排仍在 section"）。门禁：全量 93 files / 531 tests passed（1 skipped 既有）、typecheck、lint 全绿。

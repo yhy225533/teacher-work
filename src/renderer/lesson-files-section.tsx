@@ -53,6 +53,9 @@ export default function LessonFilesSection({
   const [mineruTokenConfigured, setMineruTokenConfigured] = useState(false)
   const [mineruStatus, setMineruStatus] = useState<{ state: 'queued' | 'running' | 'done' | 'failed'; message?: string } | null>(null)
   const [mineruBusy, setMineruBusy] = useState(false)
+  // V1.10/D62：批量管理态——树内勾选多份一次性移除（应对快速建课误导入一批）。
+  const [manageMode, setManageMode] = useState(false)
+  const [manageSelectedIds, setManageSelectedIds] = useState<string[]>([])
   // V19-E：课件导出 PDF（单导出串行，Main 侧 BUSY 兜底）。
   const [exportBusy, setExportBusy] = useState(false)
   const lessonFiles = useMemo(
@@ -67,6 +70,12 @@ export default function LessonFilesSection({
   const historyFiles = classifiedFiles.history
   const displayFiles = classifiedFiles.currentMaterials
   const selectedFile = displayFiles.find((file) => file.id === selectedFileId) ?? null
+  // V1.10/D62：hover ✕ 白名单 = 全部当前资料，唯一例外是"当前讲义当前版"（唯一正文，仍只走 ⋯ 入口）。
+  const removableFileIds = useMemo(() => {
+    const ids = new Set(displayFiles.map((file) => file.id))
+    if (currentVersionFile !== null) ids.delete(currentVersionFile.id)
+    return ids
+  }, [displayFiles, currentVersionFile])
   // D27（V17-B）：AI 修改面向本课全部 md（含外部导入 md）；office/pdf/图片保持只读浏览。
   const canModifySelectedFile = selectedFile !== null && isAiEditableFile(selectedFile)
   const hasAnyMarkdown = displayFiles.some(isAiEditableFile)
@@ -118,6 +127,56 @@ export default function LessonFilesSection({
     } catch (openError) {
       setError(toErrorMessage(openError, '课次资料读取失败，请稍后重试。'))
     } finally {
+      setBusy(false)
+    }
+  }
+
+  function toggleManageId(fileId: string): void {
+    setManageSelectedIds((current) =>
+      current.includes(fileId) ? current.filter((id) => id !== fileId) : [...current, fileId])
+  }
+
+  function toggleManageMode(): void {
+    setManageMode((current) => !current)
+    setManageSelectedIds([])
+  }
+
+  /** V1.10/D62：批量移除——一次确认列文件名清单，随后串行 softDeleteFile（与单份同一软删语义）。 */
+  async function removeSelectedFiles(): Promise<void> {
+    if (lesson === null || manageSelectedIds.length === 0) return
+    const targets = lessonFiles.filter((candidate) => manageSelectedIds.includes(candidate.id) && removableFileIds.has(candidate.id))
+    if (targets.length === 0) { setManageMode(false); setManageSelectedIds([]); return }
+    const confirmed = await confirm({
+      title: `从本课移除 ${targets.length} 份资料？`,
+      description: <>以下文件将从“{lesson.title}”移除：
+        <ul className="confirm-file-list">{targets.map((file) => <li key={file.id}>{file.originalName}</li>)}</ul>
+        只移除本课的独立副本，不会影响素材库原件或外部资料。</>,
+      confirmLabel: `移除 ${targets.length} 份`,
+      destructive: true,
+    })
+    if (!confirmed) return
+    setBusy(true)
+    setError('')
+    setNotice('')
+    let removed = 0
+    try {
+      for (const file of targets) {
+        await window.teacherWorkbench.files.softDeleteFile({ fileId: file.id })
+        removed += 1
+      }
+      if (manageSelectedIds.includes(selectedFileId)) setSelectedFileId('')
+      await reload()
+      setNotice(`已从本课移除 ${removed} 份资料。`)
+    } catch (removeError) {
+      if (removed > 0) {
+        await reload()
+        setNotice(`已移除 ${removed} 份，余下未完成——${toErrorMessage(removeError, '')}`.trim())
+      } else {
+        setError(toErrorMessage(removeError, '课次资料读取失败，请稍后重试。'))
+      }
+    } finally {
+      setManageMode(false)
+      setManageSelectedIds([])
       setBusy(false)
     }
   }
@@ -394,6 +453,7 @@ export default function LessonFilesSection({
       {overview === null ? (
         <div className="material-reader-state">正在读取本课次资料…</div>
       ) : (
+        <>
         <LessonMaterialReader
           files={displayFiles}
           selectedFileId={selectedFileId}
@@ -407,7 +467,28 @@ export default function LessonFilesSection({
           currentLectureId={currentVersionFile?.id ?? null}
           editing={editing}
           onToggleEditing={() => { setEditing((current) => !current) }}
+          onRemoveFile={!readOnly ? (fileId: string) => { void removeFile(fileId) } : undefined}
+          manageMode={manageMode}
+          manageSelectedIds={manageSelectedIds}
+          onToggleManageId={toggleManageId}
+          onToggleManageMode={!readOnly ? toggleManageMode : undefined}
+          removableFileIds={removableFileIds}
         />
+        {manageMode && (
+          <div className="lesson-manage-bar">
+            <span>已勾选 {manageSelectedIds.length} 份</span>
+            <button
+              className="danger-button"
+              type="button"
+              disabled={busy || manageSelectedIds.length === 0}
+              onClick={() => { void removeSelectedFiles() }}
+            >
+              移除所选（{manageSelectedIds.length}）
+            </button>
+            <button className="secondary-button" type="button" disabled={busy} onClick={toggleManageMode}>取消</button>
+          </div>
+        )}
+        </>
       )}
       {historyFiles.length > 0 && (
         <details className="lesson-history-block">
@@ -417,6 +498,17 @@ export default function LessonFilesSection({
               <li key={file.id}>
                 <span>{file.originalName}</span>
                 <button className="secondary-button" type="button" onClick={() => { void openFile(file.id) }}>系统打开</button>
+                {!readOnly && (
+                  <button
+                    className="material-reader-tree-remove"
+                    type="button"
+                    aria-label={`移除历史版本${file.originalName}`}
+                    title="从本课移除这份历史版本（不影响其他版本）"
+                    onClick={() => { void removeFile(file.id) }}
+                  >
+                    ✕
+                  </button>
+                )}
               </li>
             ))}
           </ul>
