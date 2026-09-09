@@ -1658,3 +1658,9 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **隔离 Windows 冒烟复跑**（`tmp/v110-smoke/run-smoke.mjs`，production + 隔离数据目录 + fake OpenAI-compatible + CDP）：移除场景（树 hover ✕ 单删 / 管理态批量移除 / 🕘 历史 ✕）stderr 零 `file_request_failed` / `mineru_request_failed`；既有场景回归通过；进程/临时目录双复核。
 - **验收**：`docs/v1.10-acceptance.md` 追加 V1.10.1 证据小节（不改写 V110 历史记录）；不创建 `checkpoint-V1.10.1-pass`，`checkpoint-V1.10-pass` 仍待产品负责人走查确认。
 - Git：本地提交 `v1.10.1(V1101-A): fix remove-then-reselect race in lesson files section`；随后 push（沿用 GitHub 授权）。
+
+## V1.10 · V110-D 最终验收确认（2026-09-09）
+
+- 产品负责人走查反馈：**基本验收通过**（含 V1.10.1 维护增量——走查中报告的移除资料双 error 已修复并复验：冒烟 18/18、移除场景 stderr 零 `file_request_failed` / `mineru_request_failed`）；其余走查清单项无新反馈。
+- 确认提交 `v1.10(V110-D): record final acceptance`，`checkpoint-V1.10-pass` 创建于该提交（V1.10.1 按 V1.5.3.1 先例并入本验收，不单独建标签；与既有 pass 标签互不替代）。
+- `checkpoint-V1.9-pass` / `checkpoint-V1.8.1-pass` 仍待产品负责人按各自验收文档走查确认。

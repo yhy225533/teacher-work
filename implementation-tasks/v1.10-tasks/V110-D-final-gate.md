@@ -32,3 +32,5 @@ V1.10 唯一全量验收点。自动质量门 + 隔离 Windows 冒烟（状态�
   - 进程/临时目录双复核：Get-Process electron 空；`teacher-workbench-v110-smoke-*` 临时目录全部删除。
   - `docs/v1.10-acceptance.md`：实施表、自动门、冒烟 17/17、脚本设计说明、安全边界复核、产品负责人走查清单 18 条。
   - 不创建 `checkpoint-V1.10-pass`——待产品负责人走查确认后创建。
+
+- 2026-09-09 最终验收确认：产品负责人走查反馈"基本验收通过"；走查期间报告的移除资料双 error 日志经维护增量 V1.10.1（V1101-A / D65，验收文档 §8）修复并复验（冒烟 18/18、移除场景 stderr 零 file_request_failed/mineru_request_failed）；据此创建确认提交 `v1.10(V110-D): record final acceptance` 并在其上创建 `checkpoint-V1.10-pass`（V1.10.1 按 V1.5.3.1 先例并入本验收，不单独建标签）。
