@@ -1,6 +1,6 @@
 # V111-D · 最终门禁与验收（全工作流）
 
-状态：TODO
+状态：DONE
 
 ## 目标
 
@@ -28,4 +28,15 @@ V1.11 唯一全量验收点。自动质量门 + 隔离 Windows 冒烟（真实 P
 
 ## 完成记录
 
-（待实施）
+2026-09-09 完成。
+
+- **自动门**：全量 96 files / 553 tests passed（1 skipped 既有）、typecheck、lint、production build（`pdf.worker.min-*.mjs` 资产产出）、`git diff --check` 全绿；未运行 portable/installer。
+- **冒烟**：隔离 Windows 冒烟（production `out/main/index.js` + 独立 `TEACHER_WORKBENCH_L01_SMOKE_APP_DATA` + `--user-data-dir` + `--remote-debugging-port` + external_roots 单行预插 + CDP 驱动；无 AI 调用故无 fake provider）**10/10**：真实 PDF fixture canvas 渲染 + 像素非空白（815×1054，nonWhite=3884，alpha 感知）、PDF/docx 逃生门、docx `.docx-wrapper` 含 fixture 文本、md/png/.doc 三分支零回归、stderr 健康；连跑 4 轮均 10/10。
+- **冒烟暴露并修复两处渲染缺陷**（详见 `docs/v1.11-acceptance.md` §4）：
+  1. pdfjs worker 版本失配——顶层 pdfjs-dist v6.2.108（officeparser override 固化）≠ react-pdf 内嵌 API v5.4.296；workerSrc 深路径改指 `react-pdf/node_modules/pdfjs-dist/build/pdf.worker.min.mjs`；
+  2. react-pdf `file` 载荷字面量引用竞态——每次重渲染取消重载致加载永不收敛（resize 亦触发，真实产品缺陷）；改 `useMemo` 按 dataUrl 记忆化。
+  两处修复均补进钉测（worker 深路径/useMemo/file={file}/禁字面量/setLoadError）并全量回归。
+- **复核**：冒烟后 Electron 进程零残留、`teacher-workbench-v111-smoke-*` 临时目录零残留。
+- **验收记录**：`docs/v1.11-acceptance.md`（实施表/自动门/冒烟记录/安全边界复核/走查清单/已知限制）。
+- **状态同步**：STATUS.md、GOAL_PROGRESS.md、本文件 DONE。
+- `checkpoint-V1.11-pass` 未创建——待产品负责人按验收文档 §6 走查清单确认。

@@ -29,8 +29,15 @@ describe('V111-B PDF 应用内预览', () => {
     // 渲染器边界：静态 import（无 dynamic import/require），pdfjs 只经 npm 包进 bundle
     expect(component).toContain("import { Document, Page, pdfjs } from 'react-pdf'")
     expect(component).not.toContain('import(')
-    // worker 与使用方同模块（react-pdf 约束）
-    expect(component).toContain("pdfjs.GlobalWorkerOptions.workerSrc = new URL(\n  'pdfjs-dist/build/pdf.worker.min.mjs',\n  import.meta.url,\n).toString()")
+    // worker 与使用方同模块（react-pdf 约束）——深路径指向 react-pdf 内嵌的配套 v5 worker，
+    // 顶层 pdfjs-dist 被 officeparser override 固化为 v6，指顶层会 API≠Worker 版本失配。
+    expect(component).toContain("pdfjs.GlobalWorkerOptions.workerSrc = new URL(\n  'react-pdf/node_modules/pdfjs-dist/build/pdf.worker.min.mjs',\n  import.meta.url,\n).toString()")
+    // file 载荷按 dataUrl 记忆化：字面量 file 会在每次重渲染时触发 react-pdf 取消重载（加载永不收敛）。
+    expect(component).toContain('const file = useMemo(() => ({ data: dataUrlToUint8Array(dataUrl) }), [dataUrl])')
+    expect(component).toContain('file={file}')
+    expect(component).not.toContain('file={{ data:')
+    // 打开失败的具体错误消息上屏（冒烟诊断依赖；失败态由调用方补系统打开逃生门）
+    expect(component).toContain('setLoadError(')
     // 只读面：无文本层/无注解层（无链接跳转面）
     expect(component).toContain('renderTextLayer={false}')
     expect(component).toContain('renderAnnotationLayer={false}')

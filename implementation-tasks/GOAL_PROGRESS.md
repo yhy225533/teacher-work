@@ -1685,3 +1685,28 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **测试**：`tests/v1.11-pdf-preview.test.ts` 7 例（分支结构/静态导入+worker 字面量/双 layer 关/setup 钉测/解码工具/依赖白名单/Main .doc 不在白名单）；全量 97 files / 551 tests passed（550 + 1 skipped 既有）。
 - **门禁**：typecheck、lint、production build 全绿——`pdf.worker.min-CHFwMXne.mjs`（1.26MB）实跑产出验证 worker 资产管道。
 - Git：本地提交 `v1.11(V111-B): pdf in-app preview via react-pdf`；随后 push（沿用 GitHub 授权）。下一节点 V111-C（docx 应用内预览）。
+## V1.11 · V111-C Word(docx) 应用内预览（2026-09-10 DONE）
+
+设计基准 `docs/v1.11-office-pdf-preview-plan.md` §5 + D67。消费 V111-A 的 binary 载荷（docx MIME）。
+
+- **依赖**：`docx-preview ^0.4.0`（传递依赖 jszip；D69 白名单内）；node 环境 import 干净，无需测试占位。
+- **组件（src/renderer/docx-preview.tsx）**：静态 import `renderAsync`（渲染器边界禁 dynamic import，与 V111-B 同规则）；dataUrl → ArrayBuffer（复用 pdf-binary 解码）→ `renderAsync(buffer, container, undefined, { inWrapper: true })` 受控容器渲染；卸载/重渲染前 `container.textContent = ''` 清空；失败态 inline-error。
+- **接线（lesson-material-reader.tsx）**：`DOCX_MIME` 常量（与 Main 白名单一一对应，双重钉测）；binary + docx MIME → DocxPreview + 同款逃生门；PDF 分支零改动。
+- **样式**：`.docx-preview` 容器（灰底衬托 + 居中限宽 + section.docx 白底阴影）+ `.docx-preview-state`。
+- **测试**：演进 `tests/v1.11-pdf-preview.test.ts` 至 10 例（docx 分支结构/静态导入/常量与 Main 白名单双重钉测/依赖白名单/样式组）；全量 97 files / 554 tests passed（553 + 1 skipped 既有）、typecheck、lint 全绿。
+- Git：本地提交 `v1.11(V111-C): docx in-app preview via docx-preview`（8c45603）+ 补 STATUS 行完成记录（ec572ff）；随后 push（沿用 GitHub 授权）。下一节点 V111-D（最终门禁与验收）。
+
+## V1.11 · V111-D 最终门禁与验收（2026-09-10 DONE）
+
+设计基准 `docs/v1.11-office-pdf-preview-plan.md` §7/§8。V1.11 唯一全量验收点。
+
+- **自动门**：全量 96 files / 553 tests passed（1 skipped 既有）、typecheck、lint、production build（`pdf.worker.min-*.mjs` 资产产出）、`git diff --check` 全绿；未运行 portable/installer。
+- **冒烟（tmp/v111-smoke/run-smoke.mjs，production + 隔离数据目录 + external_roots 预插 + CDP）**：**10/10，连跑 4 轮**——真实 PDF fixture canvas 渲染 + 像素非空白（815×1054，nonWhite=3884；断言 alpha 感知 + 排除 300×150 占位尺寸）、PDF/docx 逃生门、docx `.docx-wrapper` 含 fixture 文本、md/png/.doc 三分支零回归、stderr 健康；无 AI 调用故无 fake provider。复核：进程零残留 + 临时目录零残留。
+- **冒烟暴露并修复两处渲染缺陷**（真实产品缺陷，非脚本问题）：
+  1. pdfjs worker 版本失配——顶层 pdfjs-dist v6.2.108（officeparser override 固化）≠ react-pdf 内嵌 API v5.4.296，运行时 `API version does not match Worker version`；workerSrc 深路径改指 `react-pdf/node_modules/pdfjs-dist/build/pdf.worker.min.mjs`（经 react-pdf exports "./*": "./*"）；
+  2. react-pdf `file` 载荷字面量引用竞态——每次重渲染（宽度自适应/pageCount）触发取消重载，加载永不收敛（窗口 resize 亦触发）；改 `useMemo` 按 dataUrl 记忆化。
+  两处均补钉测（worker 深路径/useMemo/file={file}/禁字面量/setLoadError）并全量回归 + build + diff check 复跑。
+- **验收记录**：`docs/v1.11-acceptance.md`（实施表/自动门/冒烟记录/缺陷修复如实记录/安全边界复核/产品负责人走查清单/已知限制）。
+- Git：本地提交 `v1.11(V111-D): final gates, smoke and acceptance record`；随后 push（沿用 GitHub 授权）。
+- `checkpoint-V1.11-pass` 未创建——待产品负责人按验收文档 §6 走查清单确认后创建。
+
