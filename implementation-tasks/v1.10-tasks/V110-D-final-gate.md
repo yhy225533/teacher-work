@@ -1,6 +1,6 @@
 # V110-D · 最终门禁与验收（V1.10）
 
-状态：TODO
+状态：DONE
 
 ## 目标
 
@@ -25,4 +25,10 @@ V1.10 唯一全量验收点。自动质量门 + 隔离 Windows 冒烟（状态�
 
 ## 完成记录
 
-（待实施）
+- 2026-09-09 实施：
+  - 全量门禁：`npm test` 94 files / 534 tests passed + 1 skipped（既有）；typecheck、lint、`npm run build` 三端产物、`git diff --check` 全绿；未运行 portable/installer（符合约束）。
+  - 隔离 Windows 冒烟（`tmp/v110-smoke/run-smoke.mjs`，production + 隔离数据目录 + fake AI + CDP）：**17/17 全部通过**——场景 A 状态保活往返 6 项（含"备课工作台未卸载"直接证据与"去勾不回来 + 新文件自动入选择"）；场景 C 三按钮连发 2 项（讲义 + 作业两轮独立 note，fake AI 收到 2 请求）；场景 B 移除入口三层 4 项（树 ✕ 单删含当前讲义无 ✕ 白名单 / 管理态批量移除含确认清单 / 历史版本行 ✕）；健康检查 2 项。
+  - 冒烟数据全部经既有白名单 IPC 造数（copyToLesson / setLessonFileRole / writeVersion），不直接改库（external_roots 单行预插沿用 V19-F 先例）。
+  - 进程/临时目录双复核：Get-Process electron 空；`teacher-workbench-v110-smoke-*` 临时目录全部删除。
+  - `docs/v1.10-acceptance.md`：实施表、自动门、冒烟 17/17、脚本设计说明、安全边界复核、产品负责人走查清单 18 条。
+  - 不创建 `checkpoint-V1.10-pass`——待产品负责人走查确认后创建。

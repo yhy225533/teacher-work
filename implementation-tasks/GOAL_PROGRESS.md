@@ -1639,3 +1639,11 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **合同零改动**：drafts.generate 的 kind 单值、一次一请求；连续出三份 = 用户连点三次，每次独立 requestId/note。
 - **测试**：v1.10-kind-buttons 4 例钉测（三按钮直发/下拉撤除+合同不变/single·lesson 不受影响/按钮组样式）；演进 3 处既有钉测（v1.5.3.1 V19-A 下拉钉、v1.7.2 new 空态文案、v1.9 发送路由）。门禁：全量 94 files / 534 tests（1 skip 既有）、typecheck、lint 全绿。
 - Git：本地提交 `v1.10(V110-C): generation kind buttons restored`；随后 push（沿用 GitHub 授权）。
+
+## V1.10 · V110-D 最终门禁与验收（2026-09-09 DONE）
+
+- **全量门禁**：npm test 94 files / 534 tests passed + 1 skipped（既有）；typecheck、lint、production build（三端产物）、git diff --check 全绿；未运行 portable/installer。零 migration、零新依赖、零新 IPC 通道（补发的 notifyContentChanged 为既有广播事件）。
+- **隔离 Windows 冒烟 17/17**（`tmp/v110-smoke/run-smoke.mjs`，production + 隔离数据目录 + fake OpenAI-compatible + CDP）：场景 A 状态保活往返 6 项（overlay 打开时备课工作台未卸载；去勾的依据不回来、新导入 txt 自动入选择）；场景 C 三按钮连发 2 项（✦ 讲义 → 成果 → ✦ 作业 → 成果，修改记录两个独立节点）；场景 B 移除入口 4 项（树 hover ✕ 单删 + 当前讲义无 ✕ 白名单 / 管理态批量移除含文件名确认清单 / 🕘 历史版本行 ✕）；造数全部经既有白名单 IPC（copyToLesson / setLessonFileRole / writeVersion）。
+- **收尾复核**：Electron 进程全部终止、冒烟临时目录全部删除；`docs/v1.10-acceptance.md` 完成（实施表 + 自动门 + 冒烟记录 + 安全边界复核 + 走查清单 18 条）。
+- `checkpoint-V1.10-pass` 不创建：待产品负责人按验收文档走查确认后创建（与 checkpoint-V1.9-pass / checkpoint-V1.8.1-pass 互不阻塞）。
+- Git：本地提交 `v1.10(V110-D): final gates, smoke 17/17 and acceptance record`；随后 push（沿用 GitHub 授权）。
