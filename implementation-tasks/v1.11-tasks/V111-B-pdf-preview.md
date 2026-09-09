@@ -1,6 +1,6 @@
 # V111-B · PDF 应用内预览（react-pdf / pdfjs）
 
-状态：TODO
+状态：DONE
 
 ## 目标
 
@@ -24,4 +24,12 @@
 
 ## 完成记录
 
-（待实施）
+2026-09-10 完成：
+
+- **依赖**：`react-pdf ^10.5.0`（携 pdfjs-dist，npm 镜像源安装；package.json 依赖白名单钉测确认无额外直接依赖）；
+- **组件**：`src/renderer/pdf-preview.tsx`——静态 import（渲染器边界禁 dynamic import，见下）`Document/Page/pdfjs`；worker 经 `new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url)` 与组件同模块配置；`dataUrlToUint8Array` 工具独立在 `pdf-binary.ts`（无 DOM 依赖）；ResizeObserver 自适应阅读器栏宽；`renderTextLayer/renderAnnotationLayer` 均关（无链接跳转面）；连续滚动分页 + 渲染态文案；
+- **接线**：`lesson-material-reader.tsx` 新增 binary 分支——pdf MIME → `<PdfPreview>` + `.pdf-preview-fallback`（"需要打印或另存？"→「用系统应用打开」逃生门）；非 pdf binary → unsupported 同款兜底（V111-C 前 docx 走此路）；text/image/unsupported 三分支零改动；
+- **测试基建**：pdfjs-dist ESM 模块级引用 DOMMatrix（node 无此全局）——`tests/setup-node-dom-stubs.ts` 提供占位并经 `vitest.config.ts` setupFiles 注入（纯测试基建，零断言参与）；初版 React.lazy 动态导入方案被 `renderer-boundary` 测试正确拒绝（dynamic import 禁令为冻结安全规则），改为静态导入 + 测试占位；
+- **样式**：`.pdf-preview` 样式组（页白底/阴影/间距/滚动）+ `.pdf-preview-fallback`；
+- **测试**：新增 `tests/v1.11-pdf-preview.test.ts` 7 例——reader binary 分支结构、静态导入 + worker 配置字面量、双 layer 关闭、setup 基建钉测、解码工具、依赖白名单、样式、Main 白名单（.doc 不在）；全量 97 files / 551 tests passed（550 + 1 skipped 既有）；
+- **门禁**：typecheck、lint、production build 全绿（`pdf.worker.min-*.mjs` 1.26MB 资产实跑产出验证）。

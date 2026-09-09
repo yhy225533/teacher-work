@@ -3,6 +3,7 @@ import katex from 'katex'
 import 'katex/dist/katex.min.css'
 
 import MdEditor from './md-editor'
+import PdfPreview from './pdf-preview'
 import type { ManagedFileContent, ManagedFileRecord } from '../shared/file-contracts'
 import {
   buildLessonMaterialTree,
@@ -155,6 +156,24 @@ export default function LessonMaterialReader({
           {!loading && error === '' && !editing && content?.kind === 'text' && <MarkdownDocument body={content.content} files={files} />}
           {!loading && error === '' && content?.kind === 'image' && (
             <div className="material-image-preview"><img src={content.dataUrl} alt={selectedFile?.originalName ?? '资料图片'} /></div>
+          )}
+          {/* V1.11（D66）：PDF 应用内预览——binary 载荷 + pdf MIME，失败态沿用系统打开逃生门。 */}
+          {!loading && error === '' && content?.kind === 'binary' && content.file.mimeType === 'application/pdf' && (
+            <>
+              <PdfPreview dataUrl={content.dataUrl} />
+              {selectedFile !== null && onOpenFile !== undefined && (
+                <div className="pdf-preview-fallback">
+                  <span>需要打印或另存？</span>
+                  <button className="secondary-button" type="button" onClick={() => onOpenFile(selectedFile.id)}>用系统应用打开</button>
+                </div>
+              )}
+            </>
+          )}
+          {!loading && error === '' && content?.kind === 'binary' && content.file.mimeType !== 'application/pdf' && (
+            <div className="material-reader-state">
+              <p>这种文件暂时不能在工作台内预览。</p>
+              {selectedFile !== null && onOpenFile !== undefined && <button className="primary-button" type="button" onClick={() => onOpenFile(selectedFile.id)}>用系统应用打开</button>}
+            </div>
           )}
           {!loading && error === '' && content?.kind === 'unsupported' && (
             <div className="material-reader-state">

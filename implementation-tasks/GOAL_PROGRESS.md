@@ -1674,3 +1674,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **测试**：`tests/v1.11-readcontent-binary.test.ts` 5 例——pdf/docx 往返（前缀 + base64 字节还原）、.doc/.pptx/.bin unsupported、image/text/超限零回归（超限 pdf 显式覆盖）、守卫伪造三态。docx fixture = 测试内零依赖手写最小 zip（crc32 表 + local/central 目录 + EOCD）。
 - **门禁**：全量 96 files / 544 tests passed（543 + 1 skipped 既有）、typecheck、lint 全绿。
 - Git：本地提交 `v1.11(V111-A): readcontent binary contract and guard`；随后 push（沿用 GitHub 授权）。下一节点 V111-B（PDF 应用内预览）。
+
+## V1.11 · V111-B PDF 应用内预览（2026-09-10 DONE）
+
+设计基准 `docs/v1.11-office-pdf-preview-plan.md` §4 + D66。消费 V111-A 的 binary 载荷。
+
+- **组件（src/renderer/pdf-preview.tsx）**：`Document/Page/pdfjs` 静态导入（渲染器边界禁 dynamic import——初版 React.lazy 方案被 renderer-boundary 测试正确拒绝，遵守冻结规则改静态链）；worker = `new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url)` 与使用方同模块；ResizeObserver 自适应阅读器栏宽；连续滚动分页；renderTextLayer/renderAnnotationLayer 均关（无链接跳转面）。
+- **接线（lesson-material-reader.tsx）**：binary + pdf MIME → PdfPreview + `.pdf-preview-fallback`（用系统应用打开逃生门，打印/另存场景走系统）；非 pdf binary → unsupported 同款兜底（V111-C 落地前 docx 走此路）；text/image/unsupported 零改动。
+- **测试基建**：pdfjs-dist ESM 模块级 DOMMatrix（node 无）→ `tests/setup-node-dom-stubs.ts` 占位 + vitest.config setupFiles 注入——钉测链（renderToStaticMarkup）静态 import 不再炸，占位零断言参与。
+- **测试**：`tests/v1.11-pdf-preview.test.ts` 7 例（分支结构/静态导入+worker 字面量/双 layer 关/setup 钉测/解码工具/依赖白名单/Main .doc 不在白名单）；全量 97 files / 551 tests passed（550 + 1 skipped 既有）。
+- **门禁**：typecheck、lint、production build 全绿——`pdf.worker.min-CHFwMXne.mjs`（1.26MB）实跑产出验证 worker 资产管道。
+- Git：本地提交 `v1.11(V111-B): pdf in-app preview via react-pdf`；随后 push（沿用 GitHub 授权）。下一节点 V111-C（docx 应用内预览）。
