@@ -1629,3 +1629,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **保护规则**：readOnly（已结束课程）零移除入口（✕/管理 toggle/历史 ✕ 全部 !readOnly 门控）；⋯ 菜单红区兜底保留；确认弹窗沿用 useAppDialog（destructive 红态 + 原件不受影响文案）。
 - **测试**：v1.10-remove-entry-points 5 例 + material-library-ui 钉测演进 1 处（V19-B 的"reader 无 onRemoveFile"按 D62 更新）。门禁：全量 93 files / 531 tests（1 skip 既有）、typecheck、lint 全绿。
 - Git：本地提交 `v1.10(V110-B): tree quick remove, batch manage and history removal`；随后 push（沿用 GitHub 授权）。
+
+## V1.10 · V110-C 生成类型三按钮并排（2026-09-09 DONE）
+
+设计基准 `docs/v1.10-walkthrough-fixes-plan.md` §4 + D63。问题 4（V19-A 单选下拉副作用）修复。
+
+- **new 模式发送区**：生成类型下拉撤除，恢复 V1.2 三按钮并排（`Object.values(DRAFT_KINDS).map`，讲义 primary / 例题·作业 secondary），点击直发 `generate(kind)`；生成中三按钮全禁用、所点按钮「生成中…」（busyAction === kind）；完成后可连点下一个（连续生成独立 note）。
+- **single/lesson 零改动**：「✦ 发送」保留为方案确认流入口（startImprovePlan）；确认生成仍经 plannedDraftKind（lesson → lecture / single → inferDraftKind，new 分支撤除）。
+- **合同零改动**：drafts.generate 的 kind 单值、一次一请求；连续出三份 = 用户连点三次，每次独立 requestId/note。
+- **测试**：v1.10-kind-buttons 4 例钉测（三按钮直发/下拉撤除+合同不变/single·lesson 不受影响/按钮组样式）；演进 3 处既有钉测（v1.5.3.1 V19-A 下拉钉、v1.7.2 new 空态文案、v1.9 发送路由）。门禁：全量 94 files / 534 tests（1 skip 既有）、typecheck、lint 全绿。
+- Git：本地提交 `v1.10(V110-C): generation kind buttons restored`；随后 push（沿用 GitHub 授权）。

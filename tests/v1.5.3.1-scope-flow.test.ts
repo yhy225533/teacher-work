@@ -36,16 +36,18 @@ describe('V1.5.3.1 scoped AI modification contract', () => {
 
   it('keeps quick artifact generation exclusive to new prep', () => {
     const draft = source('../src/renderer/draft-panel.tsx')
-    // V19-A（D55）：三类快捷生成并入「✦ 发送」（生成类型 select 仅 new 模式渲染）
+    // V110-C（D63）：生成类型下拉撤除，new 模式恢复三按钮并排直发（讲义 primary / 例题 / 作业）；
+    // 「✦ 发送」保留给 single/lesson 方案确认流。
     const sayBlock = draft.slice(
       draft.indexOf('<div className="prep-chat-say">'),
       draft.indexOf("{improveError !== '' && <p"),
     )
 
-    expect(sayBlock).toContain('生成类型：')
-    expect(sayBlock).toContain('<option value="lecture">讲义</option>')
+    expect(sayBlock).toContain('prep-kind-buttons')
+    expect(sayBlock).toContain('Object.values(DRAFT_KINDS).map')
+    expect(sayBlock).toContain('void generate(kind)')
     expect(sayBlock).toContain('✦ 发送')
-    expect(draft).toContain("{prepMode === 'new' && (")
+    expect(draft).not.toContain('improveKind')
   })
 
   it('orders the modification baseline before optional references and persists readable mode markers', () => {

@@ -98,9 +98,11 @@ describe('V19-A 对话式备课工作台', () => {
     it('disables the send button while generating and routes by prepMode', () => {
       const draft = source('../src/renderer/draft-panel.tsx')
 
-      expect(draft).toContain("void (prepMode === 'new' ? generate(plannedDraftKind) : startImprovePlan())")
-      expect(draft).toContain("disabled={busyAction !== '' || improveBusy || (prepMode !== 'new' && selectedFiles.length === 0)}")
-      // textarea 与 Skill/生成类型 select 生成中禁用
+      // V110-C（D63）：new 模式三按钮各自直发 generate(kind)；single/lesson 保留 ✦ 发送 → startImprovePlan()
+      expect(draft).toContain('void generate(kind)')
+      expect(draft).toContain('void startImprovePlan()')
+      expect(draft).toContain("disabled={busyAction !== '' || improveBusy || selectedFiles.length === 0}")
+      // textarea 与 Skill select 生成中禁用
       expect(draft).toContain("disabled={busyAction !== '' || improveBusy} />")
       // D25 预算确认在 startImprovePlan / confirmPlanAndGenerate 两处复用（零改动）
       expect(draft).toContain('confirmReferenceBudget(baselineFiles)')

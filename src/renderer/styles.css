@@ -3245,6 +3245,18 @@ button.quick-status { cursor: pointer; }
   width: 100%;
 }
 
+/* V110-C（D63）：new 模式生成类型三按钮并排（讲义 primary，例题/作业 secondary） */
+.prep-kind-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.prep-kind-buttons .primary-button,
+.prep-kind-buttons .secondary-button {
+  width: 100%;
+}
+
 .prep-chat-budget {
   flex-basis: 100%;
   margin: 2px 0 0;

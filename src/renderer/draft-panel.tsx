@@ -129,7 +129,6 @@ export default function DraftPanel({
   const [improveError, setImproveError] = useState('')
   const [improveBase, setImproveBase] = useState<{ title: string; body: string } | null>(null)
   const [compareOpen, setCompareOpen] = useState(false)
-  const [improveKind, setImproveKind] = useState<DraftKind>('lecture')
   // D30/V17-D：题库自动选题（开关 + 过目步状态）
   const [bankSummary, setBankSummary] = useState<QuestionBankSummary | null>(null)
   const [bankEnabled, setBankEnabled] = useState(false)
@@ -214,11 +213,11 @@ export default function DraftPanel({
     : prepMode === 'lesson'
       ? [...lessonBaselineFiles, ...selectedReferenceFiles]
       : selectedReferenceFiles)
+  // V110-C（D63）：new 模式生成类型三按钮各自直发 generate(kind)，不再经此推导；
+  // plannedDraftKind 只服务 single/lesson 的确认生成与目标卡展示。
   const plannedDraftKind = prepMode === 'lesson'
     ? DRAFT_KINDS.lecture
-    : prepMode === 'single'
-      ? inferDraftKind(targetFile)
-      : improveKind
+    : inferDraftKind(targetFile)
   const lessonResults = useMemo(
     () => context === null ? [] : listLessonAiResults(core, context.lessonId),
     [context, core],
@@ -1242,7 +1241,7 @@ export default function DraftPanel({
           ) : (
             <div className="workspace-card draft-content-empty" role="status">
               {prepMode === 'new'
-                ? <p>还没有生成内容。右侧添加依据或直接写要求，点「✦ 发送」开始从零生成；生成后节点会出现在「修改记录」里。</p>
+                ? <p>还没有生成内容。右侧添加依据或直接写要求，点「✦ 讲义 / 例题 / 作业」任一按钮从零生成（可连发多份）；生成后节点会出现在「修改记录」里。</p>
                 : <p>还没有修改方案。右侧说清这次要改什么，点「✦ 发送」先出方案，确认后才会生成新副本。</p>}
             </div>
           )}
@@ -1411,18 +1410,25 @@ export default function DraftPanel({
                       {skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}
                     </select>
                   </label>
-                  {prepMode === 'new' && (
-                    <label className="improve-kind-label">生成类型：
-                      <select value={improveKind} onChange={(event) => setImproveKind(event.target.value as DraftKind)} disabled={busyAction !== '' || improveBusy}>
-                        <option value="lecture">讲义</option>
-                        <option value="example">例题</option>
-                        <option value="homework">作业</option>
-                      </select>
-                    </label>
+                  {prepMode === 'new' ? (
+                    <div className="prep-kind-buttons" role="group" aria-label="生成类型">
+                      {Object.values(DRAFT_KINDS).map((kind) => (
+                        <button
+                          key={kind}
+                          className={kind === DRAFT_KINDS.lecture ? 'primary-button' : 'secondary-button'}
+                          type="button"
+                          onClick={() => { void generate(kind) }}
+                          disabled={busyAction !== '' || improveBusy}
+                        >
+                          {busyAction === kind ? '生成中…' : `✦ ${kindLabels[kind]}`}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <button className="primary-button" type="button" onClick={() => { void startImprovePlan() }} disabled={busyAction !== '' || improveBusy || selectedFiles.length === 0}>
+                      {busyAction !== '' || improveBusy ? '生成中…' : '✦ 发送'}
+                    </button>
                   )}
-                  <button className="primary-button" type="button" onClick={() => { void (prepMode === 'new' ? generate(plannedDraftKind) : startImprovePlan()) }} disabled={busyAction !== '' || improveBusy || (prepMode !== 'new' && selectedFiles.length === 0)}>
-                    {busyAction !== '' || improveBusy ? '生成中…' : '✦ 发送'}
-                  </button>
                 </div>
                 {improveError !== '' && <p className="inline-error" role="alert">{improveError}</p>}
                 {prepMode === 'single' && aiEditableCurrentFiles.length === 0 && (

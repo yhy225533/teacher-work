@@ -220,7 +220,8 @@ describe('V172-A → V19-A 工作台骨架：对话栏 / 主舞台 / 修改记�
 
     // 舞台空态卡片化，分模式文案：new（从零生成）vs single/lesson（尚无方案）
     expect(draft).toContain('workspace-card draft-content-empty')
-    expect(draft).toContain('还没有生成内容。右侧添加依据或直接写要求，点「✦ 发送」开始从零生成；生成后节点会出现在「修改记录」里。')
+    // V110-C（D63）：new 模式发送区改为三按钮并排，空态文案同步指向三个生成按钮（single/lesson 的 ✦ 发送文案不变）
+    expect(draft).toContain('还没有生成内容。右侧添加依据或直接写要求，点「✦ 讲义 / 例题 / 作业」任一按钮从零生成（可连发多份）；生成后节点会出现在「修改记录」里。')
     expect(draft).toContain('还没有修改方案。右侧说清这次要改什么，点「✦ 发送」先出方案，确认后才会生成新副本。')
     expect(draft).not.toContain('左侧选择修改节点，或在上方生成新内容')
     expect(styles).toContain('.workspace-card.draft-content-empty {')
