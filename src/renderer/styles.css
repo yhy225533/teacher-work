@@ -2263,6 +2263,12 @@ button:disabled {
 .pdf-preview-state { color: var(--color-text-muted); font-size: 12px; padding: 24px; }
 .pdf-preview-fallback { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px 0 16px; color: var(--color-text-muted); font-size: 12px; }
 
+/* V1.11（D67）：docx-preview 容器——docx-wrapper 自带版式样式，外层只做尺寸约束与背景。 */
+.docx-preview { display: flex; justify-content: center; padding: 16px 8px; min-width: 0; overflow-x: auto; background: #f1f5f9; }
+.docx-preview .docx-wrapper { max-width: 100%; padding: 16px !important; }
+.docx-preview .docx-wrapper > section.docx { width: 100% !important; background: #fff; box-shadow: 0 1px 6px rgb(15 23 42 / 14%); }
+.docx-preview-state { padding: 16px; }
+
 /* V1.2 course information architecture（V19-C：course-page-header 统计条退役） */
 .section-toolbar,
 .viewed-lesson-panel,

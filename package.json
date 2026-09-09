@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
+    "docx-preview": "^0.4.0",
     "katex": "^0.18.4",
     "officeparser": "7.5.1",
     "react": "^19.2.8",

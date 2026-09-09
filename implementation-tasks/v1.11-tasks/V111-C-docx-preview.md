@@ -1,6 +1,6 @@
 # V111-C · Word(docx) 应用内预览（docx-preview）
 
-状态：TODO
+状态：DONE
 
 ## 目标
 
@@ -24,4 +24,10 @@
 
 ## 完成记录
 
-（待实施）
+2026-09-10 完成：
+
+- **依赖**：`docx-preview ^0.4.0`（传递依赖 jszip；node 环境 import 干净，无需测试占位）；
+- **组件**：`src/renderer/docx-preview.tsx`——静态 import `renderAsync`（渲染器边界禁 dynamic import，与 V111-B 同规则）；dataUrl → ArrayBuffer（复用 pdf-binary 的解码工具）→ `renderAsync(buffer, container, undefined, { inWrapper: true })`；卸载/重渲染前 `container.textContent = ''` 清空；失败态 inline-error；
+- **接线**：`lesson-material-reader.tsx` 新增 `DOCX_MIME` 常量（与 Main 白名单一一对应）；binary + docx MIME → `<DocxPreview>` + 同款 `.pdf-preview-fallback` 逃生门；非 pdf/docx 的 binary（.doc/.pptx/.xlsx——Main 侧本就返回 unsupported，双重保险）→ 系统打开兜底；PDF 分支（V111-B）零改动；
+- **样式**：`.docx-preview` 容器（灰底衬托 + 居中限宽 + docx-wrapper 尺寸约束 + section.docx 白底阴影）+ `.docx-preview-state`；
+- **测试**：演进 `tests/v1.11-pdf-preview.test.ts`（10 例）——reader docx 分支结构 + DOCX_MIME 常量钉测、DocxPreview 静态导入 + 受控容器 + inWrapper 字面量 + 卸载清空、.doc 不进渲染分支双重钉住（renderer 常量 + Main 白名单）、依赖白名单（react-pdf + docx-preview）、docx 样式组；全量 97 files / 554 tests passed（553 + 1 skipped 既有）、typecheck、lint 全绿。

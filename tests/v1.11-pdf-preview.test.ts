@@ -7,13 +7,15 @@ function source(relativePath: string): string {
   return readFileSync(fileURLToPath(new URL(relativePath, import.meta.url)), 'utf8')
 }
 
-/** V1.11（D66/D68）：PDF 应用内预览——binary 载荷渲染分支与组件结构钉测。 */
+/** V1.11（D66/D67/D68）：PDF/docx 应用内预览——binary 载荷渲染分支与组件结构钉测。 */
 describe('V111-B PDF 应用内预览', () => {
   it('reader renders the pdf branch for binary payloads and keeps the fallback escape hatch', () => {
     const reader = source('../src/renderer/lesson-material-reader.tsx')
-    // binary + pdf MIME → PdfPreview；非 pdf 的 binary（本版无渲染方）→ 系统打开兜底
+    // binary + pdf MIME → PdfPreview；docx MIME → DocxPreview；其余 binary → 系统打开兜底
     expect(reader).toContain("content?.kind === 'binary' && content.file.mimeType === 'application/pdf'")
     expect(reader).toContain('<PdfPreview dataUrl={content.dataUrl} />')
+    expect(reader).toContain("content?.kind === 'binary' && content.file.mimeType === DOCX_MIME")
+    expect(reader).toContain('<DocxPreview dataUrl={content.dataUrl} />')
     expect(reader).toContain('pdf-preview-fallback')
     expect(reader).toContain('用系统应用打开')
     // 既有 text/image/unsupported 分支保持
@@ -47,10 +49,11 @@ describe('V111-B PDF 应用内预览', () => {
     expect(binary).toContain('window.atob')
   })
 
-  it('dependency whitelist: react-pdf added, nothing else new beyond the frozen set', () => {
+  it('dependency whitelist: react-pdf and docx-preview added, nothing else beyond the frozen set', () => {
     const pkg = JSON.parse(source('../package.json')) as { dependencies: Record<string, string> }
     expect(Object.keys(pkg.dependencies).sort()).toEqual([
       'better-sqlite3',
+      'docx-preview',
       'katex',
       'officeparser',
       'react',
@@ -71,5 +74,32 @@ describe('V111-B PDF 应用内预览', () => {
     expect(service).toContain("mimeType === 'application/pdf'")
     expect(service).toContain("mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'")
     expect(service).not.toContain("mimeType === 'application/msword'")
+  })
+})
+
+describe('V111-C Word(docx) 应用内预览', () => {
+  it('DocxPreview renders statically (no dynamic import) into a controlled container', () => {
+    const component = source('../src/renderer/docx-preview.tsx')
+    // 渲染器边界：静态 import + 受控容器 + 卸载清空（textContent 置空），无落盘
+    expect(component).toContain("import { renderAsync } from 'docx-preview'")
+    expect(component).not.toContain('import(')
+    expect(component).toContain('renderAsync(dataUrlToUint8Array(dataUrl).buffer as ArrayBuffer, container')
+    expect(component).toContain("container.textContent = ''")
+    expect(component).toContain('{ inWrapper: true }')
+  })
+
+  it('styles: docx preview container present with docx-wrapper sizing constraints', () => {
+    const styles = source('../src/renderer/styles.css')
+    expect(styles).toContain('.docx-preview {')
+    expect(styles).toContain('.docx-preview .docx-wrapper')
+    expect(styles).toContain('.docx-preview-state {')
+  })
+
+  it('reader keeps .doc/.pptx/.xlsx out of both binary preview branches (via Main whitelist pin)', () => {
+    // reader 的 binary 渲染只认 pdf/docx 两个 MIME（DOCX_MIME 常量与 Main 白名单一一对应）；
+    // .doc 等其余类型在 Main 侧就返回 unsupported，不经 binary 分支——双重钉住。
+    const reader = source('../src/renderer/lesson-material-reader.tsx')
+    expect(reader).toContain("const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'")
+    expect(reader).not.toContain("mimeType === 'application/msword'")
   })
 })

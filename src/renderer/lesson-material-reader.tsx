@@ -3,6 +3,7 @@ import katex from 'katex'
 import 'katex/dist/katex.min.css'
 
 import MdEditor from './md-editor'
+import DocxPreview from './docx-preview'
 import PdfPreview from './pdf-preview'
 import type { ManagedFileContent, ManagedFileRecord } from '../shared/file-contracts'
 import {
@@ -14,6 +15,9 @@ import {
 } from './lesson-prep-context'
 import { normalizeMarkdownImageReferences, normalizeRichText } from './rich-text'
 import { toErrorMessage } from './ui-utils'
+
+/** V1.11（D67）：docx MIME 常量——与 Main 侧 isPreviewableBinary 白名单一一对应。 */
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
 /**
  * V19-B（D57）：阅读器只保留正文区/树分组/题图/编辑态——文件头与操作行退役，操作并入
@@ -169,7 +173,19 @@ export default function LessonMaterialReader({
               )}
             </>
           )}
-          {!loading && error === '' && content?.kind === 'binary' && content.file.mimeType !== 'application/pdf' && (
+          {/* V1.11（D67）：Word(.docx) 应用内预览；.doc/.pptx/.xlsx 等其余 binary 仍走系统打开。 */}
+          {!loading && error === '' && content?.kind === 'binary' && content.file.mimeType === DOCX_MIME && (
+            <>
+              <DocxPreview dataUrl={content.dataUrl} />
+              {selectedFile !== null && onOpenFile !== undefined && (
+                <div className="pdf-preview-fallback">
+                  <span>需要打印或另存？</span>
+                  <button className="secondary-button" type="button" onClick={() => onOpenFile(selectedFile.id)}>用系统应用打开</button>
+                </div>
+              )}
+            </>
+          )}
+          {!loading && error === '' && content?.kind === 'binary' && content.file.mimeType !== 'application/pdf' && content.file.mimeType !== DOCX_MIME && (
             <div className="material-reader-state">
               <p>这种文件暂时不能在工作台内预览。</p>
               {selectedFile !== null && onOpenFile !== undefined && <button className="primary-button" type="button" onClick={() => onOpenFile(selectedFile.id)}>用系统应用打开</button>}
