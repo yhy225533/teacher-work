@@ -1598,3 +1598,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **自动化边界（如实记录）**：① 保存对话框（Windows 模态）→ 注入测试 20 例（export-service/export-ipc：保存/取消/占用/超时/并发 BUSY/打印窗销毁）+ 人工走查；② CDP Page.printToPDF 未实现（-32601，page/flat 双会话实测）→ printToPdfOptions 注入测试同参钉测 + 人工走查；③ 错误码跨 contextBridge 不存活（Electron 重建 Error）为既有行为，UI 只消费 message（冒烟实测确认）。
 - **验收记录**：`docs/v1.9-acceptance.md`（实施表六节点 + 自动门 + 冒烟 21/21 + 安全边界复核 + 产品负责人双清单 16 条）。
 - Git：本地提交 `v1.9(V19-F): final gates, smoke and acceptance record`；随后 push（沿用 GitHub 授权）。`checkpoint-V1.9-pass` 待产品负责人双清单走查确认后创建（与 V1.8.1 走查标签同批，互不阻塞）。
+
+## V1.10 · 立项（2026-09-09）
+
+产品负责人 2026-09-09 确认五项使用反馈分析（另一会话产出，本会话逐条代码核实）后立项。范围 = 问题 1/4/5；问题 2（AI 429）定位为中转站限流，应用侧不改；问题 3（Office/PDF 应用内渲染）另立 V1.11 候选，调研结论（pdfjs-dist + docx-preview 技术选型、三类文件分层——自产文件/完整卷子/参考文件、MinerU/officeparser 抽取文本目前只进搜索索引而 AI 参考与预览均读不到的廉价先行项）记录在 `docs/v1.10-walkthrough-fixes-plan.md` §8。
+
+- **问题 5（真 bug，V110-A）**：备课勾选状态（selectedReferenceFileIds 等局部 state）经「＋外部资料/＋素材库」往返丢失——根因 = picker 打开走 setActiveItem 切页卸载教学内容页，重挂载初始化按模式全选/清空。修复 = 渲染保活（picker 期间教学内容页不卸载）；Main 侧 copyToLesson/importToLesson 补发既有 contentChanged 广播（V19-F 已在 renderer 加的 overviewRevision 兜底保留，双保险）。
+- **问题 1（交互，V110-B）**：V19-B/D57 收纳导致移除入口五步且单份。修复 = 树节点 hover ✕ + 批量管理 toggle + 历史版本行移除；全部走既有 softDeleteFile；readOnly 零入口、当前讲义当前版不出 ✕（唯一正文保护）。
+- **问题 4（交互回退，V110-C）**：V19-A/D55 把生成类型收成单选下拉。修复 = new 模式恢复 V1.2 三按钮并排（讲义/例题/作业），连发独立文件；drafts.generate 合同零改动（D63 否决 kind 多选合同与一键全生成）。
+- **约束（D64）**：零 migration、零新依赖、零新 IPC；不重做任何冻结语义；V110-D 唯一验收点；checkpoint-V1.10-pass 待走查确认。
+- 任务链 `implementation-tasks/v1.10-tasks/`（V110-A → B → C → D）；决策 `implementation-tasks/V1_10_DECISIONS.md`（D61–D64）。
+- Git：本地提交 `plan(V1.10): walkthrough fixes scoping and task chain`（方案 + 决策 + 任务链 + 协议/状态文件）；随后 push（沿用 GitHub 授权）。
