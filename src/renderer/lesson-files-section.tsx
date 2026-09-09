@@ -164,8 +164,9 @@ export default function LessonFilesSection({
         await window.teacherWorkbench.files.softDeleteFile({ fileId: file.id })
         removed += 1
       }
-      if (manageSelectedIds.includes(selectedFileId)) setSelectedFileId('')
+      // V1.10.1/D65：同 removeFile——先刷新列表再清选中，避免旧列表自动重选已删文件。
       await reload()
+      setSelectedFileId((current) => manageSelectedIds.includes(current) ? '' : current)
       setNotice(`已从本课移除 ${removed} 份资料。`)
     } catch (removeError) {
       if (removed > 0) {
@@ -197,8 +198,11 @@ export default function LessonFilesSection({
     setNotice('')
     try {
       await window.teacherWorkbench.files.softDeleteFile({ fileId })
-      setSelectedFileId('')
+      // V1.10.1/D65：先刷新再清选中——清空选中瞬间若列表仍是旧值，阅读器自动重选会把
+      // 刚软删的文件重新选中，触发注定失败的 readContent / mineru.getStatus 双请求。
+      // 函数式更新：仅当此刻仍选中已删文件时才清空（await 期间用户改选了别的文件则保留）。
       await reload()
+      setSelectedFileId((current) => current === fileId ? '' : current)
       setNotice(`已从本课移除“${file.originalName}”。`)
     } catch (removeError) {
       setError(toErrorMessage(removeError, '课次资料读取失败，请稍后重试。'))

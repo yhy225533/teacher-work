@@ -1647,3 +1647,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **收尾复核**：Electron 进程全部终止、冒烟临时目录全部删除；`docs/v1.10-acceptance.md` 完成（实施表 + 自动门 + 冒烟记录 + 安全边界复核 + 走查清单 18 条）。
 - `checkpoint-V1.10-pass` 不创建：待产品负责人按验收文档走查确认后创建（与 checkpoint-V1.9-pass / checkpoint-V1.8.1-pass 互不阻塞）。
 - Git：本地提交 `v1.10(V110-D): final gates, smoke 17/17 and acceptance record`；随后 push（沿用 GitHub 授权）。
+
+## V1.10.1 · V1101-A 移除资料选中重置竞态（2026-09-09 DONE）
+
+维护增量（D65，V1.5.3.1 先例：并入 V1.10 验收，不单独建 pass 标签；V173-fix/V18-fix 先例单里程碑提交，不拆 plan 提交）。产品负责人走查 V1.10 后报告：移除资料瞬间连出两条 error 日志。
+
+- **现象与根因**：`ipc.file_request_failed`（files:read-content"文件已删除，请先恢复。"）+ `ipc.mineru_request_failed`（mineru:get-status"文件不存在或已删除。"）同一渲染帧连发、随后自愈。根因 = 单份/批量移除旧序「先 `setSelectedFileId('')`、后 `await reload()`」——清选中渲染瞬间 `displayFiles` 仍为旧列表，`LessonMaterialReader` 自动重选（choosePreferredFile）把刚软删文件重新选中，连发两条注定失败的 IPC；主进程守卫（requireActiveFile/MineruService.getStatus）按设计拒绝。竞态非 V1.10 新引入，D62 三层移除入口提高了触发概率。
+- **修复（Renderer 侧顺序，一处语义两处调用点）**：`removeFile` / `removeSelectedFiles` 均改为「软删 → 先 `await reload()` → 函数式按需清选中」（`(current) => current === fileId ? '' : current` / `(current) => manageSelectedIds.includes(current) ? '' : current`）；列表先落新值后清选中，自动重选只命中有效文件；函数式更新保证 await 期间用户改选不被旧闭包覆盖。阅读器自动重选逻辑、主进程守卫、IPC/合同面零改动；零 migration、零新依赖、零新通道；D62 三层入口结构不动；softDeleteFile 不补发 contentChanged（D61 广播面仅导入路径，删除路径由调用方 reload 收口）。
+- **测试**：v1.10.1-remove-selection-race 4 例钉测（单份/批量顺序：软删→reload→按需清选中；函数式更新；旧序不得回归；零 IPC 面）；既有钉测零演进。门禁：全量 95 files / 538 tests（1 skipped 既有）、typecheck、lint、production build、git diff --check 全绿。
+- **隔离 Windows 冒烟复跑**（`tmp/v110-smoke/run-smoke.mjs`，production + 隔离数据目录 + fake OpenAI-compatible + CDP）：移除场景（树 hover ✕ 单删 / 管理态批量移除 / 🕘 历史 ✕）stderr 零 `file_request_failed` / `mineru_request_failed`；既有场景回归通过；进程/临时目录双复核。
+- **验收**：`docs/v1.10-acceptance.md` 追加 V1.10.1 证据小节（不改写 V110 历史记录）；不创建 `checkpoint-V1.10.1-pass`，`checkpoint-V1.10-pass` 仍待产品负责人走查确认。
+- Git：本地提交 `v1.10.1(V1101-A): fix remove-then-reselect race in lesson files section`；随后 push（沿用 GitHub 授权）。
