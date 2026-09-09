@@ -240,3 +240,14 @@
 | V110-C 生成类型三按钮（问题 4） | DONE | new 模式恢复讲义/例题/作业三按钮并排（可连发独立文件），撤除单选下拉与 improveKind；drafts.generate 合同零改动；D63 |
 | V110-D 最终门禁与验收 | DONE | 全量测试、typecheck、lint、build、diff check、隔离 Windows 冒烟（状态保活往返 + 批量移除 + 连续生成）+ docs/v1.10-acceptance.md；2026-09-09 产品负责人走查确认"基本验收通过"（含 V1.10.1 双 error 修复复验），确认提交创建 checkpoint-V1.10-pass |
 | V1101-A 移除资料选中重置竞态（V1.10.1/D65） | DONE | 走查反馈修复：移除资料瞬间连出两条 error 日志（files:read-content "文件已删除，请先恢复。" + mineru:get-status "文件不存在或已删除。"，同一渲染帧，随后自愈）。根因 = removeFile/removeSelectedFiles 旧序「先清选中、后 reload」，清选中渲染瞬间旧列表触发阅读器自动重选已删文件。修复 = 两处改为「软删 → 先 await reload() → 函数式按需清选中」，阅读器自动重选/主进程守卫/IPC 面零改动；零 migration、零新依赖、零新通道。2026-09-09 完成：单份/批量两调用点顺序修复 + v1.10.1-remove-selection-race 4 例钉测；全量 95 files / 538 tests（1 skipped 既有）、typecheck、lint、production build、diff check 全绿；隔离 Windows 冒烟复跑移除场景 stderr 零 file_request_failed/mineru_request_failed；验收追加至 docs/v1.10-acceptance.md（V1.5.3.1 先例并入母版本验收，不创建 checkpoint-V1.10.1-pass） |
+
+## V1.11 已立项（Office/PDF 应用内预览，走查反馈问题 3）
+
+基线：V1.10 连同 V1.10.1 已于 2026-09-09 走查确认冻结在 `checkpoint-V1.10-pass`。产品负责人 2026-09-10 确认 2026-09-09 调研结论（`docs/v1.10-walkthrough-fixes-plan.md` §8）后立项。设计基准 `docs/v1.11-office-pdf-preview-plan.md`，决策 D66–D69（`implementation-tasks/V1_11_DECISIONS.md`）。任务链 `implementation-tasks/v1.11-tasks/`，实施顺序 V111-A → B → C → D，同一时刻最多一个 `IN_PROGRESS`；V111-D 为唯一全量验收点（验收文档 `docs/v1.11-acceptance.md`）。**依赖冻结解除范围 = 仅 `react-pdf`（携 pdfjs-dist）与 `docx-preview`（携 jszip）两个直接依赖**（D69）；零 migration、零新 IPC 通道（既有 `files:read-content` 响应合同加 `binary` 分支，image/text/unsupported/超限路径逐字节不变）；范围不含 .doc/.pptx/.xlsx 渲染、预览打印/导出、AI 参考文本线（后续候选，见方案 §8）。不运行 portable/installer；`checkpoint-V1.11-pass` 待产品负责人按验收文档走查确认后创建。
+
+| 里程碑 | 状态 | 计划内容 |
+|---|---|---|
+| V111-A readContent binary 合同扩展 | TODO | ManagedFileContent 加 `{file, kind:'binary', dataUrl}` 分支（与 image 同构）+ 守卫演进 + Main 按 mime 白名单（pdf/docx）+ 12MB 上限返回；image/text/unsupported/超限零改动；测试：binary 往返 pdf/docx 各一 + 伪造 dataUrl 拒绝 + 既有分支零回归 |
+| V111-B PDF 应用内预览 | TODO | `npm i react-pdf`（pdfjs React 19 封装）+ PdfPreview 组件（Document/Page 连续滚动、Vite worker 配置）+ reader binary→PDF 分支接线 + 样式 + 失败态逃生门；门禁含 production build（worker 资产实跑验证） |
+| V111-C Word(docx) 应用内预览 | TODO | `npm i docx-preview` + DocxPreview 组件（renderAsync 到受控容器、卸载清空）+ reader docx 分支接线 + 样式；.doc/.pptx/.xlsx 维持 unsupported（钉测明示） |
+| V111-D 最终门禁与验收 | TODO | 全量测试、typecheck、lint、production build、diff check；隔离 Windows 冒烟（真实 PDF/docx fixture 渲染断言：canvas 非空白 + .docx-wrapper 含文本 + md/图片/unsupported 三分支零回归 + stderr + 双复核）；`docs/v1.11-acceptance.md`；`checkpoint-V1.11-pass` 待产品负责人走查确认后创建 |
