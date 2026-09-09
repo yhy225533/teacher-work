@@ -1609,3 +1609,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **约束（D64）**：零 migration、零新依赖、零新 IPC；不重做任何冻结语义；V110-D 唯一验收点；checkpoint-V1.10-pass 待走查确认。
 - 任务链 `implementation-tasks/v1.10-tasks/`（V110-A → B → C → D）；决策 `implementation-tasks/V1_10_DECISIONS.md`（D61–D64）。
 - Git：本地提交 `plan(V1.10): walkthrough fixes scoping and task chain`（方案 + 决策 + 任务链 + 协议/状态文件）；随后 push（沿用 GitHub 授权）。
+
+## V1.10 · V110-A 备课状态保活（2026-09-09 DONE）
+
+设计基准 `docs/v1.10-walkthrough-fixes-plan.md` §2 + D61。问题 5（真 bug）修复。
+
+- **根因回顾**：「＋外部资料/＋素材库」原走 setActiveItem 切页卸载教学内容页，DraftPanel 勾选状态（selectedReferenceFileIds 等局部 state）随卸载清零，重挂载初始化按模式全选/清空——✕ 的回来、勾好的丢失。
+- **修复形态（渲染保活）**：App.tsx 的 onOpenExternal/onOpenMaterials 只置 picker flag + prepContext（不再 setActiveItem）；教学内容页分支内以 `.prep-picker-overlay` 覆盖层渲染两个 picker 面板——TeachingContentPage/DraftPanel 全程挂载。returnToPrep 收起浮层；侧边栏切页仍关 picker 走卸载（主动离开不承诺保活，语义不变）。外部资料/素材库独立页面分支回归纯浏览（prepContext 默认 null）。
+- **Main 补广播**：external-library-ipc copyToLibrary/copyToLesson + file-ipc copyToLesson 三处在 enqueueIndex 后补发既有 notifyContentChanged（可选依赖注入；registerExternalLibraryIpc 接线 emitContentChanged）。素材库路径（files:copy-to-lesson）同样缺广播是本次实现时发现的第三个缺口，一并补齐。载荷沿用既有事件合同（无路径）。
+- **DraftPanel 订阅**：新增 files.onContentChanged → reload()——保活期间新导入文件经广播重拉，reconcileSelectedLessonFileIds 并入新文件、既有选择原样保留（V1.7.2 新文件自动入选择语义不变）。
+- **测试**：v1.10-prep-state-keepalive 5 例 + external-library-ipc/file-ipc 广播断言演进。门禁：全量 92 files / 526 tests（1 skip 既有）、typecheck、lint 全绿。
+- Git：本地提交 `v1.10(V110-A): prep picker keep-alive and contentChanged broadcasts`；随后 push（沿用 GitHub 授权）。

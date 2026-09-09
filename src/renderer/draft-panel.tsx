@@ -397,6 +397,12 @@ export default function DraftPanel({
     confirmedBudgetSignature.current = ''
   }, [selectedReferenceFileIds, targetFileId, lessonBaselineFileIds])
 
+  // V1.10/D61：picker 保活后本组件不再卸载重挂，新导入文件经 contentChanged 广播触发重拉，
+  // reconcileSelectedLessonFileIds 会把新文件并入既有选择（既有选择原样保留）。
+  useEffect(() => window.teacherWorkbench.files.onContentChanged(() => {
+    void reload()
+  }), [])
+
   // D22：订阅流事件（按 requestId 过滤）——reasoning 只累计进度计数（不展示思维链原文），text 逐字上屏。
   useEffect(() => window.teacherWorkbench.ai.onStreamEvent((event) => {
     if (event.requestId !== streamRequestId.current) return

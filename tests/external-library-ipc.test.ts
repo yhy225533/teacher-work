@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import { ExternalLibraryService } from '../src/main/external/external-library-service'
 import { ManagedFileService } from '../src/main/files/managed-file-service'
+import type { ManagedFileContentChanged } from '../src/shared/file-contracts'
 import { CoreDataService } from '../src/main/data/core-data-service'
 import {
   dispatchExternalLibraryIpc,
@@ -69,6 +70,7 @@ function createDependencies(): {
   readonly managedFiles: ManagedFileService
   readonly lessonId: string
   readonly dependencies: ExternalLibraryIpcDependencies
+  readonly notified: ManagedFileContentChanged[]
 } {
   const root = mkdtempSync(join(tmpdir(), 'teacher-workbench-v11-ipc-'))
   temporaryRoots.push(root)
@@ -85,14 +87,17 @@ function createDependencies(): {
   const course = core.nodes.createCourse('IPC 课程', 'class')
   const period = core.nodes.createPeriod(course.id, '阶段')
   const lesson = core.nodes.createLesson(period.id, '课次')
+  const notified: ManagedFileContentChanged[] = []
   const dependencies: ExternalLibraryIpcDependencies = {
     getService: () => service,
     getManagedFileService: () => managedFiles,
     chooseRootPath: async () => libraryRoot,
     openPath: async () => '',
     showInFolder: () => undefined,
+    // V1.10/D61：复制到素材库/课次后必须广播 contentChanged（备课保活跟随）。
+    notifyContentChanged: (event) => { notified.push(event) },
   }
-  return { libraryRoot, service, managedFiles, lessonId: lesson.id, dependencies }
+  return { libraryRoot, service, managedFiles, lessonId: lesson.id, dependencies, notified }
 }
 
 describe('V11-01 external library IPC', () => {
@@ -171,7 +176,8 @@ describe('V11-01 external library IPC', () => {
   })
 
   it('copies an external file independently to the material library or current lesson', async () => {
-    const { libraryRoot, managedFiles, lessonId, dependencies } = createDependencies()
+    const copyDeps = createDependencies()
+    const { libraryRoot, managedFiles, lessonId, dependencies } = copyDeps
     const logger = new TestLogger()
     const indexedIds: string[] = []
     const copyingDependencies: ExternalLibraryIpcDependencies = {
@@ -208,6 +214,11 @@ describe('V11-01 external library IPC', () => {
       expect.objectContaining({ targetType: 'lesson', targetId: lessonId }),
     ])
     expect(indexedIds).toHaveLength(2)
+    // V1.10/D61：两次导入（素材库 + 课次）各广播一次，fileId 对应新文件。
+    const { notified } = copyDeps
+    expect(notified).toHaveLength(2)
+    expect(notified.every((event) => event.contentChanged === true)).toBe(true)
+    expect(new Set(notified.map((event) => event.fileId))).toEqual(new Set(overview.files.map((file) => file.id)))
 
     const linkedFileId = overview.links[0].fileId
     const libraryFile = overview.files.find((file) => file.id !== linkedFileId)

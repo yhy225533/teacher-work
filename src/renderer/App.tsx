@@ -178,21 +178,9 @@ function AppContent(): React.JSX.Element {
             onOpenTeachingContent={(context) => openTeachingContent(openTeachingContentForContext(context, courseOriginStudentId))}
           />
         ) : activeItem === '素材库' ? (
-          materialPickerOpen && prepContext !== null ? (
-            <MaterialPickerPanel
-              context={prepContext}
-              onAdded={returnToPrep}
-              onCancel={returnToPrep}
-            />
-          ) : (
-            <ManagedFilesPanel />
-          )
+          <ManagedFilesPanel />
         ) : activeItem === '外部资料' ? (
-          <ExternalLibraryPanel
-            prepContext={externalPickerOpen ? prepContext : null}
-            onAddedToLesson={returnToPrep}
-            onCancel={returnToPrep}
-          />
+          <ExternalLibraryPanel />
         ) : activeItem === '学生' ? (
           <StudentsPage
             selectedStudentId={selectedStudentId}
@@ -202,27 +190,45 @@ function AppContent(): React.JSX.Element {
         ) : activeItem === '设置' ? (
           <SettingsPanel />
         ) : activeItem === '教学内容' ? (
-          <TeachingContentPage
-            target={teachingContentTarget}
-            initialDraftId={prepDraftId}
-            onTargetChange={(nextTarget) => {
-              setTeachingContentTarget(nextTarget)
-              setPrepContext(null)
-              setPrepDraftId(null)
-            }}
-            onBackToCourses={returnToCourses}
-            onBackToStudent={(studentId) => openStudent(studentId)}
-            onOpenExternal={(context) => {
-              setPrepContext(context)
-              setExternalPickerOpen(true)
-              setActiveItem('外部资料')
-            }}
-            onOpenMaterials={(context) => {
-              setPrepContext(context)
-              setMaterialPickerOpen(true)
-              setActiveItem('素材库')
-            }}
-          />
+          <>
+            <TeachingContentPage
+              target={teachingContentTarget}
+              initialDraftId={prepDraftId}
+              onTargetChange={(nextTarget) => {
+                setTeachingContentTarget(nextTarget)
+                setPrepContext(null)
+                setPrepDraftId(null)
+              }}
+              onBackToCourses={returnToCourses}
+              onBackToStudent={(studentId) => openStudent(studentId)}
+              onOpenExternal={(context) => {
+                setPrepContext(context)
+                setExternalPickerOpen(true)
+              }}
+              onOpenMaterials={(context) => {
+                setPrepContext(context)
+                setMaterialPickerOpen(true)
+              }}
+            />
+            {externalPickerOpen && prepContext !== null && (
+              <div className="prep-picker-overlay" role="presentation">
+                <ExternalLibraryPanel
+                  prepContext={prepContext}
+                  onAddedToLesson={returnToPrep}
+                  onCancel={returnToPrep}
+                />
+              </div>
+            )}
+            {materialPickerOpen && prepContext !== null && (
+              <div className="prep-picker-overlay" role="presentation">
+                <MaterialPickerPanel
+                  context={prepContext}
+                  onAdded={returnToPrep}
+                  onCancel={returnToPrep}
+                />
+              </div>
+            )}
+          </>
         ) : (
           <section className="placeholder-card" aria-live="polite">
             <div className="placeholder-icon" aria-hidden="true">✦</div>

@@ -12,7 +12,7 @@ import {
   isExternalPathRequest,
   isNullableExternalRootSummary,
 } from '../../shared/external-library-contracts'
-import { isManagedFileRecord, type ManagedFileRecord } from '../../shared/file-contracts'
+import { isManagedFileRecord, type ManagedFileContentChanged, type ManagedFileRecord } from '../../shared/file-contracts'
 import {
   EXTERNAL_LIBRARY_IPC_CHANNELS,
   failure,
@@ -39,6 +39,8 @@ export interface ExternalLibraryIpcDependencies {
   readonly showInFolder: (path: string) => void
   readonly enqueueIndex?: (fileId: string) => void
   readonly activityGate?: WorkspaceActivityGate
+  /** V1.10/D61：导入/复制进课次后广播（既有 contentChanged 事件，DraftPanel/课程页计数跟随）。 */
+  readonly notifyContentChanged?: (event: ManagedFileContentChanged) => void
 }
 
 export const EXTERNAL_LIBRARY_CHANNELS: readonly IpcChannel[] = Object.values(
@@ -134,6 +136,11 @@ export async function dispatchExternalLibraryIpc(
         const sourcePath = service.getFilePath(request.rootId, request.relativePath)
         const imported = dependencies.getManagedFileService().importFile(sourcePath)
         dependencies.enqueueIndex?.(imported.id)
+        dependencies.notifyContentChanged?.({
+          fileId: imported.id,
+          contentChanged: true,
+          file: imported,
+        })
         return ensureResponse<ManagedFileRecord>(imported, isManagedFileRecord)
       }
       case EXTERNAL_LIBRARY_IPC_CHANNELS.copyToLesson: {
@@ -145,6 +152,11 @@ export async function dispatchExternalLibraryIpc(
           request.lessonId,
         )
         dependencies.enqueueIndex?.(imported.id)
+        dependencies.notifyContentChanged?.({
+          fileId: imported.id,
+          contentChanged: true,
+          file: imported,
+        })
         return ensureResponse<ManagedFileRecord>(imported, isManagedFileRecord)
       }
     }

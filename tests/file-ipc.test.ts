@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { ManagedFileService } from '../src/main/files/managed-file-service'
+import type { ManagedFileContentChanged } from '../src/shared/file-contracts'
 import { CoreDataService } from '../src/main/data/core-data-service'
 import {
   dispatchFileIpc,
@@ -204,15 +205,23 @@ describe('L02 managed file IPC', () => {
     const source = service.importFile(sourcePath)
     const indexedIds: string[] = []
 
+    const notified: ManagedFileContentChanged[] = []
     const response = await dispatchFileIpc(
       FILE_IPC_CHANNELS.copyToLesson,
       { fileId: source.id, lessonId: lesson.id },
-      { ...dependencies, enqueueIndex: (fileId) => indexedIds.push(fileId) },
+      {
+        ...dependencies,
+        enqueueIndex: (fileId) => indexedIds.push(fileId),
+        notifyContentChanged: (event) => { notified.push(event) },
+      },
       new TestLogger(),
     )
 
     expect(response).toMatchObject({ ok: true, data: { originFileId: source.id } })
     expect(indexedIds).toHaveLength(1)
+    // V1.10/D61：素材库复制进课次广播 contentChanged（备课保活后 DraftPanel 跟随新文件）。
+    expect(notified).toHaveLength(1)
+    expect(notified[0]).toMatchObject({ fileId: indexedIds[0], contentChanged: true })
     expect(service.getOverview().links).toEqual([
       expect.objectContaining({ fileId: indexedIds[0], targetType: 'lesson', targetId: lesson.id }),
     ])

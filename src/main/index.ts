@@ -577,6 +577,7 @@ void app.whenReady().then(() => {
       getManagedFileService: getManagedFiles,
       activityGate,
       enqueueIndex,
+      notifyContentChanged: emitContentChanged,
       chooseRootPath: async () => {
         const options: OpenDialogOptions = {
           properties: ['openDirectory'],

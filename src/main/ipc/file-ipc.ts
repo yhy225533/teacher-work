@@ -169,6 +169,12 @@ export async function dispatchFileIpc(
           (payload as CopyFileToLessonRequest).lessonId,
         )
         dependencies.enqueueIndex?.(copied.id)
+        // V1.10/D61：素材库复制进课次后广播（既有 contentChanged 事件，DraftPanel/课程页计数跟随）。
+        dependencies.notifyContentChanged({
+          fileId: copied.id,
+          contentChanged: true,
+          file: copied,
+        })
         return ensureResponse(copied, isManagedFileRecord)
       }
       case FILE_IPC_CHANNELS.copyToStudent:

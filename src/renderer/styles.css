@@ -2287,6 +2287,31 @@ button:disabled {
 .course-minimal-head > strong { color: var(--color-text-strong); font-size: 15px; }
 .course-minimal-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 
+/* V1.10/D61：备课资料选择浮层——picker 打开时教学内容页保持挂载（状态不丢），面板以覆盖层呈现。 */
+.prep-picker-overlay {
+  position: fixed;
+  z-index: 88;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  padding: 40px 24px;
+  background: rgb(15 23 42 / 32%);
+  overflow: auto;
+}
+.prep-picker-overlay .external-library-panel,
+.prep-picker-overlay .material-picker-panel {
+  width: min(880px, 100%);
+  flex: 0 1 auto;
+  height: fit-content;
+  max-height: calc(100vh - 80px);
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  padding: 18px;
+  box-shadow: 0 18px 48px rgb(15 23 42 / 18%);
+}
+
 /* V19-C（D58）：当前课次行动卡——crumb + 大字 + chips + 行动键。 */
 .lesson-hero-card {
   display: flex;
