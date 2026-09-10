@@ -100,12 +100,22 @@ describe('V112-B external service readPreview (D70)', () => {
     expect(doc.mimeType).toBe('application/msword')
     expect(doc.message).toContain('系统应用打开')
 
-    const large = Buffer.alloc(12 * 1024 * 1024 + 1, 0)
+    // V1.12.1（D73）：超限档随 12→50MB 上限演进
+    const large = Buffer.alloc(50 * 1024 * 1024 + 1, 0)
     writeFileSync(join(libraryRoot, '大文件.pdf'), large)
     const oversize = service.readPreview(rootId, '大文件.pdf')
     expect(oversize.kind).toBe('unsupported')
     if (oversize.kind !== 'unsupported') throw new Error('narrow')
     expect(oversize.message).toContain('文件较大')
+
+    // 50MB 内（原 12MB 之上）可预览——与 managed 侧同步放宽
+    const mid = Buffer.alloc(12 * 1024 * 1024 + 1, 0)
+    mid.write('%PDF-1.4', 0, 'utf8')
+    writeFileSync(join(libraryRoot, '扫描卷.pdf'), mid)
+    const midPreview = service.readPreview(rootId, '扫描卷.pdf')
+    expect(midPreview.kind).toBe('binary')
+    if (midPreview.kind !== 'binary' && midPreview.kind !== 'image') throw new Error('narrow')
+    expect(midPreview.dataUrl.startsWith('data:application/pdf;base64,')).toBe(true)
   })
 
   it('path safety: traversal, root mismatch and folder selections are rejected', () => {
@@ -238,12 +248,56 @@ describe('V112-B external panel preview wiring (D71)', () => {
     expect(fnBody).toContain("mimeType === 'application/pdf'")
     expect(fnBody).toContain("mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'")
     expect(fnBody).not.toContain('msword')
-    // 12MB 上限与 managed 侧一致
-    expect(service).toContain('12 * 1024 * 1024')
+    // V1.12.1（D73）：50MB 上限与 managed 侧一致
+    expect(service).toContain('50 * 1024 * 1024')
   })
 
   it('preload wires readPreview with the payload guard', () => {
     const preload = source('../src/preload/index.ts')
     expect(preload).toContain('readPreview: (request: ExternalPathRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.readPreview, request, isExternalFilePreview)')
+  })
+})
+
+describe('V1121-A 预览上限 50MB + 解码钉测（D73）', () => {
+  it('managed 侧：预览 50MB / 编辑器维持 12MB（V17-C 冻结语义不动）', () => {
+    const service = source('../src/main/files/managed-file-service.ts')
+    expect(service).toContain('const MAX_PREVIEW_BYTES = 50 * 1024 * 1024')
+    expect(service).toContain('const MAX_EDITABLE_TEXT_BYTES = 12 * 1024 * 1024')
+    // readText（编辑器链）用 12MB 档；readContent（预览链）用 50MB 档
+    const readTextFn = /readText\(fileId: string\)[\s\S]*?\n {2}\}/u.exec(service)
+    expect(readTextFn).not.toBeNull()
+    expect(readTextFn?.[0]).toContain('MAX_EDITABLE_TEXT_BYTES')
+    expect(readTextFn?.[0]).not.toContain('MAX_PREVIEW_BYTES')
+  })
+
+  it('external 侧：50MB 上限 + 守卫 70M 字符（50MB base64 ≈ 67.1M）', () => {
+    const contracts = source('../src/shared/external-library-contracts.ts')
+    expect(contracts).toContain('isNonEmptyString(value.dataUrl, 70_000_000)')
+    const service = source('../src/main/external/external-library-service.ts')
+    expect(service).toContain('const EXTERNAL_PREVIEW_LIMIT_BYTES = 50 * 1024 * 1024')
+  })
+
+  it('渲染端解码：预分配 for 循环（禁 Uint8Array.from 回调——42MB 实测 3809ms vs 149ms）', () => {
+    const binary = source('../src/renderer/pdf-binary.ts')
+    expect(binary).toContain('const bytes = new Uint8Array(binary.length)')
+    expect(binary).toContain('for (let index = 0; index < binary.length; index += 1)')
+    // 断言只看实现（剥离块注释/行注释——注释里记录的实测依据允许提及 Uint8Array.from）
+    const implementation = binary.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^\s*\/\/.*$/gmu, '')
+    expect(implementation).not.toContain('Uint8Array.from')
+    expect(implementation).toContain('window.atob')
+  })
+
+  it('解码行为等价：base64 往返逐字节还原（大样本）', async () => {
+    // jsdom 环境直接执行同构逻辑（pdf-binary 依赖 window.atob，本测试内联验证语义）
+    const { atob } = globalThis as { atob?: (s: string) => string }
+    if (atob === undefined) return // node 环境 fallback：jsdom 有 atob，纯 node 跳过
+    const payload = Buffer.from('V1.12.1 decode equivalence check — 预览上限与解码钉测。'.repeat(200))
+    const b64 = payload.toString('base64')
+    const binary = atob(b64)
+    const bytes = new Uint8Array(binary.length)
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index)
+    }
+    expect(Buffer.from(bytes)).toEqual(payload)
   })
 })

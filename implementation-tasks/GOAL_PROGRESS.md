@@ -1742,3 +1742,12 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Git：本地提交 `v1.12(V112-C): final gates, smoke and acceptance record`；随后 push（沿用 GitHub 授权）。
 - `checkpoint-V1.12-pass` 未创建——待产品负责人按验收文档 §5 走查清单确认后创建（`checkpoint-V1.11-pass` 亦待其走查，互不阻塞）。
 
+## V1.12.1 · V1121-A 预览上限 50MB + 解码钉测（2026-09-10 DONE）
+
+V1.12 最终验收前维护增量（D73，V1.10.1/V1.5.3.1 先例——证据并入 `docs/v1.12-acceptance.md` §8，不单独建 pass 标签）。背景：产品负责人实测反馈超限覆盖面并授权按分析实施。
+
+- **实测依据**（tmp/v112-bench 独立基准 + production 隔离 app，详见任务文件）：真实库 6622 文件仅 25 个超 12MB（0.4%）但集中扫描卷合订/整册课本高价值场景；传输链 Main+IPC 仅 8-227ms 非瓶颈；42MB 档 `Uint8Array.from` 回调解码 3809ms vs 手动 for 149ms（25 倍，产品实现原本即 for——钉住防回退）；174MB 档渲染进程挂死（维持不可预览）；`fetch('data:')` 被 CSP 拦（零 CSP 改动）；真实 41.8MB 课本（150 页）首页 4.46s / JS 堆 104MB，RSS +972MB 属全页渲染语义（懒渲染记后续候选）。
+- **实施**：managed `MAX_PREVIEW_BYTES` 与 external `EXTERNAL_PREVIEW_LIMIT_BYTES` 双侧 12→50MB；`readText` 拆 `MAX_EDITABLE_TEXT_BYTES` 维持 12MB（V17-C 编辑器冻结语义不随预览放宽）；`isExternalFilePreview` dataUrl 上限 20M→70M 字符；pdf-binary 注释记录解码实测依据。
+- **测试**：v1.11-readcontent-binary / v1.12-external-preview 超限档演进 50MB+1 + 中间档可预览断言；新增 V1121-A describe 4 例（双常量与 readText 用档/守卫上限/解码禁回退（注释剥离）/解码等价往返）。
+- **门禁**：全量 98 files / 572 tests passed（1 skipped 既有）、typecheck、lint（regex autofix 1 处）、build、diff check 全绿；隔离冒烟 **20/20**（既有 18 场景零回归 + 13MB 有效 PDF 课次/外部双场景）；真实 41.8MB 课本计时 4.46s；进程/临时目录零残留。
+- Git：本地提交 `v1.12.1(V1121-A): preview limit 50mb and decode pinning`；随后 push（沿用 GitHub 授权）。

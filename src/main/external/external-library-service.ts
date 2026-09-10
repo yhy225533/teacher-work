@@ -352,7 +352,8 @@ function normalizeExtension(name: string): string | null {
   return extension === '' ? null : extension
 }
 
-const EXTERNAL_PREVIEW_LIMIT_BYTES = 12 * 1024 * 1024
+/** V1.12.1（D73）：外部资料预览上限 12MB → 50MB——与 managed 侧 MAX_PREVIEW_BYTES 同步放宽（扫描卷/整册课本纳入）。 */
+const EXTERNAL_PREVIEW_LIMIT_BYTES = 50 * 1024 * 1024
 
 /** V1.12（D70）：扩展名→MIME，与 managed 侧 knownTypes 同表（外部文件无登记 MIME）。 */
 function externalMimeTypeForName(name: string): string {

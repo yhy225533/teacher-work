@@ -262,3 +262,11 @@
 | V112-A docx 内嵌图片 CSP 修复 | DONE | 2026-09-10 完成：renderAsync 加 useBase64URL: true（内嵌图 data: URL，CSP img-src 已允许，零 CSP 改动）+ 新增 v1.12-docx-image 3 例（带图 docx fixture 字节结构/readContent binary 完整往返/组件+ CSP 钉测）+ V111-C 钉测演进；相关测试 13/13、typecheck、lint 全绿 |
 | V112-B 外部资料预览通道与面板 UI | DONE | 2026-09-10 完成：ExternalFilePreview 四分支合同 + 守卫 + read-preview 通道（第八通道唯一新增）+ service readPreview（resolveEntry 复用/12MB/扩展名 MIME 同表/binary 仅 pdf-docx）+ preload 接线 + ExternalEntryDetails 预览化（四分支复用课次组件栈 + 逃生门 + V1.1 说明退役 + 操作行零改动）+ 样式；新增 v1.12-external-preview 12 例；全量 98 files / 568 tests、typecheck、lint 全绿 |
 | V112-C 最终门禁与验收 | DONE | 2026-09-10 完成：全量 98 files / 568 tests + typecheck + lint + production build + diff check 全绿；隔离 Windows 冒烟 18/18 连跑 3 轮（V1.11 课次链九项零回归 + 带图 docx data: URL 图片渲染 + 外部资料页八项预览断言 + stderr + 进程/临时目录零残留）；`docs/v1.12-acceptance.md`；`checkpoint-V1.12-pass` 待产品负责人走查确认后创建 |
+
+## V1.12.1 已立项（预览上限 50MB + 渲染端解码提速，维护增量）
+
+V1.12 四节点完成后、走查确认前，产品负责人 2026-09-10 实测反馈超限文件覆盖面（"12MB 以上就不能看的话，是不是有太多的看不了"）并授权按实测分析实施（"按照你说的来"）。按 V1.10.1/V1.5.3.1 先例记为 V1.12 最终验收前维护增量 **V1.12.1**（决策 D73 并入任务文件），验收证据追加至 `docs/v1.12-acceptance.md`，不单独创建 pass 标签。实测依据（tmp/v112-bench 独立基准 + production 隔离 app）：真实库 6622 文件仅 25 个超 12MB（0.4%）但集中扫描卷/整册课本高价值场景；42MB 档渲染端 `Uint8Array.from` 回调循环 3809ms 为真凶（手动 for 149ms，25 倍），174MB 档渲染进程挂死；传输链 Main+IPC 仅 8-227ms。任务链 `implementation-tasks/v1.12.1-tasks/` 单节点 V1121-A：上限 12MB → 50MB（managed/external 双侧 + 守卫 70M 字符）、`dataUrlToUint8Array` 换预分配 for 循环；CSP 零改动、零 migration/依赖/新通道；懒渲染（整册课本全页渲染 +900MB RSS）记后续候选不动。
+
+| 里程碑 | 状态 | 计划内容 |
+|---|---|---|
+| V1121-A 预览上限 50MB + 解码提速 | DONE | 2026-09-10 完成：双侧 12→50MB（readText 编辑器链拆 MAX_EDITABLE_TEXT_BYTES 维持 12MB 冻结语义）+ 守卫 70M 字符 + pdf-binary 解码 for 循环钉测（产品实现原本即 for；注释记录 3809ms vs 149ms 实测依据）+ 超限档 50MB+1 与中间档可预览断言；全量 98 files / 572 tests、typecheck、lint、build 全绿；隔离冒烟 20/20（含 13MB 有效 PDF 双场景）+ 真实 41.8MB 课本 4.46s/104MB 计时；证据并入 docs/v1.12-acceptance.md §8；随 V1.12 走查不单独建标签 |

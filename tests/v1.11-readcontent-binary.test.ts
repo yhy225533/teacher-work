@@ -182,14 +182,22 @@ describe('V111-A readContent binary contract (D68)', () => {
     const text = importFile(fixture, '笔记.txt', Buffer.from('纯文本', 'utf8'))
     expect(fixture.files.readContent(text.id)).toMatchObject({ kind: 'text', content: '纯文本' })
 
-    // 超限 pdf 仍走 unsupported（12MB 上限对 binary 同样生效）
-    const large = Buffer.alloc(12 * 1024 * 1024 + 1, 0)
+    // 超限 pdf 仍走 unsupported——V1.12.1（D73）上限 12→50MB，超限档随之为 50MB+1
+    const large = Buffer.alloc(50 * 1024 * 1024 + 1, 0)
     large.write('%PDF-1.4', 0, 'utf8')
     const largeRecord = importFile(fixture, '大文件.pdf', large)
     const largeContent = fixture.files.readContent(largeRecord.id)
     expect(largeContent.kind).toBe('unsupported')
     if (largeContent.kind !== 'unsupported') throw new Error('narrow for type checker')
     expect(largeContent.message).toContain('文件较大')
+    // 50MB 内（原 12MB 上限之上）的 binary 现在可预览——真实场景 = 扫描卷合订/整册课本
+    const mid = Buffer.alloc(12 * 1024 * 1024 + 1, 0)
+    mid.write('%PDF-1.4', 0, 'utf8')
+    const midRecord = importFile(fixture, '扫描卷.pdf', mid)
+    const midContent = fixture.files.readContent(midRecord.id)
+    expect(midContent.kind).toBe('binary')
+    if (midContent.kind !== 'binary') throw new Error('narrow for type checker')
+    expect(midContent.dataUrl.startsWith('data:application/pdf;base64,')).toBe(true)
   })
 
   it('guard rejects a forged binary payload without a data: prefix', () => {

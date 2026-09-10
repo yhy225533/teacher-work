@@ -139,7 +139,8 @@ export function isExternalFilePreview(value: unknown): value is ExternalFilePrev
   if (!isRecord(value) || !isPreviewMeta(value)) return false
   if (value.kind === 'text') return typeof value.content === 'string'
   if (value.kind === 'image' || value.kind === 'binary') {
-    return isNonEmptyString(value.dataUrl, 20_000_000) && value.dataUrl.startsWith('data:')
+    // V1.12.1（D73）：上限随 50MB 预览放宽——50MB base64 ≈ 67.1M 字符，留裕量 70M。
+    return isNonEmptyString(value.dataUrl, 70_000_000) && value.dataUrl.startsWith('data:')
   }
   return value.kind === 'unsupported' && isNonEmptyString(value.message, 512)
 }

@@ -182,7 +182,7 @@ export class ManagedFileService {
     }
     const contentPath = this.requireReadableObject(file.id)
     const stats = statSync(contentPath)
-    if (stats.size > MAX_PREVIEW_BYTES) {
+    if (stats.size > MAX_EDITABLE_TEXT_BYTES) {
       throw new ManagedFileError('FILE_CONTENT_TOO_LARGE', '文件过大，编辑器暂不支持读取。')
     }
     return { file, content: readFileSync(contentPath).toString('utf8') }
@@ -890,7 +890,10 @@ function mimeTypeForName(name: string): string {
   return knownTypes[extension] ?? 'application/octet-stream'
 }
 
-const MAX_PREVIEW_BYTES = 12 * 1024 * 1024
+/** V1.12.1（D73）：应用内预览上限 12MB → 50MB——真实库扫描卷合订（20-33MB）与整册课本（42-54MB）纳入可预览。 */
+const MAX_PREVIEW_BYTES = 50 * 1024 * 1024
+/** V17-C 编辑器读取上限维持 12MB（D73：预览放宽不改变编辑器冻结语义）。 */
+const MAX_EDITABLE_TEXT_BYTES = 12 * 1024 * 1024
 const MAX_WRITE_BODY_CHARS = 200_000
 
 function isPreviewableText(mimeType: string): boolean {
