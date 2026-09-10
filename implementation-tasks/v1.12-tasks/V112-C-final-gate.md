@@ -1,6 +1,6 @@
 # V112-C · 最终门禁与验收（全工作流）
 
-状态：TODO
+状态：DONE
 
 ## 目标
 
@@ -27,4 +27,12 @@ V1.12 唯一全量验收点。自动质量门 + 隔离 Windows 冒烟（带图 d
 
 ## 完成记录
 
-（待实施）
+2026-09-10 完成。
+
+- **自动门**：全量 98 files / 568 tests passed（1 skipped 既有）、typecheck、lint、production build、`git diff --check` 全绿；未运行 portable/installer。
+- **冒烟（tmp/v112-smoke/run-smoke.mjs）**：**18/18，连跑 3 轮**——V1.11 课次链九项零回归（PDF canvas 像素/docx wrapper/md/png/.doc unsupported/stderr）+ V112-A 带图 docx 课次渲染（内嵌 img data: URL + naturalWidth 实解码）+ V112-B 外部资料页八项（PDF canvas 像素 + 逃生门、带图 docx data: URL、md MarkdownDocument、txt pre、png img、.doc 不可预览卡 + 打开按钮、纯文字 docx wrapper）。
+- **冒烟脚本缺陷如实记录**：首轮外部 6 场景 FAIL 系脚本 pollExternal 双箭头包装 bug（返回函数对象未求值），经临时诊断块（API 直调 + DOM dump）确认通道/UI 实际正常后修正包装并删除探针，3 连跑全绿。
+- **复核**：冒烟后 Electron 进程零残留、`teacher-workbench-v112-smoke-*` 临时目录零残留。
+- **验收记录**：`docs/v1.12-acceptance.md`（实施表/自动门/冒烟记录/安全边界复核/走查清单/已知限制）。
+- **状态同步**：STATUS.md、GOAL_PROGRESS.md、本文件 DONE；AGENTS.md V1.12 段更新为节点全完成。
+- `checkpoint-V1.12-pass` 未创建——待产品负责人按验收文档 §5 走查清单确认。

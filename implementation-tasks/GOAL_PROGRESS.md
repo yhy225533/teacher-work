@@ -1731,3 +1731,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **门禁**：全量 98 files / 568 tests（567 + 1 skip 既有）、typecheck、lint 全绿。
 - Git：本地提交 `v1.12(V112-B): external library in-app preview channel and panel`；随后 push（沿用 GitHub 授权）。下一节点 V112-C（最终门禁与验收）。
 
+## V1.12 · V112-C 最终门禁与验收（2026-09-10 DONE）
+
+设计基准 `docs/v1.12-external-preview-plan.md` §5–§7。V1.12 唯一全量验收点。
+
+- **自动门**：全量 98 files / 568 tests passed（1 skipped 既有）、typecheck、lint、production build、`git diff --check` 全绿。
+- **冒烟**：隔离 Windows 冒烟（tmp/v112-smoke，production + 隔离数据目录 + external_roots 预插 + CDP）**18/18 连跑 3 轮**：V1.11 课次链九项零回归；V112-A 带图 docx 课次渲染（内嵌 img `data:image/png;base64,` src + naturalWidth=8 实解码——D72 在真实 CSP 下端到端生效）；V112-B 外部资料页八项（PDF canvas 718×929 nonWhite=3002 + 逃生门、带图 docx data: URL、md MarkdownDocument 同渲染面、txt pre、png dataUrl img、.doc 不可预览卡 + 打开按钮双闸、纯文字 docx wrapper）。复核：进程/临时目录零残留。
+- **冒烟脚本缺陷如实记录**：首轮外部 6 场景 FAIL 系脚本 pollExternal 双箭头包装 bug；诊断确认产品代码无缺陷后修正脚本并删探针。
+- **验收记录**：`docs/v1.12-acceptance.md`（含走查清单 7 项与已知限制——外部 md 只读无编辑入口等）。
+- Git：本地提交 `v1.12(V112-C): final gates, smoke and acceptance record`；随后 push（沿用 GitHub 授权）。
+- `checkpoint-V1.12-pass` 未创建——待产品负责人按验收文档 §5 走查清单确认后创建（`checkpoint-V1.11-pass` 亦待其走查，互不阻塞）。
+

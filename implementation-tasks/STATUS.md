@@ -261,4 +261,4 @@
 |---|---|---|
 | V112-A docx 内嵌图片 CSP 修复 | DONE | 2026-09-10 完成：renderAsync 加 useBase64URL: true（内嵌图 data: URL，CSP img-src 已允许，零 CSP 改动）+ 新增 v1.12-docx-image 3 例（带图 docx fixture 字节结构/readContent binary 完整往返/组件+ CSP 钉测）+ V111-C 钉测演进；相关测试 13/13、typecheck、lint 全绿 |
 | V112-B 外部资料预览通道与面板 UI | DONE | 2026-09-10 完成：ExternalFilePreview 四分支合同 + 守卫 + read-preview 通道（第八通道唯一新增）+ service readPreview（resolveEntry 复用/12MB/扩展名 MIME 同表/binary 仅 pdf-docx）+ preload 接线 + ExternalEntryDetails 预览化（四分支复用课次组件栈 + 逃生门 + V1.1 说明退役 + 操作行零改动）+ 样式；新增 v1.12-external-preview 12 例；全量 98 files / 568 tests、typecheck、lint 全绿 |
-| V112-C 最终门禁与验收 | TODO | 全量测试、typecheck、lint、production build、diff check；隔离 Windows 冒烟（带图 docx 图片 data: URL 渲染断言 + 外部资料页六类文件预览断言 + 课次阅读器 V1.11 场景零回归 + stderr + 双复核）；`docs/v1.12-acceptance.md`；状态文件与 AGENTS.md 同步；`checkpoint-V1.12-pass` 待产品负责人走查确认后创建 |
+| V112-C 最终门禁与验收 | DONE | 2026-09-10 完成：全量 98 files / 568 tests + typecheck + lint + production build + diff check 全绿；隔离 Windows 冒烟 18/18 连跑 3 轮（V1.11 课次链九项零回归 + 带图 docx data: URL 图片渲染 + 外部资料页八项预览断言 + stderr + 进程/临时目录零残留）；`docs/v1.12-acceptance.md`；`checkpoint-V1.12-pass` 待产品负责人走查确认后创建 |
