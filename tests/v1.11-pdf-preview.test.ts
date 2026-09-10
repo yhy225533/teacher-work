@@ -92,7 +92,9 @@ describe('V111-C Word(docx) 应用内预览', () => {
     expect(component).not.toContain('import(')
     expect(component).toContain('renderAsync(dataUrlToUint8Array(dataUrl).buffer as ArrayBuffer, container')
     expect(component).toContain("container.textContent = ''")
-    expect(component).toContain('{ inWrapper: true }')
+    // V1.12（D72）：内嵌图片 data: URL 化——默认 blob: URL 被 CSP img-src 拦截（图片空白）
+    expect(component).toContain('{ inWrapper: true, useBase64URL: true }')
+    expect(component).not.toContain('{ inWrapper: true }')
   })
 
   it('styles: docx preview container present with docx-wrapper sizing constraints', () => {

@@ -1710,3 +1710,13 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - Git：本地提交 `v1.11(V111-D): final gates, smoke and acceptance record`；随后 push（沿用 GitHub 授权）。
 - `checkpoint-V1.11-pass` 未创建——待产品负责人按验收文档 §6 走查清单确认后创建。
 
+## V1.12 · V112-A docx 内嵌图片 CSP 修复（2026-09-10 DONE）
+
+设计基准 `docs/v1.12-external-preview-plan.md` §2.1/§8 + D72。V1.11 实测反馈：带内嵌图片的 docx 预览时图片全部空白。
+
+- **根因**：docx-preview 默认 `useBase64URL: false` → `blobToURL` 返回 `URL.createObjectURL(blob)`（blob: URL），CSP `img-src 'self' data:` 不含 blob: → 每个内嵌 `<img>` 被 CSP 静默拦截。
+- **修复**：`src/renderer/docx-preview.tsx` renderAsync 选项加 `useBase64URL: true`——内嵌图走 data: URL（CSP 已允许）；CSP 零改动；data URL 随 DOM 释放，无 blob URL 手动 revoke 的内存语义。组件头注释记录该约束。
+- **测试**：新增 `tests/v1.12-docx-image.test.ts` 3 例——手写带图 docx fixture（zip store 含 word/media/image1.png 最小 1×1 PNG + document.xml.rels rId1 引用 + w:drawing/wp:inline 标记，零依赖）字节结构断言；readContent binary 完整往返（base64 逐字节还原）；useBase64URL + CSP img-src（blob: 不在白名单）钉测。演进 V111-C 既有钉测（inWrapper → inWrapper + useBase64URL 组合）。
+- **门禁**：相关测试 13/13、typecheck、lint 全绿。真实 DOM 渲染断言（图片 data: src）按测试分层约定留 V112-C 隔离冒烟。
+- Git：本地提交 `v1.12(V112-A): docx embedded images via base64 data urls`；随后 push（沿用 GitHub 授权）。下一节点 V112-B（外部资料预览通道与面板）。
+

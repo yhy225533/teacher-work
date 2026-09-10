@@ -259,6 +259,6 @@
 
 | 里程碑 | 状态 | 计划内容 |
 |---|---|---|
-| V112-A docx 内嵌图片 CSP 修复 | TODO | docx-preview renderAsync 加 useBase64URL: true（内嵌图 data: URL，CSP 已允许，零 CSP 改动）+ 带内嵌 png 的 docx fixture 测试 + 钉测更新 |
+| V112-A docx 内嵌图片 CSP 修复 | DONE | 2026-09-10 完成：renderAsync 加 useBase64URL: true（内嵌图 data: URL，CSP img-src 已允许，零 CSP 改动）+ 新增 v1.12-docx-image 3 例（带图 docx fixture 字节结构/readContent binary 完整往返/组件+ CSP 钉测）+ V111-C 钉测演进；相关测试 13/13、typecheck、lint 全绿 |
 | V112-B 外部资料预览通道与面板 UI | TODO | ExternalFilePreview 四分支合同（轻量元数据无 fileId）+ external-library:read-preview 通道（service readPreview 复用 resolveEntry + 12MB 上限 + 扩展名 MIME 同表）+ ExternalEntryDetails 预览化（复用 MarkdownDocument/img/PdfPreview/DocxPreview + 操作行保留 + 逃生门 + V1.1 说明退役）+ 样式 + Main/renderer 钉测 |
 | V112-C 最终门禁与验收 | TODO | 全量测试、typecheck、lint、production build、diff check；隔离 Windows 冒烟（带图 docx 图片 data: URL 渲染断言 + 外部资料页六类文件预览断言 + 课次阅读器 V1.11 场景零回归 + stderr + 双复核）；`docs/v1.12-acceptance.md`；状态文件与 AGENTS.md 同步；`checkpoint-V1.12-pass` 待产品负责人走查确认后创建 |
