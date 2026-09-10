@@ -2,10 +2,14 @@ import { useEffect, useState } from 'react'
 
 import type {
   ExternalEntry,
+  ExternalFilePreview,
   ExternalRootSummary,
 } from '../shared/external-library-contracts'
 import type { ManagedFileRecord } from '../shared/file-contracts'
+import DocxPreview from './docx-preview'
+import { MarkdownDocument } from './lesson-material-reader'
 import type { LessonPrepContext } from './lesson-prep-context'
+import PdfPreview from './pdf-preview'
 import { formatBytes, toErrorMessage } from './ui-utils'
 
 type EntryMap = Record<string, readonly ExternalEntry[]>
@@ -29,6 +33,42 @@ export default function ExternalLibraryPanel({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  /** V1.12（D71）：选中文件的应用内只读预览载荷；null = 加载中/不可预览态。 */
+  const [preview, setPreview] = useState<ExternalFilePreview | null>(null)
+  const [previewError, setPreviewError] = useState('')
+
+  useEffect(() => {
+    void loadConfiguredRoot()
+  }, [])
+
+  /**
+   * V1.12（D70/D71）：选中文件即拉取预览载荷（readPreview 纯只读，响应不含路径）。
+   * 预览白名单按扩展名（与 Main 推导表一致）；文件夹选中不触发。
+   */
+  useEffect(() => {
+    if (selectedEntry === null || selectedEntry.kind !== 'file' || !isPreviewableExtension(selectedEntry.extension)) {
+      setPreview(null)
+      setPreviewError('')
+      return
+    }
+    let cancelled = false
+    setPreview(null)
+    setPreviewError('')
+    void window.teacherWorkbench.externalLibrary.readPreview({
+      rootId: selectedEntry.rootId,
+      relativePath: selectedEntry.relativePath,
+    })
+      .then((payload) => {
+        if (cancelled) return
+        setPreview(payload)
+      })
+      .catch((previewFailure: unknown) => {
+        if (cancelled) return
+        setPreview(null)
+        setPreviewError(toErrorMessage(previewFailure, '预览加载失败，可尝试用系统应用打开。'))
+      })
+    return () => { cancelled = true }
+  }, [selectedEntry])
 
   useEffect(() => {
     void loadConfiguredRoot()
@@ -295,6 +335,8 @@ export default function ExternalLibraryPanel({
           ) : (
             <ExternalEntryDetails
               entry={selectedEntry}
+              preview={preview}
+              previewError={previewError}
               busy={busy}
               onOpen={() => runFileAction(
                 () => window.teacherWorkbench.externalLibrary.openFile({
@@ -405,6 +447,8 @@ function ExternalTreeBranch({
 
 function ExternalEntryDetails({
   entry,
+  preview,
+  previewError,
   busy,
   onOpen,
   onShowInFolder,
@@ -412,6 +456,8 @@ function ExternalEntryDetails({
   onCopy,
 }: {
   readonly entry: ExternalEntry
+  readonly preview: ExternalFilePreview | null
+  readonly previewError: string
   readonly busy: boolean
   readonly onOpen: () => Promise<void>
   readonly onShowInFolder: () => Promise<void>
@@ -419,6 +465,8 @@ function ExternalEntryDetails({
   readonly onCopy: () => Promise<void>
 }): React.JSX.Element {
   const isFile = entry.kind === 'file'
+  const previewable = isFile && isPreviewableExtension(entry.extension)
+  const meta = preview !== null ? preview : null
   return (
     <div className="external-entry-details">
       <p className="external-breadcrumb">{formatBreadcrumb(entry.relativePath)}</p>
@@ -431,11 +479,13 @@ function ExternalEntryDetails({
           <h2>{entry.name}</h2>
         </div>
       </div>
-      <dl className="external-metadata">
-        <div><dt>类型</dt><dd>{formatFileType(entry)}</dd></div>
-        <div><dt>大小</dt><dd>{entry.sizeBytes === null ? '—' : formatBytes(entry.sizeBytes)}</dd></div>
-        <div><dt>修改时间</dt><dd>{formatModifiedAt(entry.modifiedAt)}</dd></div>
-      </dl>
+      {isFile && (
+        <dl className="external-metadata">
+          <div><dt>类型</dt><dd>{meta !== null ? meta.mimeType : formatFileType(entry)}</dd></div>
+          <div><dt>大小</dt><dd>{meta !== null ? formatBytes(meta.sizeBytes) : (entry.sizeBytes === null ? '—' : formatBytes(entry.sizeBytes))}</dd></div>
+          <div><dt>修改时间</dt><dd>{formatModifiedAt(entry.modifiedAt)}</dd></div>
+        </dl>
+      )}
       {isFile ? (
         <>
           <div className="file-toolbar external-entry-actions">
@@ -449,10 +499,51 @@ function ExternalEntryDetails({
               所在文件夹
             </button>
           </div>
-          <div className="external-preview-note">
-            <strong>使用系统应用查看内容</strong>
-            <p>V1.1 不模拟 Word、PowerPoint 或 PDF 的高保真显示，避免生成与原文件不一致的预览。</p>
-          </div>
+          {previewable ? (
+            <div className="external-preview" aria-label="外部资料预览">
+              {previewError !== '' && <div className="inline-error" role="alert">{previewError}</div>}
+              {previewError === '' && preview === null && (
+                <div className="external-preview-state">正在加载预览…</div>
+              )}
+              {previewError === '' && preview !== null && preview.kind === 'text' && (
+                entry.extension === '.md'
+                  ? <MarkdownDocument body={preview.content} files={[]} />
+                  : <pre className="external-preview-text">{preview.content}</pre>
+              )}
+              {previewError === '' && preview !== null && preview.kind === 'image' && (
+                <img className="external-preview-image" src={preview.dataUrl} alt={entry.name} />
+              )}
+              {previewError === '' && preview !== null && preview.kind === 'binary' && preview.mimeType === 'application/pdf' && (
+                <>
+                  <PdfPreview dataUrl={preview.dataUrl} />
+                  <div className="pdf-preview-fallback">
+                    <span>需要打印或另存？</span>
+                    <button className="secondary-button" type="button" onClick={() => void onOpen()}>用系统应用打开</button>
+                  </div>
+                </>
+              )}
+              {previewError === '' && preview !== null && preview.kind === 'binary' && preview.mimeType !== 'application/pdf' && (
+                <>
+                  <DocxPreview dataUrl={preview.dataUrl} />
+                  <div className="pdf-preview-fallback">
+                    <span>需要打印或另存？</span>
+                    <button className="secondary-button" type="button" onClick={() => void onOpen()}>用系统应用打开</button>
+                  </div>
+                </>
+              )}
+              {previewError === '' && preview !== null && preview.kind === 'unsupported' && (
+                <div className="external-preview-note">
+                  <strong>这种文件暂时不能在工作台内预览</strong>
+                  <p>{preview.message}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="external-preview-note">
+              <strong>这类文件工作台内暂不预览</strong>
+              <p>可用「打开文件」交给系统应用查看，原文件保持不变。</p>
+            </div>
+          )}
         </>
       ) : (
         <div className="external-preview-note">
@@ -482,6 +573,18 @@ function fileIcon(extension: string | null): string {
   if (extension === '.md') return 'M'
   return 'F'
 }
+
+/**
+ * V1.12（D71）：渲染端预览白名单（与 Main readPreview 推导表一致）——决定选中文件是否
+ * 发起 readPreview 请求。Main 侧仍是最终守卫（未知扩展名返回 unsupported）。
+ */
+function isPreviewableExtension(extension: string | null): boolean {
+  return extension !== null && PREVIEWABLE_EXTENSIONS.has(extension)
+}
+
+const PREVIEWABLE_EXTENSIONS: ReadonlySet<string> = new Set([
+  '.docx', '.gif', '.jpeg', '.jpg', '.md', '.pdf', '.png', '.txt', '.webp',
+])
 
 function formatFileType(entry: ExternalEntry): string {
   if (entry.kind === 'folder') return '文件夹'

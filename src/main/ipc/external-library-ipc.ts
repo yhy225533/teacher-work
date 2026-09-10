@@ -1,6 +1,7 @@
 import type {
   ExternalActionResult,
   ExternalDirectoryListing,
+  ExternalFilePreview,
   ExternalLessonCopyRequest,
   ExternalPathRequest,
   ExternalRootSummary,
@@ -8,6 +9,7 @@ import type {
 import {
   isExternalActionResult,
   isExternalDirectoryListing,
+  isExternalFilePreview,
   isExternalLessonCopyRequest,
   isExternalPathRequest,
   isNullableExternalRootSummary,
@@ -158,6 +160,15 @@ export async function dispatchExternalLibraryIpc(
           file: imported,
         })
         return ensureResponse<ManagedFileRecord>(imported, isManagedFileRecord)
+      }
+      case EXTERNAL_LIBRARY_IPC_CHANNELS.readPreview: {
+        // V1.12（D70）：只读预览载荷——service 内复用 resolveEntry 路径安全，零登记零广播。
+        assertRequest(payload, isExternalPathRequest)
+        const request = payload as ExternalPathRequest
+        return ensureResponse<ExternalFilePreview>(
+          service.readPreview(request.rootId, request.relativePath),
+          isExternalFilePreview,
+        )
       }
     }
     throw new Error('Unhandled external library IPC channel')

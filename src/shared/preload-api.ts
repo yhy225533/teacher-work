@@ -129,12 +129,14 @@ import type { BackupSummary, RestoreSummary } from './ipc-contracts'
 import {
   isExternalActionResult,
   isExternalDirectoryListing,
+  isExternalFilePreview,
   isExternalLessonCopyRequest,
   isExternalPathRequest,
   isExternalRootSummary,
   isNullableExternalRootSummary,
   type ExternalActionResult,
   type ExternalDirectoryListing,
+  type ExternalFilePreview,
   type ExternalLessonCopyRequest,
   type ExternalPathRequest,
   type ExternalRootSummary,
@@ -292,6 +294,7 @@ export { isPublishDraftVersionRequest, isPublishDraftVersionResult } from './dra
 export type {
   ExternalActionResult,
   ExternalDirectoryListing,
+  ExternalFilePreview,
   ExternalLessonCopyRequest,
   ExternalEntry,
   ExternalPathRequest,
@@ -416,6 +419,8 @@ export interface TeacherWorkbenchApi {
     showInFolder: (request: ExternalPathRequest) => Promise<ExternalActionResult>
     copyToLibrary: (request: ExternalPathRequest) => Promise<ManagedFileRecord>
     copyToLesson: (request: ExternalLessonCopyRequest) => Promise<ManagedFileRecord>
+    /** V1.12（D70）：外部资料只读预览载荷。 */
+    readPreview: (request: ExternalPathRequest) => Promise<ExternalFilePreview>
   }
   questionBank: {
     getSummary: () => Promise<QuestionBankSummary>
@@ -500,6 +505,7 @@ export {
   isSaveDraftRequest,
   isExternalActionResult,
   isExternalDirectoryListing,
+  isExternalFilePreview,
   isExternalLessonCopyRequest,
   isExternalPathRequest,
   isExternalRootSummary,

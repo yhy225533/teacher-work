@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto'
-import { accessSync, constants, lstatSync, readdirSync, realpathSync, statSync } from 'node:fs'
+import { accessSync, constants, lstatSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import type { Stats } from 'node:fs'
 import { basename, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 
 import type {
   ExternalDirectoryListing,
   ExternalEntry,
+  ExternalFilePreview,
   ExternalRootSummary,
 } from '../../shared/external-library-contracts'
 import type { SqliteDatabase } from '../db/migrations'
@@ -147,6 +148,52 @@ export class ExternalLibraryService {
       )
     }
     return resolved.path
+  }
+
+  /**
+   * V1.12（D70）：外部资料只读预览——与 managed readContent 四分支同构（text/image/binary/
+   * unsupported），但走轻量元数据（外部文件不在 files 表）；路径安全完全复用 resolveEntry
+   * （realpath + within-root + R_OK）；MIME 按扩展名推导（与 managed 侧 knownTypes 同表语义）；
+   * 12MB 上限沿用。纯只读：不写 files 表、不进备份/索引、零 contentChanged、响应不含路径。
+   */
+  readPreview(rootId: string, relativePath: string): ExternalFilePreview {
+    const row = this.requireRoot(rootId)
+    const resolved = this.resolveEntry(row, relativePath)
+    if (!resolved.stats.isFile()) {
+      throw new ExternalLibraryError('EXTERNAL_ENTRY_NOT_FILE', '只能预览外部资料中的文件。')
+    }
+    const name = basename(resolved.path)
+    const mimeType = externalMimeTypeForName(name)
+    const meta = { name, mimeType, sizeBytes: resolved.stats.size }
+    if (resolved.stats.size > EXTERNAL_PREVIEW_LIMIT_BYTES) {
+      return {
+        ...meta,
+        kind: 'unsupported',
+        message: `文件较大（${formatExternalSize(resolved.stats.size)}），请使用系统应用打开。`,
+      }
+    }
+    if (mimeType.startsWith('text/') || mimeType === 'application/json') {
+      return { ...meta, kind: 'text', content: readFileSync(resolved.path).toString('utf8') }
+    }
+    if (mimeType.startsWith('image/')) {
+      return {
+        ...meta,
+        kind: 'image',
+        dataUrl: `data:${mimeType};base64,${readFileSync(resolved.path).toString('base64')}`,
+      }
+    }
+    if (isExternalPreviewableBinary(mimeType)) {
+      return {
+        ...meta,
+        kind: 'binary',
+        dataUrl: `data:${mimeType};base64,${readFileSync(resolved.path).toString('base64')}`,
+      }
+    }
+    return {
+      ...meta,
+      kind: 'unsupported',
+      message: '这种文件暂时不能在工作台内预览，可用系统应用打开。',
+    }
   }
 
   private findRoot(): ExternalRootRow | undefined {
@@ -303,4 +350,39 @@ function isReadableDirectory(path: string): boolean {
 function normalizeExtension(name: string): string | null {
   const extension = extname(name).toLowerCase()
   return extension === '' ? null : extension
+}
+
+const EXTERNAL_PREVIEW_LIMIT_BYTES = 12 * 1024 * 1024
+
+/** V1.12（D70）：扩展名→MIME，与 managed 侧 knownTypes 同表（外部文件无登记 MIME）。 */
+function externalMimeTypeForName(name: string): string {
+  const extension = extname(name).toLowerCase()
+  const knownTypes: Record<string, string> = {
+    '.doc': 'application/msword',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.gif': 'image/gif',
+    '.jpeg': 'image/jpeg',
+    '.jpg': 'image/jpeg',
+    '.md': 'text/markdown',
+    '.pdf': 'application/pdf',
+    '.png': 'image/png',
+    '.ppt': 'application/vnd.ms-powerpoint',
+    '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    '.txt': 'text/plain',
+    '.xls': 'application/vnd.ms-excel',
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.webp': 'image/webp',
+  }
+  return knownTypes[extension] ?? 'application/octet-stream'
+}
+
+/** V1.12（D70）：与 managed isPreviewableBinary 同语义——pdf/docx 进 binary 分支，.doc 等不走。 */
+function isExternalPreviewableBinary(mimeType: string): boolean {
+  return mimeType === 'application/pdf' ||
+    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+}
+
+function formatExternalSize(size: number): string {
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }

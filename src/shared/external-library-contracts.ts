@@ -39,6 +39,23 @@ export interface ExternalActionResult {
   readonly accepted: true
 }
 
+/** V1.12（D70）：外部资料预览的轻量元数据——外部文件不在 files 表，无 fileId/托管字段。 */
+export interface ExternalPreviewMeta {
+  readonly name: string
+  readonly mimeType: string
+  readonly sizeBytes: number
+}
+
+/**
+ * V1.12（D70）：外部资料只读预览载荷——与 ManagedFileContent 四分支同构
+ * （text/image/binary/unsupported），file 字段换轻量元数据；Main 组装、单次响应、
+ * 纯只读（零登记/零索引/零 contentChanged）、响应不含路径。
+ */
+export type ExternalFilePreview =
+  | (ExternalPreviewMeta & { readonly kind: 'text'; readonly content: string })
+  | (ExternalPreviewMeta & { readonly kind: 'image' | 'binary'; readonly dataUrl: string })
+  | (ExternalPreviewMeta & { readonly kind: 'unsupported'; readonly message: string })
+
 export function isExternalRootSummary(value: unknown): value is ExternalRootSummary {
   return (
     isRecord(value) &&
@@ -115,6 +132,26 @@ export function isExternalLessonCopyRequest(
 
 export function isExternalActionResult(value: unknown): value is ExternalActionResult {
   return isRecord(value) && hasOnlyKeys(value, ['accepted']) && value.accepted === true
+}
+
+/** V1.12（D70）：外部资料预览载荷守卫——kind 分支字段校验（dataUrl 要求 data: 前缀拒绝伪造）。 */
+export function isExternalFilePreview(value: unknown): value is ExternalFilePreview {
+  if (!isRecord(value) || !isPreviewMeta(value)) return false
+  if (value.kind === 'text') return typeof value.content === 'string'
+  if (value.kind === 'image' || value.kind === 'binary') {
+    return isNonEmptyString(value.dataUrl, 20_000_000) && value.dataUrl.startsWith('data:')
+  }
+  return value.kind === 'unsupported' && isNonEmptyString(value.message, 512)
+}
+
+function isPreviewMeta(value: Record<string, unknown>): boolean {
+  return (
+    isNonEmptyString(value.name, 512) &&
+    isNonEmptyString(value.mimeType, 256) &&
+    typeof value.sizeBytes === 'number' &&
+    Number.isSafeInteger(value.sizeBytes) &&
+    value.sizeBytes >= 0
+  )
 }
 
 function isSafeRelativePath(value: unknown, allowEmpty: boolean): value is string {

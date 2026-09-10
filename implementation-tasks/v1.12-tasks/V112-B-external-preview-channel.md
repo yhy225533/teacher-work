@@ -1,6 +1,6 @@
 # V112-B · 外部资料预览通道与面板 UI
 
-状态：TODO
+状态：DONE
 
 ## 目标
 
@@ -31,4 +31,13 @@
 
 ## 完成记录
 
-（待实施）
+2026-09-10 完成：
+
+- **合同**（external-library-contracts.ts）：ExternalFilePreview 四分支（text/image|binary 共形态/unsupported）+ ExternalPreviewMeta 轻量元数据（name/mimeType/sizeBytes，无 fileId——外部文件不在 files 表）+ isExternalFilePreview 守卫（dataUrl 要求 data: 前缀拒伪造、message 限长、sizeBytes 安全整数）。
+- **通道**（ipc-contracts.ts）：EXTERNAL_LIBRARY_IPC_CHANNELS.readPreview = 'external-library:read-preview'（第八通道，唯一新增）。
+- **Main**：ExternalLibraryService.readPreview——resolveEntry 复用（realpath + within-root + R_OK 零新路径逻辑）、12MB 上限沿用（超限 unsupported 提示）、externalMimeTypeForName 扩展名推导（与 managed knownTypes 同表）、isExternalPreviewableBinary 与 managed isPreviewableBinary 同语义（仅 pdf/docx 进 binary，.doc 等走 unsupported）；IPC case readPreview（assertRequest isExternalPathRequest → ensureResponse isExternalFilePreview）；纯只读零登记零广播。
+- **preload + preload-api**：readPreview 接线 + 守卫导入/re-export + 类型声明（误放 import 块经 typecheck 修正——verbatimModuleSyntax type-only 约束）。
+- **Renderer**（external-library-panel.tsx）：选中文件 useEffect 拉取 readPreview（isPreviewableExtension 渲染端白名单与 Main 表一致；文件夹/不可预览扩展名不触发）；ExternalEntryDetails 预览化——text+md → MarkdownDocument（files=[]，外部 md 无托管文件引用解析面）、text 纯文本 → pre、image → img、binary+pdf → PdfPreview + 逃生门、binary+docx → DocxPreview + 逃生门、unsupported → 提示；操作行零改动；V1.1 说明「不模拟高保真显示」退役；元数据行的类型/大小用预览载荷反哺（mimeType 真实值优先）。
+- **样式**：.external-preview 容器组（限滚动 + markdown/pre/img 白底阴影 + 复用 pdf/docx 容器 margin）。
+- **测试**：新增 tests/v1.12-external-preview.test.ts 12 例——service 四分支（md/txt text、png image、pdf/docx binary、.doc unsupported、超限、越界/rootId 不匹配/文件夹拒绝）、守卫伪造三态、IPC dispatch（成功载荷 + 非法载荷/文件不存在 + 响应不含路径）、渲染端钉测（静态导入复用组件、四分支渲染字面量、逃生门、V1.1 说明退役、PREVIEWABLE_EXTENSIONS 精确集合断言、Main 白名单函数体钉测、preload 接线）；初次 4 失败均为钉测自身缺陷（fixture 无 workspace 返回值/fileIcon 合法提及 .doc/推导表必需 msword）修正后全绿。
+- **门禁**：全量 98 files / 568 tests（567 + 1 skip 既有）、typecheck、lint 全绿。

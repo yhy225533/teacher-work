@@ -107,6 +107,8 @@ export const EXTERNAL_LIBRARY_IPC_CHANNELS = {
   showInFolder: 'external-library:show-in-folder',
   copyToLibrary: 'external-library:copy-to-library',
   copyToLesson: 'external-library:copy-to-lesson',
+  /** V1.12（D70）：外部资料只读预览载荷（Main 组装、纯只读、响应不含路径）。 */
+  readPreview: 'external-library:read-preview',
 } as const
 
 export const QUESTION_BANK_IPC_CHANNELS = {

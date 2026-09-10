@@ -1720,3 +1720,14 @@ Luna Max 每完成或阻塞一个任务，在文件末尾追加一节。不要�
 - **门禁**：相关测试 13/13、typecheck、lint 全绿。真实 DOM 渲染断言（图片 data: src）按测试分层约定留 V112-C 隔离冒烟。
 - Git：本地提交 `v1.12(V112-A): docx embedded images via base64 data urls`；随后 push（沿用 GitHub 授权）。下一节点 V112-B（外部资料预览通道与面板）。
 
+## V1.12 · V112-B 外部资料预览通道与面板 UI（2026-09-10 DONE）
+
+设计基准 `docs/v1.12-external-preview-plan.md` §3/§4/§5 + D70/D71。
+
+- **合同与通道**：ExternalFilePreview 四分支（轻量元数据 name/mimeType/sizeBytes，无 fileId——外部文件不在 files 表，不桥接 managed 记录）；`external-library:read-preview` 第八通道（唯一新增）；守卫 dataUrl 要求 data: 前缀。
+- **Main**：ExternalLibraryService.readPreview——路径安全完全复用 resolveEntry（realpath + within-root + R_OK，零新路径逻辑）；12MB 上限沿用；扩展名→MIME 与 managed knownTypes 同表；binary 白名单同 managed 语义（仅 pdf/docx，.doc 走 unsupported）。纯只读：零登记/零索引/零 contentChanged/响应不含路径。
+- **Renderer**：ExternalEntryDetails 预览化——选中文件即拉取（渲染端扩展名白名单与 Main 表一致）；md → MarkdownDocument（files=[]）、纯文本 → pre、图片 → img、pdf/docx → PdfPreview/DocxPreview + 「需要打印或另存？」逃生门；操作行（保存到素材库/用于本次备课/打开文件/所在文件夹）零改动；V1.1 说明退役。备课跳转模式同生效。
+- **测试**：新增 v1.12-external-preview 12 例（service 四分支/路径安全三拒绝/守卫伪造/IPC dispatch 含响应不含路径断言/渲染端钉测含 PREVIEWABLE_EXTENSIONS 精确集合与 Main 白名单函数体钉测）。
+- **门禁**：全量 98 files / 568 tests（567 + 1 skip 既有）、typecheck、lint 全绿。
+- Git：本地提交 `v1.12(V112-B): external library in-app preview channel and panel`；随后 push（沿用 GitHub 授权）。下一节点 V112-C（最终门禁与验收）。
+

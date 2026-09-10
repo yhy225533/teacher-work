@@ -1858,6 +1858,58 @@ button:disabled {
   line-height: 1.7;
 }
 
+/* V1.12（D70/D71）：外部资料应用内预览区——复用课次阅读器组件栈，容器适配 external-content-panel。 */
+.external-preview {
+  margin-top: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 14px;
+  overflow: auto;
+  max-height: calc(100vh - 320px);
+}
+
+.external-preview .material-markdown {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 18px 22px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.external-preview-text {
+  margin: 0;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 16px 18px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--color-text);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.external-preview-image {
+  display: block;
+  max-width: 100%;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.external-preview .pdf-preview,
+.external-preview .docx-preview {
+  margin: 0 auto;
+}
+
+.external-preview-state {
+  padding: 28px 12px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
 .external-root-summary {
   margin: 0 0 18px !important;
 }

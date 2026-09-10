@@ -52,6 +52,7 @@ import {
   isRestoreSummary,
   isExternalActionResult,
   isExternalDirectoryListing,
+  isExternalFilePreview,
   isNullableExternalRootSummary,
   isQuestionBankDetail,
   isQuestionBankSearchResult,
@@ -265,6 +266,8 @@ const api = Object.freeze({
     showInFolder: (request: ExternalPathRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.showInFolder, request, isExternalActionResult),
     copyToLibrary: (request: ExternalPathRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.copyToLibrary, request, isManagedFileRecord),
     copyToLesson: (request: ExternalLessonCopyRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.copyToLesson, request, isManagedFileRecord),
+    /** V1.12（D70）：外部资料只读预览（载荷守卫过滤，Renderer 不接触路径）。 */
+    readPreview: (request: ExternalPathRequest) => invoke(EXTERNAL_LIBRARY_IPC_CHANNELS.readPreview, request, isExternalFilePreview),
   }),
   questionBank: Object.freeze({
     getSummary: () => invoke(QUESTION_BANK_IPC_CHANNELS.getSummary, {}, isQuestionBankSummary),
