@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { memo, useEffect, useMemo, useState, type ReactNode } from 'react'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 
@@ -413,7 +413,7 @@ export function LessonMaterialTree({
                       manageSelectedIds={manageSelectedIds}
                       onToggleManageId={onToggleManageId}
                       removableFileIds={removableFileIds}
-                      onSetFileGroup={onSetFileGroup !== undefined && !manageMode && !isLessonLectureFile(node.file)
+                      onSetFileGroup={onSetFileGroup !== undefined && !isLessonLectureFile(node.file)
                         ? (group2: LessonMaterialGroup | null) => onSetFileGroup(node.file.id, group2)
                         : undefined}
                       currentGroupRole={groupedNodes.roleByFileId.get(node.file.id)}
@@ -582,17 +582,22 @@ function fileIcon(file: ManagedFileRecord): string {
   return '▱'
 }
 
-export function MarkdownDocument({ body, files }: {
+/**
+ * V1.13.1：memo 化——正文面板是重渲染大头（114KB 级文档每次全量 parseBlocks + KaTeX），
+ * 管理态勾选/工具行状态等父级重渲染在 body/files 引用不变时整体跳过（探针定位的性能根因）。
+ * 注意：files 需调用方保持引用稳定（section 侧 displayFiles 已是 useMemo 产物）。
+ */
+export const MarkdownDocument = memo(function MarkdownDocument({ body, files }: {
   readonly body: string
   readonly files: readonly ManagedFileRecord[]
 }): React.JSX.Element {
-  const blocks = parseBlocks(body)
+  const blocks = useMemo(() => parseBlocks(body), [body])
   return (
     <article className="material-markdown">
       {blocks.map((block, index) => renderBlock(block, index, files))}
     </article>
   )
-}
+})
 
 type MarkdownBlock =
   | { readonly type: 'heading'; readonly level: number; readonly text: string }

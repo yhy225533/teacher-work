@@ -271,6 +271,14 @@ V1.12 四节点完成后、走查确认前，产品负责人 2026-09-10 实测�
 |---|---|---|
 | V1121-A 预览上限 50MB + 解码提速 | DONE | 2026-09-10 完成：双侧 12→50MB（readText 编辑器链拆 MAX_EDITABLE_TEXT_BYTES 维持 12MB 冻结语义）+ 守卫 70M 字符 + pdf-binary 解码 for 循环钉测（产品实现原本即 for；注释记录 3809ms vs 149ms 实测依据）+ 超限档 50MB+1 与中间档可预览断言；全量 98 files / 572 tests、typecheck、lint、build 全绿；隔离冒烟 20/20（含 13MB 有效 PDF 双场景）+ 真实 41.8MB 课本 4.46s/104MB 计时；证据并入 docs/v1.12-acceptance.md §8；随 V1.12 走查不单独建标签 |
 
+## V1.13.1 已立项（走查反馈修复：菜单可选中 + 遮挡避让 + 裁剪逃逸 + 管理态卡顿）
+
+基线：V1.13 三节点已完成（`checkpoint-V1.13-pass` 待产品负责人走查）。2026-09-13 产品负责人实测两组问题并授权修复（1-5 全做）：①点"管理"很卡；②改组菜单真实鼠标下无法选中（"好像不能换位"）。真实鼠标事件探针（CDP Input.dispatchMouseEvent，`tmp/v113-smoke/probe-menu.mjs`）实证三缺陷：AppMenuButton 外点关闭只认触发按钮（V19-B 起全部 ⋯ 菜单菜单项点不中，合成 click 冒烟盲区）、hover ✕（absolute right:2px）遮挡 ⋯、菜单列表被滚动容器裁剪且向上翻转未压基础类 top。修复按 V1.10.1/V1.12.1 先例记维护增量 **V1.13.1**，单节点 V1131-A，决策 D78–D80 并入任务文件（`implementation-tasks/v1.13.1-tasks/`），验收证据追加 `docs/v1.13-acceptance.md` §7，不单独建 pass 标签。
+
+| 里程碑 | 状态 | 计划内容 |
+|---|---|---|
+| V1131-A 菜单可选中 + 遮挡避让 + 裁剪逃逸 + 卡顿修复 | DONE | 容器关闭判定 + fixed 定位/向上翻转 + ✕ 让位 + 管理态保留改组菜单 + MarkdownDocument memo；真实鼠标探针 7/7 + V113 冒烟 13/13 零回归 + 全量 101 files / 597 tests 全绿 |
+
 ## V1.13 已立项（课件区材料分组：lesson_files role 列 + 启发式 + 手动改组）
 
 基线：V1.12 四节点与 V1.12.1 维护增量均已完成（`checkpoint-V1.12-pass` 与 `checkpoint-V1.11-pass` 待产品负责人走查确认，互不阻塞）。2026-09-13 产品负责人分析思源试点导入实测（真实材料含讲义/习题作业/试卷复习/杂项四类形态挤在单一"材料"组；92 条课后反馈冗余副本已确认清理）后拍板：①「补充讲义」类（讲义+习题一体）归讲义组；②跳过纯展示层方案，直接做持久化方案——"多加一列是必须要有的"。设计基准 `docs/v1.13-lesson-material-groups-plan.md`，决策 D74–D77（`implementation-tasks/V1_13_DECISIONS.md`）。任务链 `implementation-tasks/v1.13-tasks/`，实施顺序 V113-A → B → C，同一时刻最多一个 `IN_PROGRESS`；V113-C 为唯一全量验收点（验收文档 `docs/v1.13-acceptance.md`）。migration 仅 v18 一个（lesson_files 纯 ADD COLUMN role，无表重建）；零新依赖；新 IPC 仅一条 `files:set-material-group`（成功补发既有 contentChanged，V110-A/D61 同先例）；D46 全套冻结语义零变化；student_files 零改动。不运行 portable/installer；`checkpoint-V1.13-pass` 待产品负责人走查确认后创建。

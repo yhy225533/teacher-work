@@ -2372,6 +2372,9 @@ button:disabled {
 }
 .material-reader-tree-node:hover .material-reader-tree-remove,
 .material-reader-tree-remove:focus-visible { opacity: 1; }
+/* V1.13.1：带改组菜单的树行，hover ✕ 右移让位——✕ 原为 absolute right:2px，
+   恰好压住 ⋯（探针实锤：点 ⋯ 中心命中 ✕，弹出移除确认而非分组菜单）。 */
+.material-reader-tree-row:has(.tree-group-menu-btn) .material-reader-tree-remove { right: 30px; }
 .lesson-history-list li { position: relative; padding-right: 26px; }
 .lesson-history-list .material-reader-tree-remove { position: absolute; right: 0; top: 50%; transform: translateY(-50%); opacity: 0.65; }
 .lesson-history-list .material-reader-tree-remove:hover { opacity: 1; }

@@ -97,8 +97,8 @@ describe('V19-E 导出 UI（打印视图 + 课件区入口）', () => {
   it('frozen reader flows untouched: MarkdownDocument semantics and existing entries intact', () => {
     const reader = source('../src/renderer/lesson-material-reader.tsx')
     const section = source('../src/renderer/lesson-files-section.tsx')
-    // 打印视图只消费：渲染管线函数原样
-    expect(reader).toContain('export function MarkdownDocument({ body, files }')
+    // 打印视图只消费：渲染管线函数原样（V1.13.1 起 MarkdownDocument memo 化——渲染语义零变化）
+    expect(reader).toContain('export const MarkdownDocument = memo(function MarkdownDocument({ body, files }')
     expect(reader).toContain('function ManagedMarkdownImage(')
     // 既有入口全部保留
     for (const entry of ['设为讲义底稿', '增强解析', '从本课移除', '所在文件夹', '系统打开']) {

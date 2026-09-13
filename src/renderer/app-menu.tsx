@@ -39,12 +39,48 @@ export function AppMenuButton({ label, entries, buttonClassName = 'secondary-but
   readonly title?: string
 }): React.JSX.Element {
   const [open, setOpen] = useState(false)
-  const buttonRef = useRef<HTMLButtonElement>(null)
+  // V1.13.1：外点关闭以"触发按钮 + 菜单列表"整个容器为界——旧实现只认触发按钮，
+  // 真实鼠标按下菜单项（pointerdown）会先把菜单关掉，click 落空、选择静默失效（探针实锤）。
+  const containerRef = useRef<HTMLSpanElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  // V1.13.1：列表改 fixed 定位——absolute 列表会被滚动容器（如 .material-reader-tree 的
+  // overflow-y: auto，窄窗口下 max-height 210px）裁剪，底部行的菜单不可见不可点。
+  // 打开时按触发按钮实测坐标计算；下方剩余空间不足时向上翻。
+  const [listStyle, setListStyle] = useState<React.CSSProperties | null>(null)
+
+  function toggleOpen(): void {
+    if (open) { setOpen(false); return }
+    const trigger = triggerRef.current
+      if (trigger !== null) {
+        const rect = trigger.getBoundingClientRect()
+        const margin = 6
+        const estimateHeight = 240
+        const style: React.CSSProperties = { position: 'fixed' }
+        // 基础类 .app-menu-list 带 top: calc(100% + 6px)/left: 0——方向翻转时须用 auto 显式压掉，
+        // 否则 top/bottom 双约束把列表顶出视口（探针实测 top=787 > innerHeight=781）。
+        if (rect.bottom + estimateHeight > window.innerHeight - 8) {
+          style.top = 'auto'
+          style.bottom = window.innerHeight - rect.top + margin
+        } else {
+          style.top = rect.bottom + margin
+          style.bottom = 'auto'
+        }
+      if (align === 'right') {
+        // 基础类 .app-menu-list 带 left: 0，右对齐时须显式压掉，避免 left/right 双约束撑宽
+        style.right = window.innerWidth - rect.right
+        style.left = 'auto'
+      } else {
+        style.left = rect.left
+      }
+      setListStyle(style)
+    }
+    setOpen(true)
+  }
 
   useEffect(() => {
     if (!open) return
     const close = (event: PointerEvent): void => {
-      if (buttonRef.current !== null && event.target instanceof Node && buttonRef.current.contains(event.target)) return
+      if (containerRef.current !== null && event.target instanceof Node && containerRef.current.contains(event.target)) return
       setOpen(false)
     }
     const closeOnEscape = (event: KeyboardEvent): void => { if (event.key === 'Escape') setOpen(false) }
@@ -64,21 +100,21 @@ export function AppMenuButton({ label, entries, buttonClassName = 'secondary-but
   }, [open])
 
   return (
-    <span className="app-menu">
+    <span className="app-menu" ref={containerRef}>
       <button
-        ref={buttonRef}
+        ref={triggerRef}
         className={buttonClassName}
         type="button"
         disabled={disabled}
         title={title}
         aria-expanded={open}
         aria-haspopup="menu"
-        onClick={() => { setOpen((current) => !current) }}
+        onClick={toggleOpen}
       >
         {label}
       </button>
       {open && (
-        <div className={`app-menu-list${align === 'right' ? ' is-right' : ''}`} role="menu">
+        <div className={`app-menu-list${align === 'right' ? ' is-right' : ''}`} role="menu" style={listStyle ?? undefined}>
           {entries.map((entry) => {
             if (entry.kind === 'separator') return <hr key={entry.key} className="app-menu-separator" />
             if (entry.kind === 'group') return <p key={entry.key} className="app-menu-group">{entry.label}</p>

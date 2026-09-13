@@ -1792,3 +1792,13 @@ V1.12 最终验收前维护增量（D73，V1.10.1/V1.5.3.1 先例——证据并
 - **验收记录**：`docs/v1.13-acceptance.md`（含走查清单 7 项与已知限制）。
 - Git：本地提交 `v1.13(V113-C): final gates, smoke and acceptance record`；随后 push（沿用 GitHub 授权）。
 - `checkpoint-V1.13-pass` 未创建——待产品负责人按验收文档 §5 走查清单确认后创建（`checkpoint-V1.12-pass`、`checkpoint-V1.11-pass` 亦待其走查，互不阻塞）。
+
+## V1.13.1 · V1131-A 菜单可选中 + 遮挡避让 + 裁剪逃逸 + 卡顿修复（2026-09-13 DONE）
+
+产品负责人走查实测（"点上管理就很卡" + "好像不能换位"）后授权 1-5 全做。**诊断方法**：真实鼠标事件探针（CDP Input.dispatchMouseEvent 完整 pointerdown→click 管线）——合成 `element.click()` 的既有冒烟不触发 pointerdown，是 V1.13 冒烟 13/13 未抓到缺陷的盲区根因。
+
+- **探针实证三缺陷**：① AppMenuButton 外点关闭只认触发按钮——按下菜单项瞬间菜单被关（菜单项数 0）、click 落空、role 不落库；该缺陷自 V19-B 存在于全部 ⋯ 菜单（工具行/课程页），改组菜单是首个以菜单项点击为唯一路径的功能故暴露；② hover ✕（absolute right:2px）恰好压住 ⋯——点 ⋯ 中心命中 ✕ 弹出移除确认；③ 菜单列表 absolute 被滚动容器裁剪（`.material-reader-tree` overflow-y:auto）且向上翻转未压基础类 `top: calc(100% + 6px)`（实测 top=787 > innerHeight=781）。
+- **修复（D78–D80，决策并入任务文件）**：外点关闭改容器判定（触发+列表包 ref）；列表 `position: fixed` 按触发实测坐标定位 + 空间不足向上翻 + 翻转方向 `top/bottom='auto'` 压基础类 + 右对齐 `left='auto'`——收益面为全部 ⋯ 菜单（含短容器场景）；`✕` 在带菜单行 `:has` 作用域内右移 30px 让位；管理态保留改组菜单（讲义命名文件仍不可改组，D46 不动）；MarkdownDocument `memo` + parseBlocks 按 body useMemo——管理态操作零 IPC/零 DB（直接回答"不是数据库校验"），卡顿根因是大文档全量重渲染。
+- **验证**：真实鼠标探针 7/7（开菜单/静置稳定/按下存活/抬起 role=exam 落库/合成对照/stderr）；V113 冒烟 13/13 零回归；新增 5 例源码钉测 + 演进 V19-E 冻结钉测（memo 化渲染语义零变化）。
+- **门禁**：全量 101 files / 597 tests passed（1 skipped 既有）、typecheck、lint、production build、`git diff --check` 全绿。
+- Git：本地提交 `v1.13.1(V1131-A): menu hit-testing, clipping escape and document memo fixes`；随后 push（沿用 GitHub 授权）。
