@@ -1812,3 +1812,11 @@ V1.12 最终验收前维护增量（D73，V1.10.1/V1.5.3.1 先例——证据并
 - **验证**：探针几何断言卡高 299→69px、main 0×281→174×51；菜单探针 7/7、V113 冒烟 13/13 零回归；钉测 2 例（规则钉 + 容器全集审计钉）。
 - **门禁**：全量 102 files / 599 tests passed（1 skipped 既有）、typecheck、lint、production build、`git diff --check` 全绿。
 - Git：本地提交 `v1.13.2(V1132-A): reset bare radio and checkbox width in prep workspace`；随后 push（沿用 GitHub 授权）。
+
+## V1.14 · 设计基准冻结（2026-09-14 plan DONE）
+
+产品负责人实测拍板：①课件区无从零创建入口——手写讲义路径断裂；②四组展示结构性噪音。三项决策确认（菜单+组头双入口 / 版本链讲义 / 空组一行化）+ 附加降噪三项按推荐全做。
+
+- **设计基准**：`docs/v1.14-lesson-doc-create-and-tree-declutter-plan.md`；决策 D82–D85（`implementation-tasks/V1_14_DECISIONS.md`）：D82 新建讲义=版本链产物（`名称 · 第 1 版.md`，重名顺延，与设为讲义底稿同管线）；D83 双入口 + requestText 默认名=课次标题 + 创建后直进编辑态 + contentChanged 补发；D84 降噪四件套（空组一行化/树头去重/lessonFileBadgeLabel 徽标降噪/exercise 词表补 `特训|精练|全解全析|分层|\d{1,3}题`）；D85 门禁与冒烟扩展。
+- **任务链**：`implementation-tasks/v1.14-tasks/` V114-A（契约/服务/通道）→ B（双入口+降噪）→ C（全量门禁+冒烟）；新 IPC 仅 `files:create-lesson-doc`；零 migration/依赖；D46 零变化。
+- Git：本地提交 `plan(V1.14): lesson doc create entry and courseware tree declutter`。

@@ -271,6 +271,16 @@ V1.12 四节点完成后、走查确认前，产品负责人 2026-09-10 实测�
 |---|---|---|
 | V1121-A 预览上限 50MB + 解码提速 | DONE | 2026-09-10 完成：双侧 12→50MB（readText 编辑器链拆 MAX_EDITABLE_TEXT_BYTES 维持 12MB 冻结语义）+ 守卫 70M 字符 + pdf-binary 解码 for 循环钉测（产品实现原本即 for；注释记录 3809ms vs 149ms 实测依据）+ 超限档 50MB+1 与中间档可预览断言；全量 98 files / 572 tests、typecheck、lint、build 全绿；隔离冒烟 20/20（含 13MB 有效 PDF 双场景）+ 真实 41.8MB 课本 4.46s/104MB 计时；证据并入 docs/v1.12-acceptance.md §8；随 V1.12 走查不单独建标签 |
 
+## V1.14 已立项（课件区新建讲义 + 树降噪，D82–D85）
+
+基线：V1.13.2 已完成（`b8c52ca`）。2026-09-14 产品负责人实测：①课件区无任何从零创建入口（⋯ 菜单全是加工已有文件的动作）——手写讲义路径断裂；②四组展示下空组长文案/重复树头/全员外部资料徽标造成结构性噪音。拍板：新建入口 = ⋯ 菜单 + 讲义组头 ＋ 双入口、新建形态 = 版本链讲义（创建 `名称 · 第 1 版.md`，重名自动顺延，创建后直进编辑器）、空组一行化、附加降噪三项全做（树头去重/隐藏外部资料徽标/启发式补词）。设计基准 `docs/v1.14-lesson-doc-create-and-tree-declutter-plan.md`，决策 D82–D85（`implementation-tasks/V1_14_DECISIONS.md`）。任务链 `implementation-tasks/v1.14-tasks/`，顺序 V114-A → B → C；零 migration、零新依赖；新 IPC 仅 `files:create-lesson-doc` 一条；D46 语义零变化（新建产物与设为讲义底稿同构）。`checkpoint-V1.14-pass` 待走查确认后创建。
+
+| 里程碑 | 状态 | 计划内容 |
+|---|---|---|
+| V114-A 新建讲义契约/服务/通道 | IN_PROGRESS | CreateLessonDocRequest 守卫 + create-lesson-doc 通道 + createLessonDoc（名称清洗/重名顺延/原子写入）+ preload + contentChanged 补发 + 测试 |
+| V114-B 新建双入口 + 创建直进编辑 + 树降噪 | TODO | ⋯/组头双入口 + requestText 流程 + 空组一行化 + 树头去重 + lessonFileBadgeLabel 徽标降噪 + 启发式补词 + CSS + 钉测演进 |
+| V114-C 最终门禁与验收 | TODO | 全量门禁 + 隔离冒烟（新建→编辑→第 2 版版链复验 + 降噪断言）+ docs/v1.14-acceptance.md |
+
 ## V1.13.2 已立项（AI 修改对话栏模式卡竖排文字修复，D81）
 
 基线：V1.13.1 已完成（`ca66050`）。2026-09-14 产品负责人实测 AI 修改工作台右栏模式卡文字竖排溢出。探针 `tmp/v113-smoke/probe-draft-rail.mjs` 实证根因：全局 `input{width:100%}` 命中 `.prep-scope-option` 裸 radio 且无 `width: auto` 覆盖 → radio 撑满整卡（~250px）、文字 span 0×281 竖排——**V19-A 起既有**（用户期间未打开该页），功能未坏（input 撑满反而可点面积大）故冒烟漏过。修复 = 一条作用域复位规则，覆盖同款隐患三处（题库候选/文件列表/学生版开关行）。按维护增量先例单节点 V1132-A，验收证据追加 `docs/v1.13-acceptance.md` §8，不单独建 pass 标签。
