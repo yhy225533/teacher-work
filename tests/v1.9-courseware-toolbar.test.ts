@@ -139,7 +139,8 @@ describe('V19-B 课件区合并工具行与 ⋯ 收纳', () => {
     it('keeps V1.8.1 grouping, source badges and current badge untouched in the tree', () => {
       const reader = source('../src/renderer/lesson-material-reader.tsx')
 
-      expect(reader).toContain('splitLessonFilesByRole')
+      // V1.13/D76 语义演进：分组实现从 splitLessonFilesByRole 委托改为 groupLessonMaterialNodes 四组桶
+      expect(reader).toContain('groupLessonMaterialNodes')
       expect(reader).toContain('material-role-group')
       expect(reader).toContain('isCurrentLecture')
       expect(reader).toContain('sourceLabel={lessonFileSourceLabel(node.file)}')

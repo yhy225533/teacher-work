@@ -1,6 +1,6 @@
 # V113-B · 启发式分组纯模块 + 四组树 + 手动改组菜单
 
-状态：TODO
+状态：DONE
 
 ## 目标
 
@@ -25,4 +25,11 @@
 
 ## 完成记录
 
-（待填）
+2026-09-13 完成：
+
+- **启发式纯函数**：实现位置收敛到 `lesson-prep-context.ts`（设计基准原写"新模块 lesson-material-groups.ts"——实现时发现规则 1/6 需复用冻结的 `isLessonLectureFile` / `extractResourceReferences` / `findReferencedFiles`，同文件实现可避免循环导入；功能与规则表逐条一致）。新增 `LESSON_MATERIAL_GROUP_META`（四组图标/文案/空态）、`LessonMaterialGroupContext`、`lessonMaterialGroupRole`（D75 七条首中即停）、`groupLessonMaterialNodes`（树节点四组桶，树构建零变化）；`splitLessonFilesByRole` 保留签名、内部委托新函数（D76 语义演进：讲义组 = lecture 组，材料组 = 三组之和；课程页 hero chips 零代码改动吃到新语义）。
+- **四组渲染**：`LessonMaterialReader`/`LessonMaterialTree` 新 `grouping`（lessonTitle + groupOverrides）与 `onSetFileGroup` props（reader 透传 tree）；grouped 渲染从两组改四组循环（组序/计数/空态来自 META），lecture 组保留当前徽标、全组保留来源标签；未传 grouping 时启发式退化为空标题上下文（规则 5/6 不可用，规则 1-4/7 照常）。
+- **改组菜单**：树行内 `tree-group-menu-btn`（复用 AppMenuButton，紧凑样式 hover 才显）——四组项（当前组置灰）+ 分隔 + 「↺ 恢复自动分组」（仅手动覆盖文件可用）；白名单 = 非 `isLessonLectureFile` 文件且非管理态；readOnly / pick 场景不传回调即不出菜单。
+- **section 接线**：`groupOverrides` 从 overview lesson 链接 role 派生（仅非 null 入 map）；`setFileGroup` → `files.setMaterialGroup`，成功后 Main 补发 contentChanged → 既有 `onContentChanged → reload` 链刷新四组与 hero 计数；readOnly 不传回调。
+- **测试**：新 `tests/v1.13-material-groups.test.ts` 13 例——规则表逐条（D46 命名/习题作业优先于标题匹配/试卷复习/补充讲义裁决含 K字 docx 实名钉测/标题包含含单字符防御/薄壳外链 vs 纯题图/misc 兜底）、四组桶、splitLessonFilesByRole 语义演进、四组渲染顺序 + 手动覆盖落位 + 版本链行无菜单 + 未传回调无菜单 + 菜单项源码钉测（静态渲染不可达交互态）；演进 v1.8.1 钉测（'本课材料' 文案退役 → META 四组断言）与 v1.9-courseware-toolbar 钉测（splitLessonFilesByRole → groupLessonMaterialNodes）。
+- **门禁**：相关测试 80/80（9 files）、typecheck、lint、production build 全绿。

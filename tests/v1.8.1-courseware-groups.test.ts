@@ -17,18 +17,20 @@ describe('V1.8.1 课件区讲义/材料分组（方案 A）', () => {
     expect(context).toContain('readonly materials: readonly ManagedFileRecord[]')
   })
 
-  it('LessonMaterialTree renders lecture/material groups only when grouped, with badges and empty hints', () => {
+  it('LessonMaterialTree renders four role groups only when grouped, with badges and empty hints', () => {
     const reader = source('src/renderer/lesson-material-reader.tsx')
-    // 分组渲染与顺序：讲义组在前、材料组在后
-    expect(reader).toContain('本课讲义')
-    expect(reader).toContain('本课材料')
-    expect(reader.indexOf('本课讲义')).toBeLessThan(reader.indexOf('本课材料'))
-    // 当前徽标 + 来源标签（复用 lessonFileSourceLabel）
+    // V1.13/D76 语义演进：两组 → 四组（讲义/习题作业/试卷复习/其他），组序讲义在前；
+    // 组标题与空态文案收敛到 prep-context 的 LESSON_MATERIAL_GROUP_META（'本课材料' 文案退役）。
+    expect(reader).toContain('LESSON_MATERIAL_GROUP_META')
+    expect(reader).toContain("['lecture', 'exercise', 'exam', 'misc']")
+    expect(reader).toContain('material-role-group')
+    // 当前徽标 + 来源标签（复用 lessonFileSourceLabel，全组生效）
     expect(reader).toContain('material-role-badge is-current')
     expect(reader).toContain('material-role-badge is-source')
     expect(reader).toContain('lessonFileSourceLabel(node.file)')
-    // 讲义组空态引导（与 V17-B 无 md 引导语义衔接）
-    expect(reader).toContain('还没有讲义——选中材料区的 Markdown 可「设为讲义底稿」，或用 AI 生成第一版课件。')
+    // 讲义组空态引导（与 V17-B 无 md 引导语义衔接；文案随 META 迁至 prep-context）
+    const context = source('src/renderer/lesson-prep-context.ts')
+    expect(context).toContain('还没有讲义——选中材料区的 Markdown 可「设为讲义底稿」，或用 AI 生成第一版课件。')
     // grouped 默认 false：既有调用（draft-panel 等）零改动
     expect(reader).toContain('grouped = false')
     expect(reader).toContain('readonly grouped?: boolean')

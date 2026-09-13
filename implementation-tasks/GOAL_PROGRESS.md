@@ -1770,3 +1770,15 @@ V1.12 最终验收前维护增量（D73，V1.10.1/V1.5.3.1 先例——证据并
 - **测试**：service +4、ipc +1、新 v1.13-material-group 2（migration/CHECK/守卫）；mineru-migration 钉测演进 17→18 并补 v15 夹具 lesson_files 表。
 - **门禁**：相关 41 tests（6 files）、typecheck、lint 全绿。
 - Git：本地提交 `v1.13(V113-A): lesson_files role column and set-material-group channel`。
+
+## V1.13 · V113-B 启发式分组纯模块 + 四组树 + 改组菜单（2026-09-13 DONE）
+
+设计基准 `docs/v1.13-lesson-material-groups-plan.md` §3/§4 + D75/D76。
+
+- **启发式**：`lessonMaterialGroupRole` 七条首中即停（实现位置收敛到 lesson-prep-context.ts 复用冻结助手，避免循环导入——设计基准实现位置偏差已记录）；D75 规则表逐条测试钉死，含 K字壳 md（精讲）与 docx 本体（学生讲义）实名钉测、「AMC8 余数 - 作业」作业优先、薄壳外链 vs 纯题图分流。
+- **四组 UI**：LessonMaterialReader/Tree 四组循环渲染（META 图标/文案/空态），lecture 组当前徽标保留、全组来源标签；`splitLessonFilesByRole` 保留签名委托新函数，hero chips 零改动吃到新语义。
+- **改组菜单**：树行 ⋯（AppMenuButton）四组 + 恢复自动（仅覆盖文件可用）；白名单排除版本链命名文件/管理态；readOnly 不传回调。
+- **接线**：groupOverrides 从 lesson 链接 role 派生；setFileGroup → files.setMaterialGroup → contentChanged → reload 链。
+- **测试**：新 v1.13-material-groups 13 例；演进 v1.8.1（META 四组替代'本课材料'文案钉测）与 v1.9-courseware-toolbar（groupLessonMaterialNodes）钉测。
+- **门禁**：相关 80 tests（9 files）、typecheck、lint、production build 全绿。
+- Git：本地提交 `v1.13(V113-B): heuristic groups, four-bucket tree and regroup menu`。

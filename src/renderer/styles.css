@@ -2397,6 +2397,21 @@ button:disabled {
   font-weight: 700;
 }
 .tree-manage-toggle[aria-pressed='true'] { border-color: #4f46e5; color: var(--color-primary-active); }
+/* V1.13/D76：树行内改组菜单触发按钮（紧凑 ⋯，hover 才明显，避免噪音）。 */
+.material-reader-tree-row .tree-group-menu-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 12px;
+  line-height: 1.2;
+  border-radius: 4px;
+  opacity: 0.45;
+}
+.material-reader-tree-row .tree-group-menu-btn:hover,
+.material-reader-tree-row .tree-group-menu-btn[aria-expanded='true'] { opacity: 1; color: var(--color-primary-active); background: #f1f5f9; }
+.material-reader-tree-row .tree-group-menu-btn[disabled] { opacity: 0.25; cursor: default; }
 .confirm-file-list { margin: 6px 0; padding-left: 18px; max-height: 180px; overflow: auto; }
 .confirm-file-list li { font-size: 12px; line-height: 1.7; }
 

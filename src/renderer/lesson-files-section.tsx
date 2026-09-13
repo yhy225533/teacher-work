@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import type { NodeRecord, NoteRecord } from '../shared/core-contracts'
-import type { ManagedFileOverview } from '../shared/file-contracts'
+import type { LessonMaterialGroup, ManagedFileOverview } from '../shared/file-contracts'
 import { useCoreOverview } from './core-overview-provider'
 import {
   classifyLessonCoursewareFiles,
@@ -139,6 +139,31 @@ export default function LessonFilesSection({
   function toggleManageMode(): void {
     setManageMode((current) => !current)
     setManageSelectedIds([])
+  }
+
+  // V1.13/D76：手动覆盖组（lesson_files.role）——仅手动设置过的文件入 map，其余走 D75 启发式。
+  const groupOverrides = useMemo(() => {
+    const map = new Map<string, LessonMaterialGroup>()
+    if (lesson === null || overview === null) return map
+    for (const link of overview.links) {
+      if (link.targetType === 'lesson' && link.targetId === lesson.id && link.role !== undefined && link.role !== null) {
+        map.set(link.fileId, link.role)
+      }
+    }
+    return map
+  }, [lesson, overview])
+
+  /** V1.13/D77：手动改组——成功后 Main 补发 contentChanged，既有 onContentChanged → reload 链刷新四组与计数。 */
+  async function setFileGroup(fileId: string, group: LessonMaterialGroup | null): Promise<void> {
+    setBusy(true)
+    setError('')
+    try {
+      await window.teacherWorkbench.files.setMaterialGroup({ fileId, group })
+    } catch (groupError) {
+      setError(toErrorMessage(groupError, '资料分组设置失败，请稍后重试。'))
+    } finally {
+      setBusy(false)
+    }
   }
 
   /** V1.10/D62：批量移除——一次确认列文件名清单，随后串行 softDeleteFile（与单份同一软删语义）。 */
@@ -477,6 +502,11 @@ export default function LessonFilesSection({
           onToggleManageId={toggleManageId}
           onToggleManageMode={!readOnly ? toggleManageMode : undefined}
           removableFileIds={removableFileIds}
+          grouping={{
+            lessonTitle: lesson.title,
+            groupOverrides,
+          }}
+          onSetFileGroup={!readOnly ? (fileId: string, group: LessonMaterialGroup | null) => { void setFileGroup(fileId, group) } : undefined}
         />
         {manageMode && (
           <div className="lesson-manage-bar">

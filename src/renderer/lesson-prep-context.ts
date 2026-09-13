@@ -1,5 +1,5 @@
 import type { CourseMode, NodeRecord, StudentRecord } from '../shared/core-contracts'
-import type { ManagedFileOverview, ManagedFileRecord } from '../shared/file-contracts'
+import type { LessonMaterialGroup, ManagedFileOverview, ManagedFileRecord } from '../shared/file-contracts'
 import { normalizeMarkdownImageReferences } from './rich-text'
 
 export interface LessonMaterialTreeNode {
@@ -125,12 +125,77 @@ export interface LessonFilesByRole {
   readonly materials: readonly ManagedFileRecord[]
 }
 
+/** V1.13/D75：材料四组元数据（组序 = 展示序）。 */
+export const LESSON_MATERIAL_GROUP_META: Record<
+  LessonMaterialGroup,
+  { readonly icon: string; readonly label: string; readonly emptyText: string }
+> = {
+  lecture: { icon: '📘', label: '本课讲义', emptyText: '还没有讲义——选中材料区的 Markdown 可「设为讲义底稿」，或用 AI 生成第一版课件。' },
+  exercise: { icon: '✏️', label: '习题与作业', emptyText: '本课还没有习题与作业。' },
+  exam: { icon: '📄', label: '试卷与复习', emptyText: '本课还没有试卷与复习资料。' },
+  misc: { icon: '📎', label: '其他资料', emptyText: '本课还没有其他资料。' },
+}
+
+/** V1.13/D75：分组上下文——课次标题 + 本课全部挂课文件 + md 正文快照（规则 6 需要）。 */
+export interface LessonMaterialGroupContext {
+  readonly lessonTitle: string
+  readonly files: readonly ManagedFileRecord[]
+  readonly markdownBodies: ReadonlyMap<string, string>
+}
+
+const lessonMaterialExercisePattern = /习题|作业|题目|答案|真题|练习/u
+const lessonMaterialExamPattern = /试卷|卷子|期中|期末|一模|二模|月考|复习|错题|专项|填选|选填/u
+const lessonMaterialLecturePattern = /讲义|精讲|补充|例题|教师版|学生版/u
+
+function nameWithoutExtension(originalName: string): string {
+  return originalName.replace(/\.[^.]+$/u, '')
+}
+
+/**
+ * V1.13/D75：启发式归组——冻结顺序规则表，首中即停：
+ * 1) D46 讲义命名 → lecture；2) 习题作业关键词 → exercise；3) 试卷复习关键词 → exam；
+ * 4) 讲义类关键词（「补充讲义」= 讲义+习题一体系统，产品负责人裁决归 lecture）→ lecture；
+ * 5) 文件名主干与课次标题互相包含（≥2 字符）→ lecture；
+ * 6) md 正文引用非图片本地文件（薄壳外链容器）→ lecture；7) 兜底 → misc。
+ * 规则识别错由手动改组（lesson_files.role）兜底。
+ */
+export function lessonMaterialGroupRole(
+  file: ManagedFileRecord,
+  context: LessonMaterialGroupContext,
+): LessonMaterialGroup {
+  if (isLessonLectureFile(file)) return 'lecture'
+  const name = nameWithoutExtension(file.originalName)
+  if (lessonMaterialExercisePattern.test(name)) return 'exercise'
+  if (lessonMaterialExamPattern.test(name)) return 'exam'
+  if (lessonMaterialLecturePattern.test(name)) return 'lecture'
+  const title = context.lessonTitle.trim()
+  const stem = name.trim()
+  if (title.length >= 2 && stem.length >= 2 && (stem.includes(title) || title.includes(stem))) {
+    return 'lecture'
+  }
+  if (file.mimeType === 'text/markdown') {
+    const body = context.markdownBodies.get(file.id)
+    if (body !== undefined) {
+      const attachmentFiles = context.files.filter(
+        (candidate) => candidate.mimeType !== 'text/markdown' && !candidate.mimeType.startsWith('image/'),
+      )
+      for (const reference of extractResourceReferences(body)) {
+        if (findReferencedFiles(attachmentFiles, reference).length > 0) return 'lecture'
+      }
+    }
+  }
+  return 'misc'
+}
+
 /** V1.8.1/D46 方案 A：课件区目录树分组（纯展示，不改变文件获取与既有 classify 管线）。 */
 export function splitLessonFilesByRole(files: readonly ManagedFileRecord[]): LessonFilesByRole {
   const lecture: ManagedFileRecord[] = []
   const materials: ManagedFileRecord[] = []
+  // V1.13/D76 语义演进：讲义组 = lecture 组（含导入讲义）；材料组 = 习题/试卷/其他三组之和。
+  // 此处无 md 正文快照（规则 6 不可用），课程页行动卡计数场景足够。
+  const context: LessonMaterialGroupContext = { lessonTitle: '', files, markdownBodies: new Map() }
   for (const file of files) {
-    if (isLessonLectureFile(file)) lecture.push(file)
+    if (lessonMaterialGroupRole(file, context) === 'lecture') lecture.push(file)
     else materials.push(file)
   }
   return { lecture, materials }
@@ -230,6 +295,21 @@ export function buildLessonMaterialTree(
       file,
       children: childrenByParent.get(file.id) ?? [],
     }))
+}
+
+/** V1.13/D76：树节点级四组分组（树构建不变，仅切分组桶；手动覆盖由调用方先并入 effective role）。 */
+export function groupLessonMaterialNodes(
+  nodes: readonly LessonMaterialTreeNode[],
+  effectiveRole: (file: ManagedFileRecord) => LessonMaterialGroup,
+): Record<LessonMaterialGroup, LessonMaterialTreeNode[]> {
+  const buckets: Record<LessonMaterialGroup, LessonMaterialTreeNode[]> = {
+    lecture: [],
+    exercise: [],
+    exam: [],
+    misc: [],
+  }
+  for (const node of nodes) buckets[effectiveRole(node.file)].push(node)
+  return buckets
 }
 
 function extractResourceReferences(body: string): string[] {

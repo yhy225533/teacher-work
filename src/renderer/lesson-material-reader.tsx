@@ -5,16 +5,28 @@ import 'katex/dist/katex.min.css'
 import MdEditor from './md-editor'
 import DocxPreview from './docx-preview'
 import PdfPreview from './pdf-preview'
-import type { ManagedFileContent, ManagedFileRecord } from '../shared/file-contracts'
+import type { LessonMaterialGroup, ManagedFileContent, ManagedFileRecord } from '../shared/file-contracts'
 import {
   buildLessonMaterialTree,
+  groupLessonMaterialNodes,
+  isLessonLectureFile,
   isSelectableLessonPrepFile,
+  LESSON_MATERIAL_GROUP_META,
   lessonFileSourceLabel,
-  splitLessonFilesByRole,
+  lessonMaterialGroupRole,
   type LessonMaterialTreeNode,
 } from './lesson-prep-context'
+import { AppMenuButton } from './app-menu'
 import { normalizeMarkdownImageReferences, normalizeRichText } from './rich-text'
 import { toErrorMessage } from './ui-utils'
+
+const LESSON_MATERIAL_GROUP_ORDER: readonly LessonMaterialGroup[] = ['lecture', 'exercise', 'exam', 'misc']
+
+/** V1.13/D76：菜单项短标签（组标题去掉「本课」前缀）。 */
+function groupMenuLabel(group: LessonMaterialGroup): string {
+  const meta = LESSON_MATERIAL_GROUP_META[group]
+  return `${meta.icon} ${meta.label.replace('本课', '')}`
+}
 
 /** V1.11（D67）：docx MIME 常量——与 Main 侧 isPreviewableBinary 白名单一一对应。 */
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -43,6 +55,8 @@ export default function LessonMaterialReader({
   onToggleManageId,
   onToggleManageMode,
   removableFileIds = null,
+  grouping,
+  onSetFileGroup,
 }: {
   readonly files: readonly ManagedFileRecord[]
   readonly selectedFileId: string
@@ -59,6 +73,13 @@ export default function LessonMaterialReader({
   readonly onToggleManageMode?: () => void
   /** V1.10/D62：可移除文件白名单（null = 全部可移除；当前讲义当前版由调用方排除）。 */
   readonly removableFileIds?: ReadonlySet<string> | null
+  /** V1.13/D76：分组上下文（透传 LessonMaterialTree，见其类型注释）。 */
+  readonly grouping?: {
+    readonly lessonTitle: string
+    readonly groupOverrides?: ReadonlyMap<string, LessonMaterialGroup>
+  }
+  /** V1.13/D76：手动改组回调（透传 LessonMaterialTree；未传即不出改组菜单）。 */
+  readonly onSetFileGroup?: (fileId: string, group: LessonMaterialGroup | null) => void
   readonly onFileSaved?: (fileId: string) => void
   readonly hideTree?: boolean
   readonly treeTitle?: string
@@ -132,6 +153,8 @@ export default function LessonMaterialReader({
             onToggleManageId={onToggleManageId}
             onToggleManageMode={onToggleManageMode}
             removableFileIds={removableFileIds}
+            grouping={grouping}
+            onSetFileGroup={onSetFileGroup}
           />
         </aside>
       )}
@@ -219,6 +242,8 @@ export function LessonMaterialTree({
   onToggleManageId,
   onToggleManageMode,
   removableFileIds = null,
+  grouping,
+  onSetFileGroup,
 }: {
   readonly files: readonly ManagedFileRecord[]
   readonly selectedFileId: string
@@ -239,6 +264,16 @@ export function LessonMaterialTree({
   readonly onToggleManageMode?: () => void
   /** V1.10/D62：可移除文件白名单（null = 全部可移除；当前讲义当前版由调用方排除）。 */
   readonly removableFileIds?: ReadonlySet<string> | null
+  /**
+   * V1.13/D76：分组上下文——课次标题（规则 5）+ 手动覆盖（lesson_files.role，D74）。
+   * 未传时 grouped 模式退化为纯 D46 命名分组（兼容旧调用）。
+   */
+  readonly grouping?: {
+    readonly lessonTitle: string
+    readonly groupOverrides?: ReadonlyMap<string, LessonMaterialGroup>
+  }
+  /** V1.13/D76：手动改组回调（group = null 恢复自动；未传即不出改组菜单）。 */
+  readonly onSetFileGroup?: (fileId: string, group: LessonMaterialGroup | null) => void
 }): React.JSX.Element {
   const markdownFiles = useMemo(
     () => files.filter((file) => file.mimeType === 'text/markdown'),
@@ -276,16 +311,27 @@ export function LessonMaterialTree({
   )
   const treeSnapshot = nodes.map((node) => `${node.file.id}:${node.children.map((child) => child.id).join(',')}`).join('|')
 
-  /** V1.8.1/D46：方案 A 分组——讲义组在前、材料组在后；纯展示层切分，不动文件树构建。 */
+  /** V1.13/D76：四组分组——手动覆盖（D74）优先，未覆盖走 D75 启发式；树构建零变化。 */
   const groupedNodes = useMemo(() => {
     if (!grouped) return null
-    const byRole = splitLessonFilesByRole(nodes.map((node) => node.file))
-    const lectureIds = new Set(byRole.lecture.map((file) => file.id))
-    return {
-      lecture: nodes.filter((node) => lectureIds.has(node.file.id)),
-      materials: nodes.filter((node) => !lectureIds.has(node.file.id)),
+    const overrides = grouping?.groupOverrides
+    const groupContext = {
+      lessonTitle: grouping?.lessonTitle ?? '',
+      files,
+      markdownBodies,
     }
-  }, [grouped, nodes])
+    const effectiveRole = (file: ManagedFileRecord): LessonMaterialGroup => {
+      const override = overrides?.get(file.id)
+      return override ?? lessonMaterialGroupRole(file, groupContext)
+    }
+    return {
+      buckets: groupLessonMaterialNodes(nodes, effectiveRole),
+      roleByFileId: new Map(nodes.map((node) => [node.file.id, effectiveRole(node.file)] as const)),
+      overriddenFileIds: new Set(
+        nodes.map((node) => node.file.id).filter((fileId) => overrides?.has(fileId) === true),
+      ),
+    }
+  }, [grouped, grouping, nodes, files, markdownBodies])
 
   useEffect(() => {
     setExpandedFileIds((current) => {
@@ -339,64 +385,45 @@ export function LessonMaterialTree({
               removableFileIds={removableFileIds}
             />
           ))
-          : (
-            <li className="material-role-group" aria-label="本课讲义分组">
-              <div className="material-role-group-title"><span aria-hidden="true">📘</span>本课讲义<small>{groupedNodes.lecture.length} 项</small></div>
-              {groupedNodes.lecture.length === 0 && (
-                <p className="material-role-group-empty">还没有讲义——选中材料区的 Markdown 可「设为讲义底稿」，或用 AI 生成第一版课件。</p>
-              )}
-              <ul>
-                {groupedNodes.lecture.map((node) => (
-                  <MaterialTreeNodeRow
-                    key={node.file.id}
-                    node={node}
-                    selectedFileId={selectedFileId}
-                    selectedFileIds={selectedFileIds}
-                    expanded={expandedFileIds.has(node.file.id)}
-                    canSelect={onToggleFile !== undefined && isSelectableLessonPrepFile(node.file)}
-                    onSelectFile={onSelectFile}
-                    onToggleFile={onToggleFile}
-                    onToggleExpanded={toggleExpanded}
-                    isCurrentLecture={node.file.id === currentLectureId}
-                    onRemoveFile={onRemoveFile}
-                    manageMode={manageMode}
-                    manageSelectedIds={manageSelectedIds}
-                    onToggleManageId={onToggleManageId}
-                    removableFileIds={removableFileIds}
-                  />
-                ))}
-              </ul>
-            </li>
-          )}
-        {groupedNodes !== null && (
-          <li className="material-role-group" aria-label="本课材料分组">
-            <div className="material-role-group-title"><span aria-hidden="true">📎</span>本课材料<small>{groupedNodes.materials.length} 项</small></div>
-            {groupedNodes.materials.length === 0 && (
-              <p className="material-role-group-empty">本课还没有材料。</p>
-            )}
-            <ul>
-              {groupedNodes.materials.map((node) => (
-                <MaterialTreeNodeRow
-                  key={node.file.id}
-                  node={node}
-                  selectedFileId={selectedFileId}
-                  selectedFileIds={selectedFileIds}
-                  expanded={expandedFileIds.has(node.file.id)}
-                  canSelect={onToggleFile !== undefined && isSelectableLessonPrepFile(node.file)}
-                  onSelectFile={onSelectFile}
-                  onToggleFile={onToggleFile}
-                  onToggleExpanded={toggleExpanded}
-                  sourceLabel={lessonFileSourceLabel(node.file)}
-                    onRemoveFile={onRemoveFile}
-                    manageMode={manageMode}
-                    manageSelectedIds={manageSelectedIds}
-                    onToggleManageId={onToggleManageId}
-                    removableFileIds={removableFileIds}
-                />
-              ))}
-            </ul>
-          </li>
-        )}
+          : LESSON_MATERIAL_GROUP_ORDER.map((group) => {
+            const meta = LESSON_MATERIAL_GROUP_META[group]
+            const groupNodes = groupedNodes.buckets[group]
+            return (
+              <li key={group} className="material-role-group" aria-label={`${meta.label}分组`}>
+                <div className="material-role-group-title"><span aria-hidden="true">{meta.icon}</span>{meta.label}<small>{groupNodes.length} 项</small></div>
+                {groupNodes.length === 0 && (
+                  <p className="material-role-group-empty">{meta.emptyText}</p>
+                )}
+                <ul>
+                  {groupNodes.map((node) => (
+                    <MaterialTreeNodeRow
+                      key={node.file.id}
+                      node={node}
+                      selectedFileId={selectedFileId}
+                      selectedFileIds={selectedFileIds}
+                      expanded={expandedFileIds.has(node.file.id)}
+                      canSelect={onToggleFile !== undefined && isSelectableLessonPrepFile(node.file)}
+                      onSelectFile={onSelectFile}
+                      onToggleFile={onToggleFile}
+                      onToggleExpanded={toggleExpanded}
+                      isCurrentLecture={group === 'lecture' && node.file.id === currentLectureId}
+                      sourceLabel={lessonFileSourceLabel(node.file)}
+                      onRemoveFile={onRemoveFile}
+                      manageMode={manageMode}
+                      manageSelectedIds={manageSelectedIds}
+                      onToggleManageId={onToggleManageId}
+                      removableFileIds={removableFileIds}
+                      onSetFileGroup={onSetFileGroup !== undefined && !manageMode && !isLessonLectureFile(node.file)
+                        ? (group2: LessonMaterialGroup | null) => onSetFileGroup(node.file.id, group2)
+                        : undefined}
+                      currentGroupRole={groupedNodes.roleByFileId.get(node.file.id)}
+                      hasGroupOverride={groupedNodes.overriddenFileIds.has(node.file.id)}
+                    />
+                  ))}
+                </ul>
+              </li>
+            )
+          })}
       </ul>
       {files.length === 0 && <p className="empty-state">本课次还没有资料。</p>}
     </div>
@@ -419,6 +446,9 @@ function MaterialTreeNodeRow({
   manageSelectedIds = [],
   onToggleManageId,
   removableFileIds = null,
+  onSetFileGroup,
+  currentGroupRole,
+  hasGroupOverride = false,
 }: {
   readonly node: LessonMaterialTreeNode
   readonly selectedFileId: string
@@ -438,9 +468,33 @@ function MaterialTreeNodeRow({
   readonly manageSelectedIds?: readonly string[]
   readonly onToggleManageId?: (fileId: string) => void
   readonly removableFileIds?: ReadonlySet<string> | null
+  /** V1.13/D76：改组回调（已按调用方白名单绑定到本文件；未传即不出菜单）。 */
+  readonly onSetFileGroup?: (group: LessonMaterialGroup | null) => void
+  /** V1.13/D76：当前生效组（手动覆盖或启发式）——菜单当前项置灰。 */
+  readonly currentGroupRole?: LessonMaterialGroup
+  /** V1.13/D74：本文件是否有手动覆盖——决定「恢复自动」可用性。 */
+  readonly hasGroupOverride?: boolean
 }): React.JSX.Element {
   const hasChildren = node.children.length > 0
   const canRemove = onRemoveFile !== undefined && (removableFileIds === null || removableFileIds.has(node.file.id))
+  const groupMenuEntries = onSetFileGroup === undefined ? null : [
+    ...LESSON_MATERIAL_GROUP_ORDER.map((group) => ({
+      kind: 'item' as const,
+      key: `group-${group}`,
+      label: groupMenuLabel(group),
+      disabled: currentGroupRole === group,
+      onSelect: () => onSetFileGroup(group),
+    })),
+    { kind: 'separator' as const, key: 'group-sep' },
+    {
+      kind: 'item' as const,
+      key: 'group-auto',
+      label: '↺ 恢复自动分组',
+      title: '按文件名与课次标题自动归组',
+      disabled: !hasGroupOverride,
+      onSelect: () => onSetFileGroup(null),
+    },
+  ]
   return (
     <li className="material-reader-tree-node">
       <div className="material-reader-tree-row">
@@ -481,6 +535,15 @@ function MaterialTreeNodeRow({
           {sourceLabel !== null && <small className="material-role-badge is-source">{sourceLabel}</small>}
           {hasChildren && <small>{node.children.length}</small>}
         </button>
+        {groupMenuEntries !== null && (
+          <AppMenuButton
+            label="⋯"
+            buttonClassName="tree-group-menu-btn"
+            align="right"
+            title="移动到分组"
+            entries={groupMenuEntries}
+          />
+        )}
         {!manageMode && canRemove && (
           <button
             className="material-reader-tree-remove"
