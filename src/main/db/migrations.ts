@@ -511,6 +511,18 @@ export const workspaceMigrations: readonly Migration[] = [
       `)
     },
   },
+  {
+    version: 18,
+    name: 'add_lesson_files_role',
+    up: (database) => {
+      // V1.13/D74：课件区材料手动覆盖组。纯 ADD COLUMN（无表重建，不触发 v16 类级联风险）；
+      // NULL = 自动（渲染端启发式归组），非 NULL = 老师手动指定，只经 files:set-material-group 写入。
+      database.exec(`
+        ALTER TABLE lesson_files ADD COLUMN role TEXT
+          CHECK (role IS NULL OR role IN ('lecture', 'exercise', 'exam', 'misc'));
+      `)
+    },
+  },
 ]
 
 export function runMigrations(

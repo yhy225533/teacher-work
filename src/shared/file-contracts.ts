@@ -36,11 +36,21 @@ export type ManagedFileContent =
 
 export type FileLinkTarget = 'lesson' | 'student'
 
+/**
+ * V1.13/D74：课件区材料四组（手动覆盖组）。
+ * lesson_files.role 只存老师的手动决定；NULL = 自动（渲染端启发式归组）。
+ */
+export const LESSON_MATERIAL_GROUPS = ['lecture', 'exercise', 'exam', 'misc'] as const
+
+export type LessonMaterialGroup = (typeof LESSON_MATERIAL_GROUPS)[number]
+
 export interface ManagedFileLink {
   readonly fileId: string
   readonly targetType: FileLinkTarget
   readonly targetId: string
   readonly createdAt: string
+  /** V1.13/D74：仅 lesson 链接由 Main 填写（null = 自动）；student 链接恒缺省。 */
+  readonly role?: LessonMaterialGroup | null
 }
 
 export interface ManagedFileOverview {
@@ -95,6 +105,18 @@ export interface FileActionResult {
   readonly accepted: true
 }
 
+/** V1.13/D74：手动改组请求（group = null 恢复自动）。 */
+export interface SetLessonMaterialGroupRequest {
+  readonly fileId: string
+  readonly group: LessonMaterialGroup | null
+}
+
+/** V1.13/D77：手动改组响应（返回更新后的文件记录与生效组值）。 */
+export interface SetLessonMaterialGroupResult {
+  readonly file: ManagedFileRecord
+  readonly group: LessonMaterialGroup | null
+}
+
 export function isManagedFileRecord(value: unknown): value is ManagedFileRecord {
   return (
     isRecord(value) &&
@@ -125,7 +147,29 @@ export function isManagedFileLink(value: unknown): value is ManagedFileLink {
     isNonEmptyString(value.fileId) &&
     (value.targetType === 'lesson' || value.targetType === 'student') &&
     isNonEmptyString(value.targetId) &&
-    isNonEmptyString(value.createdAt)
+    isNonEmptyString(value.createdAt) &&
+    // V1.13/D74：可选 role（缺省 = student 链接/旧载荷）；出现时必须为四组值或 null。
+    (value.role === undefined || value.role === null || isLessonMaterialGroup(value.role))
+  )
+}
+
+export function isLessonMaterialGroup(value: unknown): value is LessonMaterialGroup {
+  return typeof value === 'string' && (LESSON_MATERIAL_GROUPS as readonly string[]).includes(value)
+}
+
+export function isSetLessonMaterialGroupRequest(value: unknown): value is SetLessonMaterialGroupRequest {
+  return (
+    hasOnlyKeys(value, ['fileId', 'group']) &&
+    isNonEmptyString(value.fileId) &&
+    (value.group === null || isLessonMaterialGroup(value.group))
+  )
+}
+
+export function isSetLessonMaterialGroupResult(value: unknown): value is SetLessonMaterialGroupResult {
+  return (
+    isRecord(value) &&
+    isManagedFileRecord(value.file) &&
+    (value.group === null || isLessonMaterialGroup(value.group))
   )
 }
 

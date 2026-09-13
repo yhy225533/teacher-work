@@ -8,6 +8,8 @@ import type {
   ManagedFileOverview,
   ManagedFileRefreshResult,
   ManagedFileRecord,
+  LessonMaterialGroup,
+  SetLessonMaterialGroupResult,
 } from '../../shared/file-contracts'
 import type { SqliteDatabase } from '../db/migrations'
 import type { WorkspacePaths } from '../workspace/workspace-paths'
@@ -25,6 +27,7 @@ export type ManagedFileErrorCode =
   | 'FILE_OPEN_FAILED'
   | 'FILE_TARGET_INVALID'
   | 'FILE_TARGET_DELETED'
+  | 'FILE_NOT_LINKED'
   | 'FILE_PERMANENT_DELETE_FAILED'
 
 export class ManagedFileError extends Error {
@@ -64,6 +67,8 @@ interface LinkRow {
   readonly target_type: 'lesson' | 'student'
   readonly target_id: string
   readonly created_at: string
+  /** V1.13/D74：仅 lesson 链接查询带出（student 分支为 undefined）。 */
+  readonly role?: LessonMaterialGroup | null
 }
 
 export class ManagedFileService {
@@ -266,6 +271,30 @@ export class ManagedFileService {
       { targetType: 'lesson', targetId: lessonId },
     )
     return { file, version }
+  }
+
+  /**
+   * V1.13/D74：课件区材料手动改组——只落老师的手动决定（lesson_files.role），
+   * null = 恢复自动启发式。与 setLessonFileRole 同反查模式（取首条挂课关系）。
+   */
+  setLessonMaterialGroup(
+    fileId: string,
+    group: LessonMaterialGroup | null,
+  ): SetLessonMaterialGroupResult {
+    const source = this.requireActiveFile(fileId)
+    const linkedLessonIds = this.database
+      .prepare('SELECT lesson_id FROM lesson_files WHERE file_id = ? ORDER BY created_at, lesson_id')
+      .all(source.id) as Array<{ readonly lesson_id: string }>
+    const lessonId = linkedLessonIds[0]?.lesson_id
+    if (lessonId === undefined) {
+      throw new ManagedFileError('FILE_NOT_LINKED', '该文件未挂接课次，无法设置分组。')
+    }
+    this.transaction(() => {
+      this.database
+        .prepare('UPDATE lesson_files SET role = ? WHERE file_id = ? AND lesson_id = ?')
+        .run(group, source.id, lessonId)
+    })
+    return { file: source, group }
   }
 
   /** V1.8.1/D46：同基名讲义版本号——`基名 · 第 N 版(· 学生版).md` 的最大 N + 1（新底稿从 1 起）。 */
@@ -739,14 +768,14 @@ export class ManagedFileService {
     const activeFilter = options.includeDeleted ? '' : 'WHERE f.deleted_at IS NULL'
     const rows = this.database
       .prepare(
-        `SELECT file_id, target_type, target_id, created_at
+        `SELECT file_id, target_type, target_id, created_at, role
            FROM (
-             SELECT lf.file_id, 'lesson' AS target_type, lf.lesson_id AS target_id, lf.created_at
+             SELECT lf.file_id, 'lesson' AS target_type, lf.lesson_id AS target_id, lf.created_at, lf.role
                FROM lesson_files AS lf
                JOIN files AS f ON f.id = lf.file_id
               ${activeFilter}
              UNION ALL
-             SELECT sf.file_id, 'student' AS target_type, sf.student_id AS target_id, sf.created_at
+             SELECT sf.file_id, 'student' AS target_type, sf.student_id AS target_id, sf.created_at, NULL AS role
                FROM student_files AS sf
                JOIN files AS f ON f.id = sf.file_id
               ${activeFilter}
@@ -861,6 +890,16 @@ async function hashManagedFile(path: string): Promise<string> {
 }
 
 function mapLink(row: LinkRow): ManagedFileLink {
+  // V1.13/D74：lesson 链接携带手动覆盖组（null = 自动）；student 链接无该维度，缺省。
+  if (row.target_type === 'lesson') {
+    return {
+      fileId: row.file_id,
+      targetType: row.target_type,
+      targetId: row.target_id,
+      createdAt: row.created_at,
+      role: row.role ?? null,
+    }
+  }
   return {
     fileId: row.file_id,
     targetType: row.target_type,

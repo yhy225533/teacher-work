@@ -25,6 +25,7 @@ import {
   isManagedFileRecord,
   isNullableManagedFileRecord,
   isReadFileTextResult,
+  isSetLessonMaterialGroupResult,
   isWriteFileVersionResult,
   isAppVersion,
   isCoreOverview,
@@ -92,6 +93,7 @@ import {
   type CopyFileToStudentRequest,
   type FileIdRequest,
   type ManagedFileContentChanged,
+  type SetLessonMaterialGroupRequest,
   type WriteFileVersionRequest,
   type MoveNodeRequest,
   type NodeIdRequest,
@@ -200,6 +202,7 @@ const api = Object.freeze({
     copyToLesson: (request: CopyFileToLessonRequest) => invoke(FILE_IPC_CHANNELS.copyToLesson, request, isManagedFileRecord),
     copyToStudent: (request: CopyFileToStudentRequest) => invoke(FILE_IPC_CHANNELS.copyToStudent, request, isManagedFileRecord),
     setLessonFileRole: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.setLessonRole, request, isWriteFileVersionResult),
+    setMaterialGroup: (request: SetLessonMaterialGroupRequest) => invoke(FILE_IPC_CHANNELS.setMaterialGroup, request, isSetLessonMaterialGroupResult),
     onContentChanged: (listener: (event: ManagedFileContentChanged) => void): (() => void) => {
       const handler = (_event: unknown, payload: unknown): void => {
         if (isManagedFileContentChanged(payload)) {

@@ -387,3 +387,87 @@ describe('V1.8.1/D46 setLessonFileRole 设为讲义底稿', () => {
     expect(() => fixture.files.setLessonFileRole(unlinked.id)).toThrow(ManagedFileError)
   })
 })})
+
+describe('V1.13/D74 setLessonMaterialGroup 手动改组', () => {
+  function createLessonFixture(): { fixture: Fixture; lessonId: string } {
+    const fixture = createFixture()
+    const course = fixture.core.nodes.createCourse('课程', 'class')
+    const period = fixture.core.nodes.createPeriod(course.id, '阶段')
+    const lesson = fixture.core.nodes.createLesson(period.id, '课次 A')
+    return { fixture, lessonId: lesson.id }
+  }
+
+  it('persists an explicit group on the lesson link and overview carries it', () => {
+    const { fixture, lessonId } = createLessonFixture()
+    const sourcePath = join(fixture.baseDirectory, '讲义.md')
+    writeFileSync(sourcePath, '讲义正文', 'utf8')
+    const imported = fixture.files.importToLesson(sourcePath, lessonId)
+
+    // 新挂课行 role 为 NULL（自动）——overview lesson 链接携带 role: null
+    const before = fixture.files.getOverview().links.find((link) => link.fileId === imported.id)
+    expect(before).toMatchObject({ targetType: 'lesson', role: null })
+
+    const result = fixture.files.setLessonMaterialGroup(imported.id, 'lecture')
+    expect(result.group).toBe('lecture')
+    expect(result.file.id).toBe(imported.id)
+
+    const after = fixture.files.getOverview().links.find((link) => link.fileId === imported.id)
+    expect(after?.role).toBe('lecture')
+  })
+
+  it('clears back to auto with null and switches between groups', () => {
+    const { fixture, lessonId } = createLessonFixture()
+    const sourcePath = join(fixture.baseDirectory, '试卷.pdf')
+    writeFileSync(sourcePath, 'pdf bytes', 'utf8')
+    const imported = fixture.files.importToLesson(sourcePath, lessonId)
+
+    fixture.files.setLessonMaterialGroup(imported.id, 'exercise')
+    expect(fixture.files.getOverview().links.find((link) => link.fileId === imported.id)?.role).toBe('exercise')
+
+    const cleared = fixture.files.setLessonMaterialGroup(imported.id, null)
+    expect(cleared.group).toBeNull()
+    expect(fixture.files.getOverview().links.find((link) => link.fileId === imported.id)?.role).toBeNull()
+  })
+
+  it('rejects unlinked and soft-deleted files', () => {
+    const { fixture } = createLessonFixture()
+    const unlinkedPath = join(fixture.baseDirectory, 'unlinked.md')
+    writeFileSync(unlinkedPath, '未挂课次', 'utf8')
+    const unlinked = fixture.files.importFile(unlinkedPath)
+    expect(() => fixture.files.setLessonMaterialGroup(unlinked.id, 'lecture')).toThrowError(
+      expect.objectContaining({ code: 'FILE_NOT_LINKED' }),
+    )
+
+    const sourcePath = join(fixture.baseDirectory, 'removed.md')
+    writeFileSync(sourcePath, '已移除', 'utf8')
+    const lessonId = fixture.core.nodes
+      .createPeriod(fixture.core.nodes.createCourse('课程2', 'class').id, '阶段2')
+      .id
+    const lesson = fixture.core.nodes.createLesson(lessonId, '课次 B')
+    const imported = fixture.files.importToLesson(sourcePath, lesson.id)
+    fixture.files.softDeleteFile(imported.id)
+    expect(() => fixture.files.setLessonMaterialGroup(imported.id, 'exam')).toThrowError(
+      expect.objectContaining({ code: 'FILE_DELETED' }),
+    )
+  })
+
+  it('keeps student links free of the role field', () => {
+    const { fixture, lessonId } = createLessonFixture()
+    const sourcePath = join(fixture.baseDirectory, 'student-copy.md')
+    writeFileSync(sourcePath, '学生副本', 'utf8')
+    const lessonFile = fixture.files.importToLesson(sourcePath, lessonId)
+    // 学生副本：经 copyToStudent 产生（student 链接不携带 role 维度）
+    const student = fixture.core.createStudentForCourse(
+      fixture.core.nodes.createCourse('课程2', 'class').id,
+      '学生甲',
+    )
+    const studentCopy = fixture.files.copyToStudent(lessonFile.id, student.id)
+
+    const links = fixture.files.getOverview().links
+    const studentLink = links.find((link) => link.fileId === studentCopy.id)
+    expect(studentLink?.targetType).toBe('student')
+    expect(studentLink?.role).toBeUndefined()
+    const lessonLink = links.find((link) => link.fileId === lessonFile.id)
+    expect(lessonLink?.role).toBeNull()
+  })
+})

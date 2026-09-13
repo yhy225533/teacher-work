@@ -303,3 +303,58 @@ describe('L02 managed file IPC', () => {
   })
 
 })
+
+describe('V1.13/D77 files:set-material-group', () => {
+  it('sets a group, notifies content change, and rejects forged payloads', async () => {
+    const { workspace, service, dependencies } = createDependencies()
+    const core = new CoreDataService(workspace.database.raw)
+    const course = core.nodes.createCourse('课程', 'class')
+    const period = core.nodes.createPeriod(course.id, '阶段')
+    const lesson = core.nodes.createLesson(period.id, '课次')
+    const root = mkdtempSync(join(tmpdir(), 'v113-group-'))
+    const sourcePath = join(root, '讲义.md')
+    writeFileSync(sourcePath, '正文', 'utf8')
+    const imported = service.importToLesson(sourcePath, lesson.id)
+    const contentChanged: unknown[] = []
+    const guarded: FileIpcDependencies = {
+      ...dependencies,
+      notifyContentChanged: (event) => contentChanged.push(event),
+    }
+
+    const setResponse = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.setMaterialGroup,
+      { fileId: imported.id, group: 'exercise' },
+      guarded,
+      new TestLogger(),
+    )
+    expect(setResponse).toMatchObject({ ok: true, data: { group: 'exercise', file: { id: imported.id } } })
+    expect(contentChanged).toHaveLength(1)
+
+    const clearResponse = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.setMaterialGroup,
+      { fileId: imported.id, group: null },
+      guarded,
+      new TestLogger(),
+    )
+    expect(clearResponse).toMatchObject({ ok: true, data: { group: null } })
+
+    // 伪造载荷：未知组值 / 多余字段 → INVALID_PAYLOAD
+    const badGroup = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.setMaterialGroup,
+      { fileId: imported.id, group: 'homework' },
+      guarded,
+      new TestLogger(),
+    )
+    expect(badGroup).toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
+
+    const extraKey = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.setMaterialGroup,
+      { fileId: imported.id, group: null, lessonId: lesson.id },
+      guarded,
+      new TestLogger(),
+    )
+    expect(extraKey).toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
+
+    rmSync(root, { recursive: true, force: true })
+  })
+})

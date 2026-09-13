@@ -17,6 +17,8 @@ import {
   isManagedFileRecord,
   isNullableManagedFileRecord,
   isReadFileTextResult,
+  isSetLessonMaterialGroupRequest,
+  isSetLessonMaterialGroupResult,
   isWriteFileVersionRequest,
   isWriteFileVersionResult,
   type CopyFileToLessonRequest,
@@ -24,6 +26,7 @@ import {
   type FileIdRequest,
   type ManagedFileContentChanged,
   type ManagedFileRefreshResult,
+  type SetLessonMaterialGroupRequest,
   type WriteFileVersionRequest,
 } from '../../shared/file-contracts'
 import { ManagedFileError, ManagedFileService } from '../files/managed-file-service'
@@ -197,6 +200,19 @@ export async function dispatchFileIpc(
           file: promoted.file,
         })
         return ensureResponse(promoted, isWriteFileVersionResult)
+      }
+      case FILE_IPC_CHANNELS.setMaterialGroup: {
+        // V1.13/D77：课件区材料手动改组（lesson_files.role；null = 恢复自动）。
+        // 成功补发既有 contentChanged（V110-A/D61 同先例）：overview 一致刷新四组/行动卡计数/备课面板。
+        assertRequest(payload, isSetLessonMaterialGroupRequest)
+        const request = payload as SetLessonMaterialGroupRequest
+        const grouped = fileService.setLessonMaterialGroup(request.fileId, request.group)
+        dependencies.notifyContentChanged({
+          fileId: grouped.file.id,
+          contentChanged: true,
+          file: grouped.file,
+        })
+        return ensureResponse(grouped, isSetLessonMaterialGroupResult)
       }
     }
     throw new Error('Unhandled file IPC channel')

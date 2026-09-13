@@ -49,6 +49,8 @@ export const FILE_IPC_CHANNELS = {
   copyToLesson: 'files:copy-to-lesson',
   copyToStudent: 'files:copy-to-student',
   setLessonRole: 'files:set-lesson-role',
+  /** V1.13/D77：课件区材料手动改组（lesson_files.role；null = 恢复自动）。 */
+  setMaterialGroup: 'files:set-material-group',
 } as const
 
 export const SEARCH_IPC_CHANNELS = {

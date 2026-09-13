@@ -122,6 +122,8 @@ import {
   type ManagedFileContentChanged,
   type ManagedFileRecord,
   type ReadFileTextResult,
+  type SetLessonMaterialGroupRequest,
+  type SetLessonMaterialGroupResult,
   type WriteFileVersionRequest,
   type WriteFileVersionResult,
 } from './file-contracts'
@@ -246,10 +248,12 @@ export type {
   ManagedFileRecord,
   ManagedFileRefreshResult,
   ReadFileTextResult,
+  SetLessonMaterialGroupRequest,
   WriteFileVersionRequest,
   WriteFileVersionResult,
 } from './file-contracts'
 export { isManagedFileContent } from './file-contracts'
+export { isSetLessonMaterialGroupResult } from './file-contracts'
 export type { ExportPrintPayload, ExportPrintRequest, ExportPrintResult, PrintReadyResult } from './export-contracts'
 export {
   isExportPrintPayload,
@@ -365,6 +369,7 @@ export interface TeacherWorkbenchApi {
     copyToLesson: (request: CopyFileToLessonRequest) => Promise<ManagedFileRecord>
     copyToStudent: (request: CopyFileToStudentRequest) => Promise<ManagedFileRecord>
     setLessonFileRole: (request: FileIdRequest) => Promise<WriteFileVersionResult>
+    setMaterialGroup: (request: SetLessonMaterialGroupRequest) => Promise<SetLessonMaterialGroupResult>
     onContentChanged: (listener: (event: ManagedFileContentChanged) => void) => () => void
   }
   materialLibrary: {

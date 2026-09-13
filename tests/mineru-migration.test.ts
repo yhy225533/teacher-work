@@ -53,12 +53,12 @@ describe('V16-D migration v16 (files index_status CHECK rebuild, endpoint update
   it('applies v16 on top of a fresh workspace and keeps idempotent', () => {
     const database = createDatabase()
     const version = runMigrations(database, workspaceMigrations)
-    expect(version).toBe(17)
+    expect(version).toBe(18)
     expect(getAppliedMigrationVersions(database)).toContain(16)
     expect(getAppliedMigrationVersions(database)).toContain(17)
 
     // 再次运行不重复应用、不报错（幂等）
-    expect(runMigrations(database, workspaceMigrations)).toBe(17)
+    expect(runMigrations(database, workspaceMigrations)).toBe(18)
   })
 
   it('upgrades a v15-shaped workspace losslessly: rows, old status values, and foreign keys survive', () => {
@@ -102,6 +102,13 @@ describe('V16-D migration v16 (files index_status CHECK rebuild, endpoint update
       INSERT INTO nodes (id, kind, title, created_at, updated_at) VALUES
         ('lesson-fk', 'lesson', '第 1 讲', 't', 't');
 
+      CREATE TABLE lesson_files (
+        file_id TEXT NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+        lesson_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (file_id, lesson_id)
+      );
+
       CREATE TABLE students (
         id TEXT PRIMARY KEY NOT NULL,
         name TEXT NOT NULL CHECK (length(trim(name)) > 0),
@@ -125,7 +132,7 @@ describe('V16-D migration v16 (files index_status CHECK rebuild, endpoint update
       );
     `)
 
-    expect(runMigrations(database, workspaceMigrations)).toBe(17)
+    expect(runMigrations(database, workspaceMigrations)).toBe(18)
 
     const rows = database
       .prepare('SELECT id, index_status FROM files ORDER BY id')
@@ -245,7 +252,7 @@ describe('V16-D migration v16 (files index_status CHECK rebuild, endpoint update
       );
     `)
 
-    expect(runMigrations(database, workspaceMigrations)).toBe(17)
+    expect(runMigrations(database, workspaceMigrations)).toBe(18)
 
     // 关联行逐条幸存（旧实现此数为 0）
     const links = database

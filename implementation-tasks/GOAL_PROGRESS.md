@@ -1759,3 +1759,14 @@ V1.12 最终验收前维护增量（D73，V1.10.1/V1.5.3.1 先例——证据并
 - **设计基准**：`docs/v1.13-lesson-material-groups-plan.md`；决策 D74–D77（`implementation-tasks/V1_13_DECISIONS.md`）：D74 role 列只存手动覆盖（NULL=自动启发式、不回填、导入路径零改动）；D75 冻结顺序启发式（关键词→标题包含→薄壳引用→misc 兜底，补充系列归 lecture）；D76 四组树 + ⋯ 改组菜单（版本链文件不出菜单，D46 不可移出）；D77 新通道 files:set-material-group + 既有 contentChanged 补发。
 - **任务链**：`implementation-tasks/v1.13-tasks/` V113-A（contracts+migration+service/IPC）→ B（启发式+四组 UI）→ C（全量门禁+冒烟+验收）；migration 仅 v18 一个 ADD COLUMN；零新依赖；D46/编辑器/导出/反馈/题库/外部预览链零变化。
 - Git：本地提交 `plan(V1.13): lesson material groups with role column and manual regroup`。
+
+## V1.13 · V113-A contracts + migration v18 + 设组服务/通道（2026-09-13 DONE）
+
+设计基准 `docs/v1.13-lesson-material-groups-plan.md` §2/§5 + D74/D77。
+
+- **合同**：`LessonMaterialGroup` 四值 + `LESSON_MATERIAL_GROUPS` + Request/Result + 守卫；`ManagedFileLink.role?`（仅 lesson 链接携带，student 恒缺省）；`files:set-material-group` 入 FILE 通道白名单。
+- **migration v18**：`add_lesson_files_role`——纯 ADD COLUMN + 四值/NULL CHECK，无表重建（v16 守卫框架照用、风险面未触发）；旧行 NULL = 自动，不回填启发式（D74）。
+- **Service/IPC/Preload**：`setLessonMaterialGroup`（反查 lesson_files，空 → `FILE_NOT_LINKED`；UPDATE role）；listLinks/mapLink 带 role；IPC 成功补发既有 contentChanged；`files.setMaterialGroup` preload API 与 TeacherWorkbenchApi 类型。
+- **测试**：service +4、ipc +1、新 v1.13-material-group 2（migration/CHECK/守卫）；mineru-migration 钉测演进 17→18 并补 v15 夹具 lesson_files 表。
+- **门禁**：相关 41 tests（6 files）、typecheck、lint 全绿。
+- Git：本地提交 `v1.13(V113-A): lesson_files role column and set-material-group channel`。
