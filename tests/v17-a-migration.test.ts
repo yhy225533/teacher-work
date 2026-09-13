@@ -74,10 +74,10 @@ describe('V17-A migration v17 (notes note_kind CHECK rebuild)', () => {
   it('applies v17 on top of a fresh workspace and stays idempotent', () => {
     const database = createDatabase()
     const version = runMigrations(database, workspaceMigrations)
-    expect(version).toBe(17)
-    expect(getAppliedMigrationVersions(database)).toContain(17)
+    expect(version).toBe(18)
+    expect(getAppliedMigrationVersions(database)).toContain(18)
 
-    expect(runMigrations(database, workspaceMigrations)).toBe(17)
+    expect(runMigrations(database, workspaceMigrations)).toBe(18)
   })
 
   it('upgrades a v16 workspace losslessly: rows, old kinds, occurred_on and foreign keys survive', () => {
@@ -92,7 +92,7 @@ describe('V17-A migration v17 (notes note_kind CHECK rebuild)', () => {
     const before = readNotes(database)
     expect(before).toHaveLength(4)
 
-    expect(runMigrations(database, workspaceMigrations)).toBe(17)
+    expect(runMigrations(database, workspaceMigrations)).toBe(18)
     expect(readNotes(database)).toEqual(before)
 
     const violations = database.pragma('foreign_key_check') as unknown[]

@@ -279,4 +279,4 @@ V1.12 四节点完成后、走查确认前，产品负责人 2026-09-10 实测�
 |---|---|---|
 | V113-A contracts + migration v18 + 设组服务/通道 | DONE | LessonMaterialGroup 合同与守卫 + ManagedFileLink.role 可选键 + `files:set-material-group` 通道 + migration v18（ADD COLUMN role CHECK 四值/NULL）+ setLessonMaterialGroup（requireActiveFile → 反查 lesson_files → UPDATE）+ preload + contentChanged 补发；contracts/migration/service/ipc 四组测试 |
 | V113-B 启发式分组纯模块 + 四组树 + 改组菜单 | DONE | lesson-material-groups.ts 规则表（D75 七条首中即停）+ LessonMaterialReader 四组渲染 + ⋯ 改组菜单（AppMenuButton，白名单/恢复自动）+ section/hero 接线 + CSS；启发式逐条 + 渲染/菜单钉测 + splitLessonFilesByRole 语义演进 |
-| V113-C 最终门禁与验收 | IN_PROGRESS | 全量测试、typecheck、lint、production build、diff check、隔离 Windows 冒烟（四组渲染/改组往返/D46 零回归/stderr）+ `docs/v1.13-acceptance.md` |
+| V113-C 最终门禁与验收 | DONE | 全量测试、typecheck、lint、production build、diff check、隔离 Windows 冒烟（四组渲染/改组往返/D46 零回归/stderr）+ `docs/v1.13-acceptance.md` |

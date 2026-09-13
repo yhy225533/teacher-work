@@ -1782,3 +1782,13 @@ V1.12 最终验收前维护增量（D73，V1.10.1/V1.5.3.1 先例——证据并
 - **测试**：新 v1.13-material-groups 13 例；演进 v1.8.1（META 四组替代'本课材料'文案钉测）与 v1.9-courseware-toolbar（groupLessonMaterialNodes）钉测。
 - **门禁**：相关 80 tests（9 files）、typecheck、lint、production build 全绿。
 - Git：本地提交 `v1.13(V113-B): heuristic groups, four-bucket tree and regroup menu`。
+
+## V1.13 · V113-C 最终门禁与验收（2026-09-13 DONE）
+
+设计基准 `docs/v1.13-lesson-material-groups-plan.md` §7。V1.13 唯一全量验收点。
+
+- **自动门**：全量 100 files / 592 tests passed（1 skipped 既有）、typecheck、lint、production build、`git diff --check` 全绿；migration 钉测标准演进 17→18（7 文件，mineru-migration v15 夹具补 lesson_files）。首轮全量 backup-restore 1 例偶发（Windows 临时目录并发争用，单跑两次 + 复跑均过）——既有偶发如实记录，与本版无关。
+- **冒烟**：隔离 Windows 冒烟（tmp/v113-smoke，production + 隔离数据目录 + CDP）**13/13**：四组渲染与启发式归组、hero chips 新语义、D46 零回归（当前徽标 + 版本链不出改组菜单）、手动改组往返（role='exam' 落库 → 恢复自动 → NULL）、菜单状态（当前组置灰/恢复自动可用）、docx 预览零回归、stderr 健康；冒烟脚本自身缺陷两处（docx 夹具 zip 截断 + 断言未对齐 displayFileName）诊断修复后复跑，产品代码无缺陷。
+- **验收记录**：`docs/v1.13-acceptance.md`（含走查清单 7 项与已知限制）。
+- Git：本地提交 `v1.13(V113-C): final gates, smoke and acceptance record`；随后 push（沿用 GitHub 授权）。
+- `checkpoint-V1.13-pass` 未创建——待产品负责人按验收文档 §5 走查清单确认后创建（`checkpoint-V1.12-pass`、`checkpoint-V1.11-pass` 亦待其走查，互不阻塞）。
