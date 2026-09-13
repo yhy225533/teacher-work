@@ -1751,3 +1751,11 @@ V1.12 最终验收前维护增量（D73，V1.10.1/V1.5.3.1 先例——证据并
 - **测试**：v1.11-readcontent-binary / v1.12-external-preview 超限档演进 50MB+1 + 中间档可预览断言；新增 V1121-A describe 4 例（双常量与 readText 用档/守卫上限/解码禁回退（注释剥离）/解码等价往返）。
 - **门禁**：全量 98 files / 572 tests passed（1 skipped 既有）、typecheck、lint（regex autofix 1 处）、build、diff check 全绿；隔离冒烟 **20/20**（既有 18 场景零回归 + 13MB 有效 PDF 课次/外部双场景）；真实 41.8MB 课本计时 4.46s；进程/临时目录零残留。
 - Git：本地提交 `v1.12.1(V1121-A): preview limit 50mb and decode pinning`；随后 push（沿用 GitHub 授权）。
+## V1.13 · 设计基准冻结（2026-09-13 plan DONE）
+
+产品负责人 2026-09-13 拍板立项：①「补充讲义」类（讲义+习题一体系统）归讲义组；②跳过纯展示层方案，直接做持久化方案（lesson_files 加 role 列）。
+
+- **背景实证**：思源试点导入（tmp/import-siyuan-pilot.mjs，三学生 902 文件）+ 真实库核查——真实材料四类形态（讲义 143 / 习题作业 21 / 试卷 13 / 杂项，assets 图片 583 已由嵌套机制承载）；92 条课后反馈 md 冗余副本经确认软删除（91 条与 notes 全文精确配对 + 1 条空壳；备份 backups/manual-feedback-dedup-2026-09-13/）；K字模型课实证：薄壳 md 与 assets docx 讲义本体均已在库、嵌套匹配命中，仅分组展示不可辨。
+- **设计基准**：`docs/v1.13-lesson-material-groups-plan.md`；决策 D74–D77（`implementation-tasks/V1_13_DECISIONS.md`）：D74 role 列只存手动覆盖（NULL=自动启发式、不回填、导入路径零改动）；D75 冻结顺序启发式（关键词→标题包含→薄壳引用→misc 兜底，补充系列归 lecture）；D76 四组树 + ⋯ 改组菜单（版本链文件不出菜单，D46 不可移出）；D77 新通道 files:set-material-group + 既有 contentChanged 补发。
+- **任务链**：`implementation-tasks/v1.13-tasks/` V113-A（contracts+migration+service/IPC）→ B（启发式+四组 UI）→ C（全量门禁+冒烟+验收）；migration 仅 v18 一个 ADD COLUMN；零新依赖；D46/编辑器/导出/反馈/题库/外部预览链零变化。
+- Git：本地提交 `plan(V1.13): lesson material groups with role column and manual regroup`。
