@@ -1802,3 +1802,13 @@ V1.12 最终验收前维护增量（D73，V1.10.1/V1.5.3.1 先例——证据并
 - **验证**：真实鼠标探针 7/7（开菜单/静置稳定/按下存活/抬起 role=exam 落库/合成对照/stderr）；V113 冒烟 13/13 零回归；新增 5 例源码钉测 + 演进 V19-E 冻结钉测（memo 化渲染语义零变化）。
 - **门禁**：全量 101 files / 597 tests passed（1 skipped 既有）、typecheck、lint、production build、`git diff --check` 全绿。
 - Git：本地提交 `v1.13.1(V1131-A): menu hit-testing, clipping escape and document memo fixes`；随后 push（沿用 GitHub 授权）。
+
+## V1.13.2 · V1132-A AI 修改对话栏模式卡竖排文字修复（2026-09-14 DONE）
+
+产品负责人实测 AI 修改工作台右栏模式卡文字竖排溢出（"怎么这个界面变这样了"）。
+
+- **根因（探针 probe-draft-rail 实测）**：全局 `input{width:100%}` 命中 `.prep-scope-option` 裸 radio 且缺 `width: auto` 覆盖 → radio 撑满整卡（~250×280px，圆点居中即截图形态）、`prep-scope-option-main` 被挤成 0×281 竖排溢出。**V19-A（9-08）起既有**，非 V1.13.x 引入；功能可用（撑满反而可点面积大）+ 冒烟不截图该状态 → 漏过。V1.2 先例（`.course-mode-fieldset input{width:auto}`）V19-A 漏抄。
+- **修复（D81）**：一条作用域复位规则覆盖四处——`.prep-scope-option / .prep-scope-file-list / .improve-bank-candidates / .prep-bank-controls-inner` 的裸 radio/checkbox 回 intrinsic 宽（后三处为审计出的同款隐患：题库候选列表、目标文件列表、学生版开关行）。
+- **验证**：探针几何断言卡高 299→69px、main 0×281→174×51；菜单探针 7/7、V113 冒烟 13/13 零回归；钉测 2 例（规则钉 + 容器全集审计钉）。
+- **门禁**：全量 102 files / 599 tests passed（1 skipped 既有）、typecheck、lint、production build、`git diff --check` 全绿。
+- Git：本地提交 `v1.13.2(V1132-A): reset bare radio and checkbox width in prep workspace`；随后 push（沿用 GitHub 授权）。

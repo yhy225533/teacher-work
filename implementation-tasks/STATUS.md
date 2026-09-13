@@ -271,6 +271,14 @@ V1.12 四节点完成后、走查确认前，产品负责人 2026-09-10 实测�
 |---|---|---|
 | V1121-A 预览上限 50MB + 解码提速 | DONE | 2026-09-10 完成：双侧 12→50MB（readText 编辑器链拆 MAX_EDITABLE_TEXT_BYTES 维持 12MB 冻结语义）+ 守卫 70M 字符 + pdf-binary 解码 for 循环钉测（产品实现原本即 for；注释记录 3809ms vs 149ms 实测依据）+ 超限档 50MB+1 与中间档可预览断言；全量 98 files / 572 tests、typecheck、lint、build 全绿；隔离冒烟 20/20（含 13MB 有效 PDF 双场景）+ 真实 41.8MB 课本 4.46s/104MB 计时；证据并入 docs/v1.12-acceptance.md §8；随 V1.12 走查不单独建标签 |
 
+## V1.13.2 已立项（AI 修改对话栏模式卡竖排文字修复，D81）
+
+基线：V1.13.1 已完成（`ca66050`）。2026-09-14 产品负责人实测 AI 修改工作台右栏模式卡文字竖排溢出。探针 `tmp/v113-smoke/probe-draft-rail.mjs` 实证根因：全局 `input{width:100%}` 命中 `.prep-scope-option` 裸 radio 且无 `width: auto` 覆盖 → radio 撑满整卡（~250px）、文字 span 0×281 竖排——**V19-A 起既有**（用户期间未打开该页），功能未坏（input 撑满反而可点面积大）故冒烟漏过。修复 = 一条作用域复位规则，覆盖同款隐患三处（题库候选/文件列表/学生版开关行）。按维护增量先例单节点 V1132-A，验收证据追加 `docs/v1.13-acceptance.md` §8，不单独建 pass 标签。
+
+| 里程碑 | 状态 | 计划内容 |
+|---|---|---|
+| V1132-A 裸 radio/checkbox 宽度复位 | DONE | styles.css 四选择器复位规则 + 钉测 2 例；探针几何断言（卡高 299→69px、main 0×281→174×51）+ 菜单探针 7/7 + V113 冒烟 13/13 零回归 + 全量 102 files / 599 tests 全绿 |
+
 ## V1.13.1 已立项（走查反馈修复：菜单可选中 + 遮挡避让 + 裁剪逃逸 + 管理态卡顿）
 
 基线：V1.13 三节点已完成（`checkpoint-V1.13-pass` 待产品负责人走查）。2026-09-13 产品负责人实测两组问题并授权修复（1-5 全做）：①点"管理"很卡；②改组菜单真实鼠标下无法选中（"好像不能换位"）。真实鼠标事件探针（CDP Input.dispatchMouseEvent，`tmp/v113-smoke/probe-menu.mjs`）实证三缺陷：AppMenuButton 外点关闭只认触发按钮（V19-B 起全部 ⋯ 菜单菜单项点不中，合成 click 冒烟盲区）、hover ✕（absolute right:2px）遮挡 ⋯、菜单列表被滚动容器裁剪且向上翻转未压基础类 top。修复按 V1.10.1/V1.12.1 先例记维护增量 **V1.13.1**，单节点 V1131-A，决策 D78–D80 并入任务文件（`implementation-tasks/v1.13.1-tasks/`），验收证据追加 `docs/v1.13-acceptance.md` §7，不单独建 pass 标签。

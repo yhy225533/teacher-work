@@ -3255,6 +3255,19 @@ button.quick-status { cursor: pointer; }
   cursor: pointer;
 }
 
+/* V1.13.2：全局 input{width:100%} 表单规则会把 flex 行内的裸 radio/checkbox 撑满整行——
+   .prep-scope-option 的文字 span 被挤成 0 宽竖排溢出（V19-A 起既有，探针实测 input≈250px）。
+   工作台内裸 radio/checkbox 统一回 intrinsic 宽（course-mode-fieldset/attendance 同款先例）。 */
+.prep-scope-option input,
+.prep-scope-file-list input,
+.improve-bank-candidates input,
+.prep-bank-controls-inner input[type='checkbox'] {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+}
+
 .prep-scope-option.is-active {
   border-color: #6366f1;
   background: #f5f5ff;
