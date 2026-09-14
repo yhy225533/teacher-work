@@ -91,6 +91,7 @@ import {
   type SaveLessonAttendanceRequest,
   type CopyFileToLessonRequest,
   type CopyFileToStudentRequest,
+  type CreateLessonDocRequest,
   type FileIdRequest,
   type ManagedFileContentChanged,
   type SetLessonMaterialGroupRequest,
@@ -202,6 +203,7 @@ const api = Object.freeze({
     copyToLesson: (request: CopyFileToLessonRequest) => invoke(FILE_IPC_CHANNELS.copyToLesson, request, isManagedFileRecord),
     copyToStudent: (request: CopyFileToStudentRequest) => invoke(FILE_IPC_CHANNELS.copyToStudent, request, isManagedFileRecord),
     setLessonFileRole: (request: FileIdRequest) => invoke(FILE_IPC_CHANNELS.setLessonRole, request, isWriteFileVersionResult),
+    createLessonDoc: (request: CreateLessonDocRequest) => invoke(FILE_IPC_CHANNELS.createLessonDoc, request, isWriteFileVersionResult),
     setMaterialGroup: (request: SetLessonMaterialGroupRequest) => invoke(FILE_IPC_CHANNELS.setMaterialGroup, request, isSetLessonMaterialGroupResult),
     onContentChanged: (listener: (event: ManagedFileContentChanged) => void): (() => void) => {
       const handler = (_event: unknown, payload: unknown): void => {

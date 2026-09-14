@@ -471,3 +471,84 @@ describe('V1.13/D74 setLessonMaterialGroup 手动改组', () => {
     expect(lessonLink?.role).toBeNull()
   })
 })
+
+describe('V1.14/D82 createLessonDoc 新建讲义', () => {
+  function createLessonFixture(): { fixture: Fixture; lessonId: string } {
+    const fixture = createFixture()
+    const course = fixture.core.nodes.createCourse('课程', 'class')
+    const period = fixture.core.nodes.createPeriod(course.id, '阶段')
+    const lesson = fixture.core.nodes.createLesson(period.id, '课次 A')
+    return { fixture, lessonId: lesson.id }
+  }
+
+  it('creates a first version with heading body, lesson link and markdown registration', () => {
+    const { fixture, lessonId } = createLessonFixture()
+
+    const created = fixture.files.createLessonDoc(lessonId, '复习讲义')
+
+    expect(created.version).toBe(1)
+    expect(created.file.originalName).toBe('复习讲义 · 第 1 版.md')
+    expect(created.file.mimeType).toBe('text/markdown')
+    // 正文 = 首标题空讲义（Renderer 直进编辑态从这里开始手写）
+    expect(fixture.files.readText(created.file.id).content).toBe('# 复习讲义\n')
+    // 挂课链接
+    const linked = fixture.files.getOverview().links.filter((link) => link.targetId === lessonId)
+    expect(linked.map((link) => link.fileId)).toContain(created.file.id)
+  })
+
+  it('numbers the second creation of the same base above existing versions, other bases independent', () => {
+    const { fixture, lessonId } = createLessonFixture()
+
+    const first = fixture.files.createLessonDoc(lessonId, '复习讲义')
+    expect(first.version).toBe(1)
+
+    // 同基名顺延：与 setLessonFileRole 的 nextLectureBaseVersionNumber 同规则
+    const second = fixture.files.createLessonDoc(lessonId, '复习讲义')
+    expect(second.version).toBe(2)
+    expect(second.file.originalName).toBe('复习讲义 · 第 2 版.md')
+
+    // 不同基名独立从第 1 版起（V1.14/D86 分链语义）
+    const other = fixture.files.createLessonDoc(lessonId, '二次根式')
+    expect(other.version).toBe(1)
+    expect(other.file.originalName).toBe('二次根式 · 第 1 版.md')
+
+    // 与"设为讲义底稿"共享同一条链的版本号空间
+    const sourcePath = join(fixture.baseDirectory, '复习讲义.md')
+    writeFileSync(sourcePath, '外部底稿', 'utf8')
+    const imported = fixture.files.importToLesson(sourcePath, lessonId)
+    const promoted = fixture.files.setLessonFileRole(imported.id)
+    expect(promoted.version).toBe(3)
+    expect(promoted.file.originalName).toBe('复习讲义 · 第 3 版.md')
+  })
+
+  it('rejects empty/oversize names and invalid lessons, and trims control characters', () => {
+    const { fixture, lessonId } = createLessonFixture()
+
+    expect(() => fixture.files.createLessonDoc(lessonId, '   ')).toThrow(ManagedFileError)
+    expect(() => fixture.files.createLessonDoc(lessonId, 'x'.repeat(81))).toThrow(ManagedFileError)
+    expect(() => fixture.files.createLessonDoc('missing-lesson', '复习讲义')).toThrow(ManagedFileError)
+
+    // 控制字符清洗后有效；trim 与去控制字符后再校验长度
+    const cleaned = fixture.files.createLessonDoc(lessonId, ' 复习\u0000讲义 ')
+    expect(cleaned.file.originalName).toBe('复习讲义 · 第 1 版.md')
+    expect(fixture.files.readText(cleaned.file.id).content).toBe('# 复习讲义\n')
+
+    // 已删除课次拒绝
+    fixture.core.nodes.softDeleteNode(lessonId)
+    expect(() => fixture.files.createLessonDoc(lessonId, '再来一份')).toThrow(ManagedFileError)
+  })
+
+  it('does not touch unrelated files or lesson file listings', () => {
+    const { fixture, lessonId } = createLessonFixture()
+    const sourcePath = join(fixture.baseDirectory, '素材.md')
+    writeFileSync(sourcePath, '素材正文', 'utf8')
+    const imported = fixture.files.importToLesson(sourcePath, lessonId)
+
+    const before = fixture.files.getOverview().files.length
+    fixture.files.createLessonDoc(lessonId, '复习讲义')
+
+    // 未挂课文件无关路径零影响；既有文件记录不被动
+    expect(fixture.files.readText(imported.id).content).toBe('素材正文')
+    expect(fixture.files.getOverview().files.length).toBe(before + 1)
+  })
+})

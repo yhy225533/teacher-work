@@ -111,6 +111,12 @@ export interface SetLessonMaterialGroupRequest {
   readonly group: LessonMaterialGroup | null
 }
 
+/** V1.14/D82：新建讲义请求（名称清洗校验在 Main 侧 createLessonDoc 再做一遍防御）。 */
+export interface CreateLessonDocRequest {
+  readonly lessonId: string
+  readonly name: string
+}
+
 /** V1.13/D77：手动改组响应（返回更新后的文件记录与生效组值）。 */
 export interface SetLessonMaterialGroupResult {
   readonly file: ManagedFileRecord
@@ -162,6 +168,19 @@ export function isSetLessonMaterialGroupRequest(value: unknown): value is SetLes
     hasOnlyKeys(value, ['fileId', 'group']) &&
     isNonEmptyString(value.fileId) &&
     (value.group === null || isLessonMaterialGroup(value.group))
+  )
+}
+
+/** V1.14/D82：名称清洗规则（trim + 去控制字符；1–80 字）。Main 侧 createLessonDoc 与共享守卫共用同一上限。 */
+export const LESSON_DOC_NAME_MAX_CHARS = 80
+
+export function isCreateLessonDocRequest(value: unknown): value is CreateLessonDocRequest {
+  return (
+    hasOnlyKeys(value, ['lessonId', 'name']) &&
+    isNonEmptyString(value.lessonId) &&
+    typeof value.name === 'string' &&
+    value.name.trim() !== '' &&
+    Array.from(value.name).length <= LESSON_DOC_NAME_MAX_CHARS
   )
 }
 

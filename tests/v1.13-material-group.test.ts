@@ -12,6 +12,7 @@ import {
 } from '../src/main/db/migrations'
 import {
   LESSON_MATERIAL_GROUPS,
+  isCreateLessonDocRequest,
   isLessonMaterialGroup,
   isManagedFileLink,
   isSetLessonMaterialGroupRequest,
@@ -86,5 +87,16 @@ describe('V1.13/D74 lesson_files.role 迁移与合同', () => {
 
     expect(isSetLessonMaterialGroupResult({ file: { id: 'file-1', originalName: 'a.md', sizeBytes: 1, mimeType: 'text/markdown', originFileId: null, mtimeMs: null, contentHash: null, createdAt: '2026-01-01', updatedAt: '2026-01-01', deletedAt: null }, group: null })).toBe(true)
     expect(isSetLessonMaterialGroupResult({ file: null, group: null })).toBe(false)
+  })
+})
+
+describe('V1.14/D82 createLessonDoc 合同', () => {
+  it('accepts lessonId + non-empty name within 80 chars, rejects forged payloads', () => {
+    expect(isCreateLessonDocRequest({ lessonId: 'lesson-1', name: '复习讲义' })).toBe(true)
+    expect(isCreateLessonDocRequest({ lessonId: 'lesson-1', name: '  ' })).toBe(false)
+    expect(isCreateLessonDocRequest({ lessonId: 'lesson-1', name: '复习讲义'.repeat(21) })).toBe(false)
+    expect(isCreateLessonDocRequest({ lessonId: 'lesson-1' })).toBe(false)
+    expect(isCreateLessonDocRequest({ lessonId: 'lesson-1', name: '复习讲义', extra: 1 })).toBe(false)
+    expect(isCreateLessonDocRequest({ lessonId: '', name: '复习讲义' })).toBe(false)
   })
 })

@@ -358,3 +358,96 @@ describe('V1.13/D77 files:set-material-group', () => {
     rmSync(root, { recursive: true, force: true })
   })
 })
+
+describe('V1.14/D82 files:create-lesson-doc', () => {
+  it('creates a versioned lecture doc, indexes it, notifies content change, and rejects forged payloads', async () => {
+    const { workspace, service, dependencies } = createDependencies()
+    const core = new CoreDataService(workspace.database.raw)
+    const course = core.nodes.createCourse('课程', 'class')
+    const period = core.nodes.createPeriod(course.id, '阶段')
+    const lesson = core.nodes.createLesson(period.id, '课次')
+    const root = mkdtempSync(join(tmpdir(), 'v114-create-'))
+    const sourcePath = join(root, '外部底稿.md')
+    writeFileSync(sourcePath, '# 外部底稿', 'utf8')
+    const imported = service.importToLesson(sourcePath, lesson.id)
+    const promoted = service.setLessonFileRole(imported.id)
+    expect(promoted.version).toBe(1)
+
+    const indexedIds: string[] = []
+    const contentChanged: unknown[] = []
+    const guarded: FileIpcDependencies = {
+      ...dependencies,
+      enqueueIndex: (fileId) => indexedIds.push(fileId),
+      notifyContentChanged: (event) => contentChanged.push(event),
+    }
+
+    const created = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.createLessonDoc,
+      { lessonId: lesson.id, name: '复习讲义' },
+      guarded,
+      new TestLogger(),
+    )
+    // 同基名顺延不在场：新基名独立第 1 版；与 promoted 同课挂链
+    expect(created).toMatchObject({
+      ok: true,
+      data: { version: 1, file: { originalName: '复习讲义 · 第 1 版.md', mimeType: 'text/markdown' } },
+    })
+    expect(service.readText((created as { data: { file: { id: string } } }).data.file.id).content)
+      .toBe('# 复习讲义\n')
+    expect(indexedIds).toHaveLength(1)
+    expect(contentChanged).toHaveLength(1)
+
+    // 同基名再建 → 第 2 版（重名顺延）
+    const second = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.createLessonDoc,
+      { lessonId: lesson.id, name: '复习讲义' },
+      guarded,
+      new TestLogger(),
+    )
+    expect(second).toMatchObject({ ok: true, data: { version: 2 } })
+    expect(contentChanged).toHaveLength(2)
+
+    // 伪造载荷：空名 / 超长 / 缺字段 / 多余字段 / 不存在的课次 → INVALID_PAYLOAD 或 MANAGED_FILE_ERROR
+    const emptyName = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.createLessonDoc,
+      { lessonId: lesson.id, name: '   ' },
+      guarded,
+      new TestLogger(),
+    )
+    expect(emptyName).toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
+
+    const oversize = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.createLessonDoc,
+      { lessonId: lesson.id, name: 'x'.repeat(81) },
+      guarded,
+      new TestLogger(),
+    )
+    expect(oversize).toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
+
+    const missingField = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.createLessonDoc,
+      { lessonId: lesson.id },
+      guarded,
+      new TestLogger(),
+    )
+    expect(missingField).toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
+
+    const extraKey = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.createLessonDoc,
+      { lessonId: lesson.id, name: '复习讲义', extra: 1 },
+      guarded,
+      new TestLogger(),
+    )
+    expect(extraKey).toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.INVALID_PAYLOAD } })
+
+    const badLesson = await dispatchFileIpc(
+      FILE_IPC_CHANNELS.createLessonDoc,
+      { lessonId: 'missing-lesson', name: '复习讲义' },
+      guarded,
+      new TestLogger(),
+    )
+    expect(badLesson).toMatchObject({ ok: false, error: { code: IPC_ERROR_CODES.MANAGED_FILE_ERROR } })
+
+    rmSync(root, { recursive: true, force: true })
+  })
+})

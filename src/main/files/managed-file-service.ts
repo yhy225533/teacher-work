@@ -11,6 +11,7 @@ import type {
   LessonMaterialGroup,
   SetLessonMaterialGroupResult,
 } from '../../shared/file-contracts'
+import { LESSON_DOC_NAME_MAX_CHARS } from '../../shared/file-contracts'
 import type { SqliteDatabase } from '../db/migrations'
 import type { WorkspacePaths } from '../workspace/workspace-paths'
 
@@ -267,6 +268,35 @@ export class ManagedFileService {
     const version = this.nextLectureBaseVersionNumber(lessonId, base)
     const file = this.createTextObjectAndRegister(
       bodyMd,
+      `${base} · 第 ${version} 版.md`,
+      { targetType: 'lesson', targetId: lessonId },
+    )
+    return { file, version }
+  }
+
+  /**
+   * V1.14/D82：课件区新建讲义——从零手写的版本链产物：`基名 · 第 N 版.md`（N = 同基名链顺延），
+   * 挂课次、正文为首标题空讲义，与"设为讲义底稿"同管线（临时文件 + 原子重命名 + 既有登记）。
+   */
+  createLessonDoc(lessonId: string, name: string): { file: ManagedFileRecord; version: number } {
+    this.requireActiveLesson(lessonId)
+    if (typeof name !== 'string') {
+      throw new ManagedFileError('FILE_SOURCE_INVALID', '讲义名称无效。')
+    }
+    const base = name
+      .split('')
+      .filter((char) => !isControlChar(char))
+      .join('')
+      .trim()
+    if (Array.from(base).length < 1) {
+      throw new ManagedFileError('FILE_SOURCE_INVALID', '讲义名称不能为空。')
+    }
+    if (Array.from(base).length > LESSON_DOC_NAME_MAX_CHARS) {
+      throw new ManagedFileError('FILE_SOURCE_INVALID', '讲义名称过长（不超过 80 字）。')
+    }
+    const version = this.nextLectureBaseVersionNumber(lessonId, base)
+    const file = this.createTextObjectAndRegister(
+      `# ${base}\n`,
       `${base} · 第 ${version} 版.md`,
       { targetType: 'lesson', targetId: lessonId },
     )
@@ -934,6 +964,12 @@ const MAX_PREVIEW_BYTES = 50 * 1024 * 1024
 /** V17-C 编辑器读取上限维持 12MB（D73：预览放宽不改变编辑器冻结语义）。 */
 const MAX_EDITABLE_TEXT_BYTES = 12 * 1024 * 1024
 const MAX_WRITE_BODY_CHARS = 200_000
+
+/** V1.14/D82：讲义名称控制字符（C0 + DEL + C1；清洗后 trim；共享守卫只挡结构，Main 侧再清洗一遍防御）。 */
+function isControlChar(char: string): boolean {
+  const code = char.codePointAt(0)
+  return code !== undefined && (code <= 0x1f || (code >= 0x7f && code <= 0x9f))
+}
 
 function isPreviewableText(mimeType: string): boolean {
   return mimeType.startsWith('text/') || mimeType === 'application/json'

@@ -1829,3 +1829,10 @@ V1.12 最终验收前维护增量（D73，V1.10.1/V1.5.3.1 先例——证据并
 - **D87 工具行重排**：恢复 v1.9/D57 冻结原序（修改这份｜编辑｜导出 PDF｜⛶｜⋯）；沉浸阅读从第一顺位全宽按钮降为行尾 38px 图标（title/aria 完整、激活态高亮）；新建讲义维持组头「＋」为主入口不升工具行大按钮；readOnly=导出+⛶+⋯、无 md=引导+AI 主键+⛶（不渲染 ⋯）。
 - 落笔：设计基准 §2/§3 重写（§5 任务表与 §6 红线同步）；D86/D87 决策追加；V114-B/C 任务内容与冒烟场景扩展（自定义名新链并立 + 历史按链唤出 + 工具行顺序断言）；STATUS V1.14 段更新。
 - Git：本地方案修订提交 `plan(V1.14): chain-per-base display, history on demand and toolbar reorder (D86/D87)`。
+
+### V114-A 新建讲义契约/服务/通道（2026-09-14 DONE）
+
+- 实现：`CreateLessonDocRequest` + 结构守卫（≤80 字共享常量）；`files:create-lesson-doc` 通道（FILE_IPC_CHANNELS + 白名单自动收编）；`createLessonDoc` 服务（requireActiveLesson → C0/DEL/C1 码位清洗 + trim + 1–80 字 → `nextLectureBaseVersionNumber` 同基名链顺延（与 setLessonFileRole 共享版本号空间）→ `createTextObjectAndRegister("# 基名\n", "基名 · 第 N 版.md", lesson link)` 原子写入 → `{file, version}`）；IPC case 补发 enqueueIndex + contentChanged（V110-A/D61 先例）；preload + preload-api 类型接线（响应守卫复用 WriteFileVersionResult）。
+- 测试：contracts/service/ipc 三组新增（首版正文与挂课、同基名顺延 + 异基名独立（D86 语义）+ 跨入口共享版本号空间、空名/超长/坏课次/已删除课次、控制字符清洗、五种伪造载荷、contentChanged 与索引计数）；ipc-security 白名单回归。
+- 门禁：相关测试 33/33、typecheck、lint 全绿。
+- Git：本地提交 `v1.14(V114-A): lesson doc create contract, service and channel`。

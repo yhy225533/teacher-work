@@ -115,6 +115,7 @@ import {
   isWriteFileVersionResult,
   type CopyFileToLessonRequest,
   type CopyFileToStudentRequest,
+  type CreateLessonDocRequest,
   type FileActionResult,
   type FileIdRequest,
   type ManagedFileOverview,
@@ -240,6 +241,7 @@ export type {
 export type {
   CopyFileToLessonRequest,
   CopyFileToStudentRequest,
+  CreateLessonDocRequest,
   FileActionResult,
   FileIdRequest,
   ManagedFileContent,
@@ -369,6 +371,7 @@ export interface TeacherWorkbenchApi {
     copyToLesson: (request: CopyFileToLessonRequest) => Promise<ManagedFileRecord>
     copyToStudent: (request: CopyFileToStudentRequest) => Promise<ManagedFileRecord>
     setLessonFileRole: (request: FileIdRequest) => Promise<WriteFileVersionResult>
+    createLessonDoc: (request: CreateLessonDocRequest) => Promise<WriteFileVersionResult>
     setMaterialGroup: (request: SetLessonMaterialGroupRequest) => Promise<SetLessonMaterialGroupResult>
     onContentChanged: (listener: (event: ManagedFileContentChanged) => void) => () => void
   }

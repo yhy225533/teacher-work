@@ -10,6 +10,7 @@ import {
 import {
   isCopyFileToLessonRequest,
   isCopyFileToStudentRequest,
+  isCreateLessonDocRequest,
   isFileActionResult,
   isFileIdRequest,
   isManagedFileContent,
@@ -23,6 +24,7 @@ import {
   isWriteFileVersionResult,
   type CopyFileToLessonRequest,
   type CopyFileToStudentRequest,
+  type CreateLessonDocRequest,
   type FileIdRequest,
   type ManagedFileContentChanged,
   type ManagedFileRefreshResult,
@@ -200,6 +202,20 @@ export async function dispatchFileIpc(
           file: promoted.file,
         })
         return ensureResponse(promoted, isWriteFileVersionResult)
+      }
+      case FILE_IPC_CHANNELS.createLessonDoc: {
+        // V1.14/D82 新建讲义：版本链产物复用 WriteFileVersionResult 守卫；
+        // 成功补发既有 contentChanged（V110-A/D61 同先例）——课件区四组/行动卡计数跟随刷新。
+        assertRequest(payload, isCreateLessonDocRequest)
+        const request = payload as CreateLessonDocRequest
+        const created = fileService.createLessonDoc(request.lessonId, request.name)
+        dependencies.enqueueIndex?.(created.file.id)
+        dependencies.notifyContentChanged({
+          fileId: created.file.id,
+          contentChanged: true,
+          file: created.file,
+        })
+        return ensureResponse(created, isWriteFileVersionResult)
       }
       case FILE_IPC_CHANNELS.setMaterialGroup: {
         // V1.13/D77：课件区材料手动改组（lesson_files.role；null = 恢复自动）。
