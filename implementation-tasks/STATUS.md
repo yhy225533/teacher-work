@@ -279,7 +279,9 @@ V1.12 四节点完成后、走查确认前，产品负责人 2026-09-10 实测�
 |---|---|---|
 | V114-A 新建讲义契约/服务/通道 | DONE | CreateLessonDocRequest 守卫 + create-lesson-doc 通道 + createLessonDoc（名称清洗/重名顺延/原子写入）+ preload + contentChanged 补发 + 测试（2026-09-14：相关测试 33/33 + typecheck + lint） |
 | V114-B 新建双入口 + 创建直进编辑 + 分链显示与工具行重排 + 树降噪 | DONE | ⋯/组头双入口 + requestText 流程 + D86 分链 classify/链头基名行/历史按需/白名单 + orderAiEditableFiles 分链演进 + D87 工具行重排与 ⛶ 图标 + 空组一行化 + 树头去重 + lessonFileBadgeLabel 徽标降噪 + 启发式补词 + CSS + 钉测演进（2026-09-14：全量 102 files / 616 tests + typecheck + lint + production build） |
-| V114-C 最终门禁与验收 | IN_PROGRESS | 全量门禁 + 隔离冒烟（新建→编辑→第 2 版版链复验 + 自定义名新链并立/历史按链唤出复验 + 工具行顺序断言 + 降噪断言）+ docs/v1.14-acceptance.md |
+| V114-C 最终门禁与验收 | DONE | 全量门禁（102 files / 616 tests + typecheck + lint + build + git diff --check）+ 隔离冒烟 15/15 × 3 轮（新建→编辑→第 2 版版链 + 多链并立/历史按链唤出 + 工具行顺序/⛶ + 降噪断言 + 落库 + stderr；冒烟发现并修复「创建后直进编辑态被切文件 effect 反清」真实缺陷——enterEditingRef 修复 + 门禁复跑全绿）+ `docs/v1.14-acceptance.md`（2026-09-14） |
+
+V1.14 全链完成；`checkpoint-V1.14-pass` 待产品负责人按 `docs/v1.14-acceptance.md` §5 走查清单确认后创建。
 
 ## V1.13.2 已立项（AI 修改对话栏模式卡竖排文字修复，D81）
 

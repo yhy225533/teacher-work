@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { NodeRecord, NoteRecord } from '../shared/core-contracts'
 import type { LessonMaterialGroup, ManagedFileOverview } from '../shared/file-contracts'
@@ -335,11 +335,21 @@ export default function LessonFilesSection({
 
   // V19-B（D57）：编辑态提升到工具行（✎ 编辑主键），阅读器只消费受控态
   const [editing, setEditing] = useState(false)
+  // V1.14/D83：创建后直进编辑——选中新建文件与 setEditing(true) 同批提交，
+  // 而 V19-B 的「切文件即退出编辑」effect 会随后清掉它；用进入编辑意图标记隔开两步。
+  const enterEditingRef = useRef(false)
   // V1.14/D86：历史版本按需唤出——底部不再常驻，⋯「本文件」组点击后展开（按链分组）。
   // 切换选中文件即收起（历史块始终跟随当前链头）。
   const [historyOpenFileId, setHistoryOpenFileId] = useState<string | null>(null)
   useEffect(() => { setHistoryOpenFileId(null) }, [selectedFileId])
-  useEffect(() => { setEditing(false) }, [selectedFileId])
+  useEffect(() => {
+    if (enterEditingRef.current) {
+      enterEditingRef.current = false
+      setEditing(true)
+      return
+    }
+    setEditing(false)
+  }, [selectedFileId])
   const canEditSelectedFile = !readOnly && selectedFile !== null && selectedFile.mimeType === 'text/markdown'
   const canPromoteSelectedFile = !readOnly && selectedFile !== null
     && selectedFile.mimeType === 'text/markdown'
@@ -433,8 +443,8 @@ export default function LessonFilesSection({
       const created = await window.teacherWorkbench.files.createLessonDoc({ lessonId: lesson.id, name })
       await reload()
       await reloadCore()
+      enterEditingRef.current = true
       setSelectedFileId(created.file.id)
-      setEditing(true)
       setNotice(`已创建《${created.file.originalName}》（第 ${created.version} 版），直接开始编辑——保存为新版本后旧版永不丢失。`)
     } catch (createError) {
       setError(toErrorMessage(createError, '讲义创建失败，请稍后重试。'))

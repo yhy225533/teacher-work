@@ -328,8 +328,11 @@ describe('V1.14/D83+D87 课件区源码结构（新建入口 + 工具行重排 +
     expect(section).toContain('requestText({')
     expect(section).toContain("initialValue: lesson.title")
     expect(section).toContain('files.createLessonDoc({ lessonId: lesson.id, name })')
+    // D83 修订：setSelectedFileId 与 setEditing 同批会被「切文件退出编辑」effect 反清——
+    // 改 enterEditingRef 进入编辑意图，选中变化 effect 消费后置 editing=true。
+    expect(section).toContain('enterEditingRef.current = true')
     expect(section).toContain('setSelectedFileId(created.file.id)')
-    expect(section).toContain('setEditing(true)')
+    expect(section).toContain('enterEditingRef.current = false')
     expect(section).toContain('await reloadCore()')
   })
 

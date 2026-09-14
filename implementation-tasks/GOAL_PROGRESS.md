@@ -1845,3 +1845,11 @@ V1.12 最终验收前维护增量（D73，V1.10.1/V1.5.3.1 先例——证据并
 - **D84 降噪**：空组一行化（`label · 暂无`）、树头去重（treeTitle=""）、lessonFileBadgeLabel（外部资料徽标隐藏、素材库保留）、exercise 词表补 `特训|精练|全解全析|分层|\d{1,3}题`。
 - **测试与门禁**：lesson-prep-context 新增 D86/D83/D87 钉测两组 + v1.8.1/v1.9/v1.10/v1.13 既有钉测演进；全量 102 files / 616 tests + typecheck + lint + production build 全绿。
 - Git：本地提交 `v1.14(V114-B): dual create entries, chain-per-base display and toolbar reorder`。
+
+### V114-C 最终门禁与验收（2026-09-14 DONE，V1.14 全链完成）
+
+- **全量门禁**：102 files / 616 tests + typecheck + lint + production build + `git diff --check` 全绿。
+- **冒烟发现并修复 1 处真实产品缺陷**：D83「创建后直进编辑态」被 V19-B（D57）「切文件退出编辑」effect 反清（同批 setSelectedFileId + setEditing(true)，effect 随后清掉）——探针实证 notice/胶囊更新但编辑器不出现；修复 = enterEditingRef 进入编辑意图标记（手动切文件仍冻结退出语义），钉测演进 + 门禁复跑全绿。
+- **隔离冒烟 15/15 × 3 轮**：D84 降噪四断言（80题/空组一行/树头去重/徽标 0）、D87 工具行 + ⛶ 38px 切换、D83 双入口默认名 + 创建后编辑器直开、保存第 2 版、D86 多链并立/历史按需 + 自动收起/白名单两链头、落库、stderr 健康。
+- **验收文档**：`docs/v1.14-acceptance.md`；`checkpoint-V1.14-pass` 待走查确认后创建。
+- Git：本地提交 `v1.14(V114-C): final gates, smoke 15/15 and acceptance record`。
