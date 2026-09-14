@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>V1.14 交互示意（修订提案）· 分链显示 + 历史按需 + 工具行重排</title>
+<style>
+/* ============================================================
+   设计令牌 / 基础 —— 与 src/renderer/styles.css 等值搬运
+   ============================================================ */
+:root {
+  --color-primary: #4338ca;
+  --color-primary-hover: #6366f1;
+  --color-primary-active: #3730a3;
+  --color-primary-soft: #eef2ff;
+  --color-text: #1f2937;
+  --color-text-strong: #334155;
+  --color-text-muted: #64748b;
+  --color-text-faint: #94a3b8;
+  --color-border: #e2e8f0;
+  --color-page-bg: #f5f7fb;
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fff7f7;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --mock-accent: #b45309;
+}
+html, body { height: 100%; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text);
+  background: var(--color-page-bg);
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+button { font: inherit; }
+
+/* ============================================================
+   示意图控制台（演示专属，不属于产品 UI）
+   ============================================================ */
+.demo-wrap { display: flex; height: 100vh; overflow: hidden; }
+.demo-side {
+  flex: 0 0 248px; height: 100%; overflow-y: auto;
+  border-right: 2px dashed #c7d2fe;
+  padding: 16px 14px; background: #eef2ff; font-size: 12px;
+}
+.demo-side h1 { margin: 0 0 2px; color: #172554; font-size: 15px; }
+.demo-side .demo-ver { margin: 0 0 12px; color: var(--mock-accent); font-weight: 700; font-size: 11px; }
+.demo-side h2 { margin: 14px 0 6px; color: #475569; font-size: 11px; letter-spacing: .08em; }
+.demo-side p { margin: 0 0 10px; color: #475569; line-height: 1.7; }
+.demo-mode-btn {
+  display: block; width: 100%; margin-bottom: 6px; text-align: left;
+  border: 1px solid #c7d2fe; border-radius: 9px; padding: 8px 10px;
+  background: #fff; color: #4338ca; cursor: pointer; font-size: 12px; font-weight: 700;
+}
+.demo-mode-btn:hover { background: #e0e7ff; }
+.demo-mode-btn.is-active { background: #4338ca; color: #fff; border-color: #4338ca; }
+.demo-mode-btn small { display: block; margin-top: 2px; font-weight: 400; font-size: 10px; color: inherit; opacity: .75; }
+.demo-toggle { display: flex; align-items: center; gap: 7px; margin: 8px 0; cursor: pointer; font-size: 12px; color: #334155; font-weight: 700; }
+.demo-toggle input { width: auto; }
+.demo-note {
+  margin-top: 12px; border: 1px solid #fde68a; border-radius: 8px;
+  padding: 8px 9px; background: #fffbeb; color: #78350f; font-size: 11px; line-height: 1.7;
+}
+.demo-change {
+  border: 2px solid var(--mock-accent); border-radius: 5px;
+  box-shadow: 0 0 0 3px rgba(180, 87, 9, .14);
+}
+.demo-change-label {
+  position: absolute; z-index: 60; white-space: nowrap;
+  border-radius: 999px; padding: 2px 9px;
+  background: var(--mock-accent); color: #fff;
+  font-size: 10px; font-weight: 800; line-height: 1.6;
+  pointer-events: none;
+}
+body:not(.with-annotations) .demo-change { border-color: transparent; box-shadow: none; }
+body:not(.with-annotations) .demo-change-label { display: none; }
+.demo-app { flex: 1; min-width: 0; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+
+/* ============================================================
+   应用外壳 —— 对应 .app-shell / .sidebar / .content-area
+   ============================================================ */
+.app-shell { display: flex; height: 100%; min-height: 0; overflow: hidden; }
+.sidebar {
+  display: flex; width: 104px; height: 100%; flex: 0 0 104px; flex-direction: column;
+  overflow-y: auto; border-right: 1px solid var(--color-border);
+  padding: 12px 8px; color: #475569; background: #fff;
+}
+nav { display: grid; gap: 3px; }
+.nav-item {
+  display: flex; min-height: 64px; align-items: center; justify-content: center; flex-direction: column; gap: 5px;
+  border: 0; border-radius: var(--radius-md); padding: 8px 4px;
+  color: #475569; background: transparent; cursor: pointer; font-size: 13px; text-align: center;
+}
+.nav-item:hover { color: #1e40af; background: #f1f5f9; }
+.nav-item.is-active { color: #2563eb; background: #eaf2ff; }
+.nav-glyph { font-size: 20px; line-height: 1; }
+.content-area {
+  display: flex; flex: 1; flex-direction: column; min-width: 0; height: 100%;
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: 10px 12px 12px;
+}
+.teaching-content-page { display: flex; width: 100%; min-width: 0; min-height: 0; flex: 1; flex-direction: column; gap: 10px; }
+
+/* 教学内容页头部 + 课件/修改记录 tab */
+.teaching-content-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; border-bottom: 1px solid var(--color-border); padding: 4px 2px 12px; }
+.teaching-content-context h1 { overflow: hidden; margin: 0 0 5px; color: #172554; font-size: 21px; text-overflow: ellipsis; white-space: nowrap; }
+.teaching-content-context p { margin: 0; color: var(--color-text-muted); font-size: 12px; }
+.teaching-content-tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--color-border); padding: 0 4px; }
+.teaching-content-tabs button { border: 0; border-bottom: 2px solid transparent; padding: 10px 3px 8px; color: var(--color-text-muted); background: transparent; cursor: pointer; font-size: 13px; font-weight: 800; }
+.teaching-content-tabs button.is-active { border-bottom-color: #2563eb; color: #1d4ed8; }
+
+/* ============================================================
+   按钮体系 —— styles.css 等值
+   ============================================================ */
+.primary-button, .secondary-button {
+  border: 0; border-radius: 9px; padding: 10px 14px; cursor: pointer;
+  font-size: 13px; font-weight: 700; white-space: nowrap;
+}
+.primary-button { color: #fff; background: var(--color-primary); }
+.primary-button:hover:not(:disabled) { background: var(--color-primary-active); }
+.secondary-button { border: 1px solid #c7d2fe; color: var(--color-primary-active); background: var(--color-primary-soft); }
+.secondary-button:hover:not(:disabled) { background: #e0e7ff; }
+.link-button, .danger-button { border: 0; padding: 3px 0; cursor: pointer; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.link-button { color: var(--color-primary); background: transparent; }
+.danger-button { color: var(--color-danger); background: transparent; }
+.danger-button:hover:not(:disabled) { color: #7f1d1d; text-decoration: underline; }
+button:disabled { cursor: not-allowed; opacity: 0.6; }
+
+/* 修订 · 沉浸阅读降级为行尾图标按钮 */
+.toolbar-icon-btn {
+  display: inline-flex; width: 38px; height: 38px; align-items: center; justify-content: center;
+  border: 1px solid #c7d2fe; border-radius: 9px; cursor: pointer;
+  background: var(--color-primary-soft); color: var(--color-primary-active);
+  font-family: "Segoe UI Symbol", "Microsoft YaHei", sans-serif; font-size: 16px; line-height: 1;
+}
+.toolbar-icon-btn:hover { background: #e0e7ff; }
+.toolbar-icon-btn.is-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+
+input, select, textarea {
+  width: 100%; border: 1px solid #cbd5e1; border-radius: 9px; padding: 10px 11px;
+  color: #1e293b; background: #fff; font: inherit; font-size: 14px;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--color-primary-hover); outline: 3px solid rgb(99 102 241 / 14%); }
+
+.inline-error { border: 1px solid #fecaca; border-radius: var(--radius-lg); padding: 11px 14px; color: #991b1b; background: var(--color-danger-bg); font-size: 13px; }
+.inline-notice { border: 1px solid #bbf7d0; border-radius: var(--radius-lg); padding: 11px 14px; color: #166534; background: #f0fdf4; font-size: 13px; }
+.empty-state { color: var(--color-text-faint) !important; font-style: italic; }
+
+/* ============================================================
+   ⋯ 收纳菜单 —— .app-menu 体系等值
+   ============================================================ */
+.app-menu { position: relative; display: inline-flex; }
+.app-menu-btn { min-width: 34px; }
+.app-menu-list {
+  position: absolute; z-index: 40; top: calc(100% + 6px); right: 0;
+  display: grid; min-width: 210px; max-width: min(270px, calc(100vw - 16px));
+  max-height: min(420px, calc(100vh - 16px)); overflow-y: auto;
+  border: 1px solid #dbe3ef; border-radius: 9px; padding: 4px;
+  background: #fff; box-shadow: 0 12px 28px rgb(15 23 42 / 18%);
+}
+.app-menu-list > button {
+  border: 0; padding: 8px 10px; color: var(--color-text-strong);
+  background: #fff; cursor: pointer; font-size: 12px; text-align: left; white-space: nowrap;
+}
+.app-menu-list > button:hover:not(:disabled) { background: #f8fafc; }
+.app-menu-list > button.is-danger { color: var(--color-danger); font-weight: 600; }
+.app-menu-separator { height: 1px; margin: 4px 0; border: 0; background: var(--color-border); }
+.app-menu-group { margin: 6px 2px 2px; color: var(--color-text-faint); font-size: 10px; font-weight: 800; padding: 0 10px 2px; }
+
+/* ============================================================
+   课件区（主舞台）—— .lesson-files-section 等值
+   ============================================================ */
+.lesson-files-section { display: grid; min-width: 0; gap: 14px; padding: 15px; }
+.lesson-files-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 14px; padding: 2px 2px 0; }
+.lesson-files-toolbar-main { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; min-width: 0; }
+.lesson-files-toolbar h3 { margin: 0; color: #172554; font-size: 16px; }
+.lesson-file-capsule { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; overflow: hidden; border: 1px solid var(--color-border); border-radius: 999px; padding: 3px 10px; background: #f8fafc; }
+.lesson-file-capsule b { overflow: hidden; color: #1e293b; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.lesson-file-capsule small { flex-shrink: 0; color: var(--color-text-faint); font-size: 10px; }
+.lesson-file-capsule small.is-current { border-radius: 999px; padding: 0 6px; background: #eef2ff; color: #4338ca; font-weight: 600; }
+.lesson-files-toolbar-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.lesson-files-guide { color: var(--color-text-muted); font-size: 12px; }
+
+/* 阅读器双栏 */
+.material-reader {
+  display: grid; min-width: 0; max-width: 100%; min-height: 480px;
+  grid-template-columns: minmax(220px, 250px) minmax(0, 1fr);
+  overflow: hidden; border: 1px solid var(--color-border); border-radius: 11px; background: #fff;
+}
+.material-reader.is-single { grid-template-columns: minmax(0, 1fr); }
+.material-reader.is-single .material-reader-tree { display: none; }
+.material-reader-tree {
+  min-width: 0; max-width: 100%; overflow-y: auto; overflow-x: hidden;
+  border-right: 1px solid var(--color-border); padding: 12px 9px; background: #f8fafc;
+}
+.material-reader-tree-content { min-width: 0; width: 100%; max-width: 100%; overflow-x: hidden; }
+.material-reader-tree-heading {
+  display: flex; align-items: center; gap: 6px; padding: 3px 5px 11px;
+  color: #172554; font-size: 12px;
+}
+.material-reader-tree-heading small { margin-left: auto; color: var(--color-text-faint); font-size: 10px; }
+.material-reader-folder-icon { color: var(--color-primary-hover); }
+.tree-manage-toggle {
+  border: 1px solid #cbd5e1; border-radius: 6px; padding: 2px 8px;
+  background: #fff; color: var(--color-text-muted); cursor: pointer; font-size: 11px; font-weight: 700;
+}
+.tree-manage-toggle[aria-pressed='true'] { border-color: #4f46e5; color: var(--color-primary-active); }
+.material-reader-tree-list { display: grid; min-width: 0; max-width: 100%; gap: 2px; margin: 0; padding: 0; list-style: none; }
+
+/* 四组分组树 */
+.material-reader-tree-list > .material-role-group { list-style: none; }
+.material-role-group + .material-role-group { margin-top: 10px; }
+.material-role-group-title {
+  display: flex; align-items: center; gap: 6px; margin: 2px 0 3px; padding: 5px 6px;
+  border-radius: 6px; background: #f1f5f9; color: #334155; font-size: 11px; font-weight: 800;
+}
+.material-role-group-title > span { color: var(--color-primary-hover); }
+.material-role-group-title small { margin-left: auto; color: var(--color-text-faint); font-size: 10px; font-weight: 700; }
+.material-role-group > ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.material-role-group-empty { margin: 4px 0 6px; padding: 4px 8px; color: var(--color-text-faint); font-size: 11px; line-height: 1.6; }
+.material-role-group-empty.is-legacy { font-style: normal; }
+
+/* 树行 */
+.material-reader-tree-node { min-width: 0; max-width: 100%; overflow-x: hidden; }
+.material-reader-tree-row { display: flex; min-width: 0; max-width: 100%; align-items: center; gap: 3px; overflow: hidden; position: relative; }
+.material-reader-tree-toggle, .material-reader-tree-toggle-spacer {
+  display: grid; width: 18px; height: 28px; flex: 0 0 18px; place-items: center;
+  border: 0; padding: 0; color: #818cf8; background: transparent; font-size: 12px;
+}
+.material-reader-tree-toggle { cursor: pointer; }
+.material-reader-tree-toggle:hover { color: var(--color-primary); }
+.material-reader-tree-file {
+  display: flex; min-width: 0; flex: 1; max-width: 100%; align-items: center; gap: 7px;
+  border: 0; border-radius: 6px; padding: 6px 6px; color: #475569; background: transparent;
+  cursor: pointer; font-size: 12px; text-align: left;
+}
+.material-reader-tree-row > .material-reader-tree-file { width: 0; }
+.material-reader-tree-file:hover, .material-reader-tree-file.is-selected { color: var(--color-primary-active); background: #e0e7ff; }
+.material-reader-tree-file > span:nth-child(2) { width: 0; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.material-reader-tree-file small { flex: 0 0 auto; margin-left: auto; color: var(--color-text-faint); font-size: 10px; }
+.material-file-icon { flex: 0 0 auto; color: #818cf8; font-size: 15px; }
+.material-role-badge { flex: 0 0 auto; margin-left: auto; padding: 1px 6px; border-radius: 999px; font-size: 9px; font-weight: 700; white-space: nowrap; }
+.material-role-badge.is-current { background: #ecfdf5; border: 1px solid #6ee7b7; color: #059669; }
+.material-role-badge.is-source { background: #fff; border: 1px dashed #cbd5e1; color: #64748b; }
+.material-reader-tree-remove {
+  position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+  border: 1px solid #fecaca; border-radius: 6px; padding: 1px 5px;
+  color: var(--color-danger); background: var(--color-danger-bg);
+  cursor: pointer; font-size: 10px; line-height: 1.5;
+  opacity: 0; transition: opacity 0.12s ease;
+}
+.material-reader-tree-node:hover .material-reader-tree-remove, .material-reader-tree-remove:focus-visible { opacity: 1; }
+.material-reader-tree-row:has(.tree-group-menu-btn) .material-reader-tree-remove { right: 30px; }
+.material-reader-tree-row .tree-group-menu-btn {
+  border: none; background: transparent; color: var(--color-text-muted); cursor: pointer;
+  padding: 0 4px; font-size: 12px; line-height: 1.2; border-radius: 4px; opacity: 0.45;
+}
+.material-reader-tree-row .tree-group-menu-btn:hover,
+.material-reader-tree-row .tree-group-menu-btn[aria-expanded='true'] { opacity: 1; color: var(--color-primary-active); background: #f1f5f9; }
+
+/* 讲义组头轻量 ＋（基调同 tree-group-menu-btn） */
+.group-add-btn {
+  border: 1px solid transparent; background: transparent; color: var(--color-text-muted);
+  cursor: pointer; padding: 0 6px; font-size: 13px; line-height: 1.4;
+  border-radius: 4px; opacity: 0.5;
+}
+.group-add-btn:hover, .group-add-btn:focus-visible { opacity: 1; color: var(--color-primary-active); background: #f1f5f9; }
+.material-role-group-title .group-add-btn { margin-left: 6px; flex: 0 0 auto; }
+
+/* 正文区 */
+.material-reader-document { display: flex; min-width: 0; max-width: 100%; flex-direction: column; overflow: hidden; background: #fff; }
+.material-reader-scroll { min-height: 0; min-width: 0; max-width: 100%; overflow: auto; }
+.material-reader-state { display: grid; min-height: 300px; place-items: center; align-content: center; gap: 12px; padding: 30px; color: var(--color-text-muted); text-align: center; }
+.material-reader-state p { margin: 0; }
+.material-markdown { width: 100%; min-width: 0; max-width: 820px; margin: 0 auto; padding: 30px 36px 48px; color: var(--color-text); font-size: 14px; line-height: 1.9; }
+.material-markdown h1, .material-markdown h2, .material-markdown h3 { margin: 1.25em 0 0.48em; color: #111827; line-height: 1.35; }
+.material-markdown h1 { font-size: 28px; }
+.material-markdown h2 { font-size: 22px; }
+.material-markdown h3 { font-size: 18px; }
+.material-markdown > :first-child { margin-top: 0; }
+.material-markdown p { margin: 0.55em 0; color: var(--color-text-strong); }
+.material-markdown ul, .material-markdown ol { margin: 0.65em 0; padding-left: 1.7em; color: var(--color-text-strong); }
+.material-markdown li { padding-left: 0.25em; }
+
+/* 历史版本折叠块（修订：默认不存在，⋯ 唤出后才渲染） */
+.lesson-history-block { margin-top: 10px; border: 1px dashed #cbd5e1; border-radius: var(--radius-md); padding: 8px 12px; font-size: 12px; color: #475569; }
+.lesson-history-block summary { cursor: pointer; font-weight: 600; }
+.lesson-history-list { list-style: none; display: grid; gap: 6px; margin: 8px 0 0; }
+.lesson-history-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.lesson-history-list li > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lesson-manual-edit-notes { margin: 8px 0 0; color: #7c5cbf; font-size: 12px; }
+
+/* ============================================================
+   MD 编辑器（新建后直进编辑态）—— .md-editor 等值
+   ============================================================ */
+.md-editor { display: grid; gap: 8px; padding: 14px 18px 18px; }
+.md-editor-toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 6px;
+  border: 1px solid #cbd5e1; border-radius: var(--radius-md); background: #f8fafc;
+}
+.md-editor-toolbar button {
+  border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 8px;
+  background: #fff; color: #334155; cursor: pointer; font-size: 12px;
+}
+.md-editor-toolbar button:hover { background: #eef2ff; }
+.md-editor-toolbar select { font-size: 12px; padding: 3px 4px; width: auto; }
+.md-editor-toolbar-sep { width: 1px; height: 18px; margin: 0 4px; background: #cbd5e1; }
+.md-editor-view-bar {
+  display: flex; gap: 4px; padding: 4px; border: 1px solid #e2e8f0; border-radius: var(--radius-md);
+  background: #f1f5f9; width: fit-content; margin-bottom: 8px;
+}
+.md-editor-view-button { border: 0; border-radius: 6px; padding: 4px 12px; font-size: 12px; color: var(--color-text-muted); background: transparent; cursor: pointer; }
+.md-editor-view-button.is-active { background: #fff; color: var(--color-primary); font-weight: 700; box-shadow: 0 1px 2px rgb(15 23 42 / 10%); }
+.md-editor-split { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); min-height: 320px; gap: 0; }
+.md-editor-textarea {
+  width: 100%; min-height: 320px; padding: 10px; resize: none; overflow-y: auto;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 13px; line-height: 1.7;
+  border: 1px solid #cbd5e1; border-radius: var(--radius-md); border-right-width: 0;
+  border-top-right-radius: 0; border-bottom-right-radius: 0;
+}
+.md-editor-split-handle { position: relative; margin: 0 -5px; z-index: 5; cursor: col-resize; }
+.md-editor-split-handle::after {
+  content: ""; position: absolute; inset: 0; left: 50%; width: 2px; margin-left: -1px;
+  border-radius: 1px; background: #cbd5e1;
+}
+.md-editor-split-handle:hover::after { background: var(--color-primary); }
+.md-editor-preview {
+  border: 1px solid #cbd5e1; border-radius: var(--radius-md); border-left-width: 0;
+  border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 10px 14px;
+  background: #fff; overflow: auto; max-height: 60vh; min-height: 320px;
+}
+.md-editor-actions { display: flex; align-items: center; gap: 8px; }
+.md-editor-actions > div { margin-left: auto; display: flex; gap: 8px; }
+.md-editor-hint { font-size: 12px; color: #64748b; }
+
+/* ============================================================
+   应用内输入框（requestText）—— .modal-* 等值
+   ============================================================ */
+.modal-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 24px; background: rgb(15 23 42 / 44%); }
+.modal-backdrop[hidden] { display: none; }
+.modal-card {
+  width: min(520px, 100%); max-height: calc(100vh - 48px); overflow-y: auto;
+  border: 1px solid var(--color-border); border-radius: 14px; padding: 18px;
+  background: #fff; box-shadow: 0 24px 80px rgb(15 23 42 / 25%);
+}
+.modal-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 15px; }
+.modal-heading h2 { margin: 0 0 4px; color: #172554; font-size: 18px; }
+.modal-heading p { margin: 0; color: var(--color-text-muted); font-size: 12px; white-space: pre-line; }
+.modal-close { border: 0; border-radius: 7px; padding: 2px 8px; color: var(--color-text-muted); background: #f1f5f9; cursor: pointer; font-size: 22px; }
+.modal-form { display: grid; gap: 13px; }
+.modal-field { display: grid; gap: 6px; color: #475569; font-size: 12px; font-weight: 700; }
+.modal-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+/* 对话框内标注（演示用） */
+.modal-anno { margin-top: 12px; border-top: 1px dashed #fde68a; padding-top: 9px; color: #92400e; font-size: 11px; line-height: 1.7; }
+</style>
+</head>
+<body class="with-annotations">
+<div class="demo-wrap">
+
+  <!-- ════════════════ 示意图控制台（非产品 UI） ════════════════ -->
+  <aside class="demo-side">
+    <h1>V1.14 · 交互示意</h1>
+    <p class="demo-ver">修订提案：分链显示 + 历史按需 + 工具行重排（D86 候选，待拍板）</p>
+    <p>左侧还原「课程 → 教学内容 → 课件」真实界面；右侧每个场景可直接操作。橙色框 = 本次修订点。</p>
+
+    <h2>场景</h2>
+    <button class="demo-mode-btn" data-mode="overview">① 降噪总览 + 工具行重排<small>链头行（基名，不带「第 N 版」）· 沉浸阅读降为行尾图标</small></button>
+    <button class="demo-mode-btn" data-mode="menu">② ⋯ 菜单全貌<small>新建讲义第一位 · 历史版本按需入口（新）</small></button>
+    <button class="demo-mode-btn" data-mode="history">③ 历史版本按需展开<small>⋯ 唤出 · 底部不再常驻</small></button>
+    <button class="demo-mode-btn" data-mode="header">④ 讲义组头 ＋<small>就地新建入口（空组也渲染）</small></button>
+    <button class="demo-mode-btn" data-mode="dialog">⑤ 命名弹窗<small>默认名 = 课次标题 · 改名 = 独立新链</small></button>
+    <button class="demo-mode-btn" data-mode="editor">⑥ 创建 → 新链并立<small>自定义名不被吞进历史 · 直进编辑器</small></button>
+    <button class="demo-mode-btn" data-mode="empty">⑦ 整课空态引导<small>0 文件一句引导 · 组头 ＋ 仍在</small></button>
+
+    <h2>演示选项</h2>
+    <label class="demo-toggle"><input type="checkbox" id="anno-toggle" checked>改动点橙色标注</label>
+    <label class="demo-toggle"><input type="checkbox" id="compare-toggle">对比：改动前（V1.13 现状）</label>
+
+    <div class="demo-note">
+      <b>修订要点（产品负责人 2026-09-14 反馈）：</b><br>
+      ① 讲义组按「基名」分链：每条链只显示最新版，行名 = 基名；「当前」徽标 = 最近保存的链；<br>
+      ② 历史版本不再常驻页面底部——收进 ⋯「本文件」组，按链按需展开；<br>
+      ③ 工具行重排：修改这份｜编辑｜导出 PDF｜⛶ 沉浸阅读｜⋯（沉浸阅读从第一顺位全宽按钮降为行尾图标）；<br>
+      ④ 自定义名新建讲义 = 独立新链并立（修复「新讲义被吞进历史版本」的分类缺陷）。<br><br>
+      原四件套不变：空组一行化 / 树头去重 / 隐藏「外部资料」徽标 / 启发式补词。readOnly（历史课程）不渲染任何新建入口。
+    </div>
+  </aside>
+
+  <!-- ════════════════ 应用外壳 ════════════════ -->
+  <div class="demo-app">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <nav>
+          <button class="nav-item" type="button"><span class="nav-glyph">▦</span>课程</button>
+          <button class="nav-item" type="button"><span class="nav-glyph">⌕</span>搜索</button>
+          <button class="nav-item" type="button"><span class="nav-glyph">▤</span>题库</button>
+          <button class="nav-item" type="button"><span class="nav-glyph">▤</span>外部资料</button>
+          <button class="nav-item" type="button"><span class="nav-glyph">▤</span>素材库</button>
+          <button class="nav-item" type="button"><span class="nav-glyph">◉</span>学生</button>
+          <button class="nav-item is-active" type="button"><span class="nav-glyph">✎</span>教学内容</button>
+          <button class="nav-item" type="button"><span class="nav-glyph">⚙</span>设置</button>
+        </nav>
+      </aside>
+
+      <main class="content-area">
+        <div class="teaching-content-page">
+          <header class="teaching-content-header">
+            <div class="teaching-content-context">
+              <h1>教学内容</h1>
+              <p>浏览课件和开始备课不会改变课程进度。</p>
+            </div>
+          </header>
+          <nav class="teaching-content-tabs">
+            <button class="is-active" type="button">课件</button>
+            <button type="button">修改记录</button>
+          </nav>
+
+          <!-- ────────── 课件区（主舞台） ────────── -->
+          <section class="lesson-files-section" id="files-section" aria-live="polite"></section>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+
+<!-- requestText 命名弹窗（初始隐藏） -->
+<div class="modal-backdrop" id="name-dialog" hidden>
+  <section class="modal-card" role="dialog" aria-modal="true" aria-label="新建讲义">
+    <header class="modal-heading">
+      <div>
+        <h2>新建讲义</h2>
+        <p>在「二次根式 · 第 3 课次」创建一份从零手写的讲义。</p>
+      </div>
+      <button class="modal-close" type="button" id="name-dialog-close" aria-label="关闭">×</button>
+    </header>
+    <form class="modal-form" id="name-form">
+      <label class="modal-field">
+        讲义名称
+        <input id="name-input" placeholder="如：复习讲义" maxlength="80">
+      </label>
+      <footer class="modal-actions">
+        <button class="secondary-button" type="button" id="name-cancel">取消</button>
+        <button class="primary-button" type="submit" id="name-submit">创建并开始编辑</button>
+      </footer>
+    </form>
+    <p class="modal-anno">① 默认名 = 课次标题；② 不改名 = 延续同名链的下一版，改名（如此处「复习讲义」）= <b>独立新链</b>，与本课已有讲义并立显示；③ trim / 去控制字符 / ≤80 字（违者 Main 侧 FILE_SOURCE_INVALID）。</p>
+  </section>
+</div>
+
+<script>
+/* ============================================================
+   演示数据 —— 讲义按「基名」分链（versions 降序，[0] = 链头）
+   ============================================================ */
+const GROUPS = [
+  { key: 'lecture', icon: '📘', label: '本课讲义' },
+  { key: 'exercise', icon: '✏️', label: '习题与作业' },
+  { key: 'exam', icon: '📄', label: '试卷与复习' },
+  { key: 'misc', icon: '📎', label: '其他资料' },
+]
+
+const LESSON_TITLE = '二次根式 · 第 3 课次'
+const PERIOD_TITLE = '第 3 讲'
+
+const INITIAL_CHAINS = [
+  { base: '二次根式', versions: [2, 1] }, // AI 生成链：第 2 版为链头，第 1 版进历史
+]
+
+const PRISTINE_MATERIALS = {
+  exercise: [
+    { name: '二次根式80题全题型', source: '外部资料', isMd: false, heur: true, groupMenu: true, removable: true },
+    { name: '课本习题 16.2 答案', source: '素材库', isMd: true, groupMenu: true, removable: true },
+  ],
+  // exam 留空 —— 空组一行化（对比态：V1.13 长引导文案）
+  exam: [],
+  misc: [
+    { name: '备课参考（截自讲义教辅）', source: '外部资料', isMd: false, hasChildren: true, groupMenu: true, removable: true },
+  ],
+}
+
+const LEGACY_EMPTY_TEXT = {
+  lecture: '还没有讲义——选中材料区的 Markdown 可「设为讲义底稿」，或用 AI 生成第一版课件。',
+  exercise: '本课还没有习题与作业。',
+  exam: '本课还没有试卷与复习资料。',
+  misc: '本课还没有其他资料。',
+}
+
+const DRAFT_BODY = '# 复习讲义\n\n（自定义名新建 = 独立新链——与《二次根式》并立显示，各自的旧版收进各自的历史版本，互不干扰。）\n\n## 学习目标\n\n- 梳理二次根式的化简与运算\n- 掌握 $\\sqrt{a^2}=|a|$ 的双向运用\n\n## 例题\n\n1. 化简：$\\sqrt{12}$\n2. 计算：$\\sqrt{27}+\\sqrt{3}$\n'
+
+const clone = (value) => JSON.parse(JSON.stringify(value))
+
+const state = {
+  mode: 'overview',        // overview | menu | history | header | dialog | editor | empty
+  legacy: false,           // 对比态 = V1.13 现状
+  chains: [],
+  materials: null,
+  activeChain: 0,          // 「当前」徽标 = 最近保存的链（主讲义）
+  selection: null,         // { kind:'chain', idx } | { kind:'material', group, idx }
+  editing: false,
+  editorBody: DRAFT_BODY,
+  justCreated: false,
+  historyOpen: false,      // 修订：历史版本默认不存在，⋯ 唤出后才渲染
+  immersive: false,
+  notice: '',
+}
+
+/* ============================================================
+   派生数据
+   ============================================================ */
+function groupMaterials(key) {
+  const exercise = state.materials?.exercise ?? []
+  const misc = state.materials?.misc ?? []
+  // 对比态（V1.13 词表无“N题”）：80题文件落「其他资料」；修订词表后落「习题与作业」
+  if (key === 'exercise') return state.legacy ? exercise.filter((m) => !m.heur) : exercise
+  if (key === 'misc') return state.legacy ? [...misc, ...exercise.filter((m) => m.heur)] : misc
+  return []
+}
+
+function totalRows() {
+  return state.chains.length
+    + groupMaterials('exercise').length
+    + groupMaterials('exam').length
+    + groupMaterials('misc').length
+}
+
+function allMaterials() {
+  return [...groupMaterials('exercise'), ...groupMaterials('exam'), ...groupMaterials('misc')]
+}
+
+function hasAnyMarkdown() {
+  return state.chains.length > 0 || allMaterials().some((m) => m.isMd)
+}
+
+function selectedInfo() {
+  if (state.selection === null) return null
+  if (state.selection.kind === 'chain') {
+    const chain = state.chains[state.selection.idx]
+    if (chain === undefined) return null
+    return {
+      isChain: true, chain, chainIdx: state.selection.idx,
+      name: `${chain.base} · 第 ${chain.versions[0]} 版.md`,
+      isMd: true, current: state.selection.idx === state.activeChain,
+      source: null, size: '8.4 KB',
+    }
+  }
+  const list = state.materials?.[state.selection.group] ?? []
+  const mat = list[state.selection.idx]
+  if (mat === undefined) return null
+  return {
+    isChain: false, chain: null, chainIdx: -1,
+    name: mat.name, isMd: mat.isMd === true, current: false,
+    source: mat.source, size: mat.source === '素材库' ? '6.1 KB' : '1.2 MB',
+  }
+}
+
+/* ============================================================
+   渲染器 —— 树行 / 分组 / 菜单 / 工具行 / 阅读器 / 历史块
+   ============================================================ */
+const section = document.getElementById('files-section')
+
+function chainRowHtml(idx) {
+  const chain = state.chains[idx]
+  const isMain = idx === state.activeChain
+  const selected = state.selection?.kind === 'chain' && state.selection.idx === idx
+  // 修订：行名 = 基名，不带「第 N 版」；对比态 = V1.13 全名
+  const name = state.legacy ? `${chain.base} · 第 ${chain.versions[0]} 版` : chain.base
+  const badge = isMain ? '<small class="material-role-badge is-current">当前</small>' : ''
+  const isFresh = !state.legacy && state.mode === 'editor' && state.justCreated && idx === state.chains.length - 1
+  return `
+  <li class="material-reader-tree-node">
+    <div class="material-reader-tree-row">
+      <span class="material-reader-tree-toggle-spacer"></span>
+      <button class="material-reader-tree-file${selected ? ' is-selected' : ''}${isFresh ? ' demo-change' : ''}" type="button" data-chain="${idx}" id="chain-row-${idx}">
+        <span class="material-file-icon" aria-hidden="true">▤</span><span>${name}</span>${badge}
+      </button>
+    </div>
+  </li>`
+}
+
+function materialRowHtml(group, mat, idx) {
+  const selected = state.selection?.kind === 'material' && state.selection.group === group && state.selection.idx === idx
+  // V1.14/D84-3：lessonFileBadgeLabel——外部资料 → null（对比态显示）
+  const badgeSource = (mat.source === '素材库' || state.legacy)
+    ? `<small class="material-role-badge is-source">${mat.source}</small>` : ''
+  const childCount = mat.hasChildren ? '<small>2</small>' : ''
+  const groupMenu = mat.groupMenu
+    ? `<button class="tree-group-menu-btn" type="button" title="移动到分组">⋯</button>` : ''
+  const remove = mat.removable
+    ? `<button class="material-reader-tree-remove" type="button" title="从本课移除（素材库/外部原件不受影响）">✕</button>` : ''
+  const heurTag = mat.heur && !state.legacy ? ' demo-change' : ''
+  const heurId = mat.heur && !state.legacy ? ' id="heur-row"' : ''
+  return `
+  <li class="material-reader-tree-node">
+    <div class="material-reader-tree-row">
+      ${mat.hasChildren
+        ? '<button class="material-reader-tree-toggle" type="button">▾</button>'
+        : '<span class="material-reader-tree-toggle-spacer"></span>'}
+      <button class="material-reader-tree-file${selected ? ' is-selected' : ''}${heurTag}"${heurId} type="button" data-group="${group}" data-idx="${idx}">
+        <span class="material-file-icon" aria-hidden="true">${mat.hasChildren ? '▾' : '▤'}</span><span>${mat.name}</span>${badgeSource}${childCount}
+      </button>
+      ${groupMenu}${remove}
+    </div>
+    ${mat.hasChildren ? `
+    <ul class="material-reader-tree-children">
+      <li><button class="material-reader-tree-file material-reader-tree-child" type="button"><span class="material-file-icon">▧</span><span>图1-根式几何意义.png</span></button></li>
+      <li><button class="material-reader-tree-file material-reader-tree-child" type="button"><span class="material-file-icon">▧</span><span>图2-数轴表示.png</span></button></li>
+    </ul>` : ''}
+  </li>`
+}
+
+function groupBlock(g) {
+  const rows = g.key === 'lecture'
+    ? state.chains.map((_, i) => chainRowHtml(i)).join('')
+    : groupMaterials(g.key).map((m, i) => materialRowHtml(g.key, m, i)).join('')
+  const count = g.key === 'lecture' ? state.chains.length : groupMaterials(g.key).length
+  const oneLine = count === 0 && !state.legacy
+  const title = oneLine ? `${g.label} · 暂无` : g.label
+  const addBtn = (!state.legacy && g.key === 'lecture')
+    ? `<button class="group-add-btn${state.mode === 'header' || state.mode === 'empty' ? ' demo-change' : ''}" type="button" title="新建讲义（创建后直接进入编辑）" id="header-add-btn">＋</button>`
+    : ''
+  const legacyEmpty = count === 0 && state.legacy
+    ? `<p class="material-role-group-empty is-legacy">${LEGACY_EMPTY_TEXT[g.key]}</p>` : ''
+  const titleCls = oneLine && ['overview', 'header', 'empty'].includes(state.mode) ? ' demo-change' : ''
+  return `
+  <li class="material-role-group" aria-label="${g.label}分组">
+    <div class="material-role-group-title${titleCls}"><span aria-hidden="true">${g.icon}</span>${title}${addBtn}<small>${count} 项</small></div>
+    ${legacyEmpty}
+    <ul>${rows}</ul>
+  </li>`
+}
+
+function menuHtml() {
+  const info = selectedInfo()
+  const items = []
+  items.push({ kind: 'group', label: '本课' })
+  if (!state.legacy) items.push({ kind: 'item', id: 'menu-create-btn', cls: 'demo-change', text: '＋ 新建讲义', title: '从零手写一份讲义（版本链形态，创建后直进编辑）' })
+  items.push({ kind: 'item', text: '刷新' })
+  items.push({ kind: 'item', text: '继续上次修改' })
+  items.push({ kind: 'item', text: '整个课件包重做' })
+  items.push({ kind: 'group', label: '本文件' })
+  if (!state.legacy && info?.isChain && info.chain.versions.length > 1) {
+    items.push({ kind: 'item', id: 'menu-history-btn', cls: 'demo-change', text: `🕘 历史版本（${info.chain.versions.length - 1}）`, title: '按需唤出该讲义链的旧版；不再常驻页面底部' })
+  }
+  if (info !== null && info.isMd && !info.isChain) {
+    items.push({ kind: 'item', text: '设为讲义底稿', title: '复制为「基名 · 第 N 版.md」进入讲义链，原件保留在材料区' })
+  }
+  if (info !== null) {
+    items.push({ kind: 'item', text: '系统打开' })
+    items.push({ kind: 'item', text: '所在文件夹' })
+    items.push({ kind: 'separator' })
+    items.push({ kind: 'item', text: '从本课移除', danger: true })
+  }
+  return items.map((item) => {
+    if (item.kind === 'group') return `<p class="app-menu-group">${item.label}</p>`
+    if (item.kind === 'separator') return '<hr class="app-menu-separator">'
+    return `<button type="button" class="${item.danger ? 'is-danger ' : ''}${item.cls ?? ''}"${item.id ? ` id="${item.id}"` : ''}${item.title ? ` title="${item.title}"` : ''}>${item.text}</button>`
+  }).join('')
+}
+
+function toolbarActionsHtml() {
+  const info = selectedInfo()
+  const mdOk = info !== null && info.isMd
+  const immersiveBtn = state.legacy
+    ? `<button class="secondary-button" type="button" id="immersive-btn" title="全宽阅读，隐藏目录树">${state.immersive ? '退出沉浸阅读' : '沉浸阅读'}</button>`
+    : `<button class="toolbar-icon-btn${state.immersive ? ' is-active' : ''}" type="button" id="immersive-btn" title="${state.immersive ? '退出沉浸阅读' : '沉浸阅读（隐藏目录树，全宽阅读）'}">⛶</button>`
+
+  if (!hasAnyMarkdown()) {
+    // 无 md 课次：引导 + AI 新建备课主键（⋯ 不渲染——新建入口由组头 ＋ 承担）
+    const guide = state.legacy
+      ? '本课还没有 Markdown 课件，可先导入 md 讲义或用 AI 生成第一版课件。'
+      : '本课还没有 Markdown 课件——可点讲义组头 ＋ 新建讲义，或用 AI 生成第一版课件。'
+    return `${immersiveBtn}<span class="lesson-files-guide" role="status">${guide}</span><button class="primary-button" type="button">AI 新建备课</button>`
+  }
+
+  const modifyBtn = `<button class="secondary-button" type="button" ${mdOk ? '' : 'disabled'} title="${mdOk ? `修改${info.name}` : '仅支持修改 Markdown 文件；外部 Office 文档请用系统应用打开修改'}">✦ 修改这份</button>`
+  const editBtn = mdOk
+    ? `<button class="secondary-button" type="button" id="edit-btn" aria-pressed="${state.editing}">${state.editing ? '✓ 预览' : '✎ 编辑'}</button>`
+    : ''
+  const exportBtn = `<button class="secondary-button" type="button" ${mdOk ? '' : 'disabled'} title="${mdOk ? `导出${info.name}为 PDF` : '仅支持导出 Markdown 文件'}">⬇ 导出 PDF</button>`
+  const menuBtn = `<span class="app-menu">
+    <button class="secondary-button app-menu-btn${state.mode === 'menu' && !state.legacy ? ' demo-change' : ''}" type="button" aria-expanded="${state.mode === 'menu'}" aria-haspopup="menu" title="更多操作（本课 / 本文件）" id="menu-trigger">⋯</button>
+    ${state.mode === 'menu' ? `<div class="app-menu-list" role="menu">${menuHtml()}</div>` : ''}
+  </span>`
+
+  // 修订：三主键直达；沉浸阅读降为行尾图标（对比态 = V1.13 全宽文字按钮居首）
+  return state.legacy
+    ? `${immersiveBtn}${modifyBtn}${editBtn}${exportBtn}${menuBtn}`
+    : `${modifyBtn}${editBtn}${exportBtn}${immersiveBtn}${menuBtn}`
+}
+
+function capsuleHtml() {
+  const info = selectedInfo()
+  if (info === null) return '<span class="lesson-file-capsule is-empty" style="border-style:dashed;color:var(--color-text-faint);font-size:11px;">未选择文件</span>'
+  const currentBadge = info.current ? '<small class="is-current">当前</small>' : ''
+  const sourceBadge = (info.source === '素材库' || (state.legacy && info.source !== null))
+    ? `<small class="is-source">${info.source}</small>` : ''
+  return `<span class="lesson-file-capsule"><b>${info.name}</b>${currentBadge}<small>${info.size}</small>${sourceBadge}</span>`
+}
+
+function miniMd(body) {
+  const lines = body.split('\n'); const out = []; let list = []
+  const flush = () => { if (list.length) { out.push(`<ul>${list.map((t) => `<li>${t}</li>`).join('')}</ul>`); list = [] } }
+  for (const raw of lines) {
+    const line = raw.trim()
+    if (line === '') { flush(); continue }
+    const h = /^(#{1,3})\s+(.+)$/.exec(line)
+    if (h) { flush(); out.push(`<h${h[1].length}>${h[2]}</h${h[1].length}>`); continue }
+    if (/^[-*]\s+/.test(line)) { list.push(line.replace(/^[-*]\s+/, '')); continue }
+    flush(); out.push(`<p>${line}</p>`)
+  }
+  flush(); return out.join('')
+}
+
+function editorHtml() {
+  const info = selectedInfo()
+  const name = info?.name ?? '讲义'
+  const versionHint = state.justCreated
+    ? `已创建《${name}》——独立新链，与既有讲义并立显示；直接进入编辑，写完点「保存为新版本」，旧版永不丢失。`
+    : '已保存为新版本，旧版收进该链的历史版本（⋯ 可按需查看）。'
+  return `
+  <div class="md-editor" aria-label="编辑 ${name}">
+    <div class="inline-notice" role="status" id="editor-notice">${state.notice !== '' ? state.notice : versionHint}</div>
+    <div class="md-editor-toolbar" role="toolbar" aria-label="Markdown 编辑工具栏">
+      <button type="button" title="加粗">B</button>
+      <button type="button" title="斜体"><i>i</i></button>
+      <select aria-label="标题层级（字号）"><option>标题字号</option><option>H1 大标题</option><option>H2 中标题</option><option>H3 小标题</option></select>
+      <button type="button" title="下标 x₂">x₂</button>
+      <button type="button" title="上标 x²">x²</button>
+      <button type="button" title="无序列表">• 列表</button>
+      <button type="button" title="有序列表">1. 列表</button>
+      <button type="button" title="引用">引用</button>
+      <button type="button" title="表格模板">表格</button>
+      <button type="button" title="分隔线">—</button>
+      <span class="md-editor-toolbar-sep" aria-hidden="true"></span>
+      <button type="button" title="行内公式">$x$</button>
+      <button type="button" title="块级公式">$$∑$$</button>
+      <button type="button" title="插入本课图片引用">▦ 插图</button>
+      <span class="md-editor-toolbar-sep" aria-hidden="true"></span>
+      <button type="button" title="撤销">↶</button>
+      <button type="button" title="重做">↷</button>
+    </div>
+    <div class="md-editor-view-bar" role="group" aria-label="编辑器视图">
+      <button class="md-editor-view-button" type="button">✎ 编辑</button>
+      <button class="md-editor-view-button is-active" type="button">◫ 分屏</button>
+      <button class="md-editor-view-button" type="button">👁 预览</button>
+    </div>
+    <div class="md-editor-split is-split">
+      <textarea class="md-editor-textarea" spellcheck="false" aria-label="${name} 正文编辑" id="editor-textarea"></textarea>
+      <div class="md-editor-split-handle" title="拖动调整分栏比例"></div>
+      <div class="md-editor-preview" aria-label="实时预览（KaTeX 渲染）"><article class="material-markdown" id="editor-preview"></article></div>
+    </div>
+    <footer class="md-editor-actions">
+      <span class="md-editor-hint">保存为<strong>新版本</strong>：旧版收进该链历史版本，原件永不被改写。公式内输入缩写（frac、sum、int…）+ 空格自动展开；Tab 跳槽位；空行输入 / 唤出模板菜单。</span>
+      <div>
+        <button class="secondary-button" type="button" id="editor-cancel">取消</button>
+        <button class="primary-button" type="button" id="editor-save">保存为新版本</button>
+      </div>
+    </footer>
+  </div>`
+}
+
+function readerDocumentHtml() {
+  if (state.editing) return editorHtml()
+  if (totalRows() === 0) {
+    return state.legacy
+      ? '<div class="material-reader-state"><p>本课次还没有资料。</p></div>'
+      : `<div class="material-reader-state demo-change"><p>本课次还没有资料——可从外部资料/素材库导入，或点讲义组的 <b>＋</b> 新建讲义、用 AI 生成第一版课件。</p></div>`
+  }
+  const info = selectedInfo()
+  const title = info === null
+    ? ''
+    : (info.isChain && !state.legacy ? info.chain.base : info.name.replace(/\.md$/u, ''))
+  return `
+  <div class="material-reader-scroll">
+    <article class="material-markdown">
+      <h1>${title}</h1>
+      <p>二次根式：一般地，形如 $\\sqrt{a}$（a ≥ 0）的式子叫做二次根式。</p>
+      <ul>
+        <li>双重非负性：被开方数 a ≥ 0，$\\sqrt{a}$ ≥ 0</li>
+        <li>$(\\sqrt{a})^2 = a$（a ≥ 0）</li>
+      </ul>
+      <p><b>例 1</b>：化简 $\\sqrt{12} = 2\\sqrt{3}$；<b>例 2</b>：计算 $\\sqrt{27} + \\sqrt{3} = 4\\sqrt{3}$。</p>
+    </article>
+  </div>`
+}
+
+function historyBlockHtml() {
+  if (state.legacy) {
+    // V1.13 现状：常驻折叠块（默认收起），整课混列所有旧版
+    const olds = state.chains.flatMap((c) => c.versions.slice(1).map((v) => `${c.base} · 第 ${v} 版.md`))
+    if (olds.length === 0) return ''
+    return `<details class="lesson-history-block">
+      <summary>🕘 历史版本（${olds.length}）——点开可系统打开查看，旧版永不丢失</summary>
+      <ul class="lesson-history-list">
+        ${olds.map((n) => `<li><span>${n}</span><button class="secondary-button" type="button">系统打开</button><button class="material-reader-tree-remove" style="position:static;transform:none;opacity:.65;">✕</button></li>`).join('')}
+      </ul>
+      <p class="lesson-manual-edit-notes">✎ 人工编辑：把例 2 的运算过程补全了一步。</p>
+    </details>`
+  }
+  // 修订：默认不存在；⋯「本文件」组按链唤出
+  if (!state.historyOpen) return ''
+  const info = selectedInfo()
+  if (info === null || !info.isChain || info.chain.versions.length < 2) return ''
+  const olds = info.chain.versions.slice(1)
+  return `<details class="lesson-history-block demo-change" open id="history-block">
+    <summary>🕘 「${info.chain.base}」历史版本（${olds.length}）——从 ⋯ 按需唤出，不再常驻页面</summary>
+    <ul class="lesson-history-list">
+      ${olds.map((v) => `<li><span>${info.chain.base} · 第 ${v} 版.md</span><button class="secondary-button" type="button">系统打开</button><button class="material-reader-tree-remove" style="position:static;transform:none;opacity:.65;">✕</button></li>`).join('')}
+    </ul>
+    <p class="lesson-manual-edit-notes">✎ 人工编辑：把例 2 的运算过程补全了一步。</p>
+  </details>`
+}
+
+function render() {
+  const rows = totalRows()
+  const treeHead = state.legacy
+    ? `<div class="material-reader-tree-heading">
+         <span class="material-reader-folder-icon" aria-hidden="true">▾</span>
+         <strong>${LESSON_TITLE}</strong>
+         <small>${rows} 项</small>
+         <button class="tree-manage-toggle" type="button">管理</button>
+       </div>`
+    : `<div class="material-reader-tree-heading" id="tree-head">
+         <small>${rows} 项</small>
+         <button class="tree-manage-toggle" type="button">管理</button>
+       </div>`
+
+  section.innerHTML = `
+    ${state.notice !== '' && !state.editing ? `<div class="inline-notice" role="status">${state.notice}</div>` : ''}
+    <header class="lesson-files-toolbar">
+      <div class="lesson-files-toolbar-main">
+        <h3>${PERIOD_TITLE} · ${LESSON_TITLE}</h3>
+        ${capsuleHtml()}
+      </div>
+      <div class="lesson-files-toolbar-actions">
+        ${toolbarActionsHtml()}
+      </div>
+    </header>
+    <div class="material-reader${state.immersive ? ' is-single' : ''}">
+      <aside class="material-reader-tree" aria-label="本课资料目录">
+        <div class="material-reader-tree-content">
+          ${treeHead}
+          <ul class="material-reader-tree-list">${GROUPS.map(groupBlock).join('')}</ul>
+        </div>
+      </aside>
+      <section class="material-reader-document" aria-label="资料正文">
+        ${readerDocumentHtml()}
+      </section>
+    </div>
+    ${historyBlockHtml()}
+  `
+
+  // 编辑器内容绑定
+  const ta = document.getElementById('editor-textarea')
+  const pv = document.getElementById('editor-preview')
+  if (ta && pv) {
+    ta.value = state.editorBody
+    pv.innerHTML = miniMd(state.editorBody)
+    ta.addEventListener('input', () => {
+      state.editorBody = ta.value
+      pv.innerHTML = miniMd(ta.value)
+    })
+    const saveBtn = document.getElementById('editor-save')
+    if (saveBtn) saveBtn.addEventListener('click', () => {
+      const info = selectedInfo()
+      if (info !== null && info.isChain) {
+        const next = info.chain.versions[0] + 1
+        info.chain.versions.unshift(next)
+        state.notice = `已保存为第 ${next} 版《${info.chain.base}》，旧版收进该链的历史版本（⋯ 可按需查看）。`
+      } else {
+        state.notice = '已保存为新版本，旧版保留在历史版本。'
+      }
+      state.editing = false
+      state.justCreated = false
+      render()
+    })
+    const cancelBtn = document.getElementById('editor-cancel')
+    if (cancelBtn) cancelBtn.addEventListener('click', () => {
+      state.editing = false
+      state.justCreated = false
+      state.notice = ''
+      render()
+    })
+  }
+
+  bindEvents()
+  placeLabels()
+}
+
+/* ============================================================
+   交互
+   ============================================================ */
+const dialog = document.getElementById('name-dialog')
+const nameInput = document.getElementById('name-input')
+
+function openDialog(prefill) {
+  nameInput.value = prefill ?? LESSON_TITLE
+  dialog.hidden = false
+  nameInput.focus()
+  nameInput.select()
+}
+function closeDialog() { dialog.hidden = true }
+
+document.getElementById('name-dialog-close').addEventListener('click', closeDialog)
+document.getElementById('name-cancel').addEventListener('click', closeDialog)
+dialog.addEventListener('mousedown', (e) => { if (e.target === dialog) closeDialog() })
+document.getElementById('name-form').addEventListener('submit', (e) => {
+  e.preventDefault()
+  const raw = nameInput.value.trim()
+  if (raw === '') return
+  closeDialog()
+  // 同基名 = 延续该链下一版；新基名 = 独立新链（修订：不再被吞进历史版本）
+  const existing = state.chains.findIndex((c) => c.base === raw)
+  let idx
+  if (existing >= 0) {
+    state.chains[existing].versions.unshift(state.chains[existing].versions[0] + 1)
+    idx = existing
+  } else {
+    state.chains.push({ base: raw, versions: [1] })
+    idx = state.chains.length - 1
+  }
+  state.activeChain = idx // 最近保存的链接过「当前」徽标
+  state.selection = { kind: 'chain', idx }
+  state.editorBody = `# ${raw}\n\n（从这里开始手写——保存为新版本后，旧版收进本链历史版本。）\n`
+  state.editing = true
+  state.justCreated = true
+  state.notice = ''
+  state.mode = 'editor'
+  syncModeButtons()
+  render()
+})
+
+function bindEvents() {
+  const mt = document.getElementById('menu-trigger')
+  if (mt) mt.addEventListener('click', () => {
+    state.mode = state.mode === 'menu' ? 'overview' : 'menu'
+    syncModeButtons(); render()
+  })
+  const mc = document.getElementById('menu-create-btn')
+  if (mc) mc.addEventListener('click', () => openDialog())
+  const mh = document.getElementById('menu-history-btn')
+  if (mh) mh.addEventListener('click', () => {
+    state.historyOpen = true
+    state.mode = 'history'
+    syncModeButtons(); render()
+  })
+  const hb = document.getElementById('header-add-btn')
+  if (hb) hb.addEventListener('click', () => openDialog())
+  const ib = document.getElementById('immersive-btn')
+  if (ib) ib.addEventListener('click', () => { state.immersive = !state.immersive; render() })
+  const eb = document.getElementById('edit-btn')
+  if (eb) eb.addEventListener('click', () => {
+    state.editing = !state.editing
+    if (!state.editing) state.notice = ''
+    render()
+  })
+  section.querySelectorAll('[data-chain]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (state.editing) return
+      state.selection = { kind: 'chain', idx: Number(btn.dataset.chain) }
+      state.notice = ''
+      render()
+    })
+  })
+  section.querySelectorAll('[data-group]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (state.editing) return
+      state.selection = { kind: 'material', group: btn.dataset.group, idx: Number(btn.dataset.idx) }
+      state.notice = ''
+      render()
+    })
+  })
+}
+
+/* 改动点标签定位（标注开关开启时） */
+function placeLabels() {
+  document.querySelectorAll('.demo-change-label').forEach((el) => el.remove())
+  if (!document.body.classList.contains('with-annotations') || state.legacy) return
+  const add = (el, text, dx = 0, dy = 0) => {
+    if (el === null) return
+    const r = el.getBoundingClientRect()
+    if (r.width === 0) return
+    const tag = document.createElement('span')
+    tag.className = 'demo-change-label'
+    tag.textContent = text
+    tag.style.left = `${Math.max(4, Math.min(r.left - 4 + dx, window.innerWidth - 170))}px`
+    tag.style.top = `${r.bottom + 2 + dy}px`
+    document.body.appendChild(tag)
+  }
+  if (state.mode === 'overview' || state.mode === 'header' || state.mode === 'empty') {
+    add(document.getElementById('tree-head'), 'V1.14 · 树头去重（不再渲染课次标题）', 0, 6)
+    add(document.getElementById('chain-row-0'), '修订 · 只显示链头（行名 = 基名，不带「第 N 版」）', 0, 1)
+    add(document.getElementById('immersive-btn'), '修订 · 沉浸阅读降为行尾图标', -130, 4)
+    add(document.getElementById('heur-row'), 'V1.14 · 补词后自动落「习题与作业」（原落其他资料）', 0, 1)
+    const emptyGroup = [...section.querySelectorAll('.material-role-group-title')]
+      .find((t) => t.textContent.includes('暂无'))
+    if (emptyGroup) add(emptyGroup, 'V1.14 · 空组一行化', 0, 4)
+  }
+  if (state.mode === 'menu') {
+    add(document.getElementById('menu-create-btn'), 'V1.14 · 新建第一位（双入口之一）', 0, 1)
+    add(document.getElementById('menu-history-btn'), '修订 · 历史版本按需入口', 0, 1)
+  }
+  if (state.mode === 'history') {
+    add(document.getElementById('history-block'), '修订 · ⋯ 唤出、按链展开，底部不再常驻', 0, 2)
+  }
+  if (state.mode === 'header') {
+    add(document.getElementById('header-add-btn'), 'V1.14 · 组头新建（双入口之二）', 0, 2)
+  }
+  if (state.mode === 'editor' && state.justCreated) {
+    add(document.getElementById('editor-notice'), 'V1.14 · 选中 + 直进编辑态', 0, 2)
+    add(document.getElementById(`chain-row-${state.chains.length - 1}`), '修订 · 新链并立（自定义名不被吞进历史）', 0, 1)
+  }
+  if (state.mode === 'empty') {
+    const guide = section.querySelector('.material-reader-state p')
+    if (guide) add(guide, 'V1.14 · 一句式整课引导', 0, 2)
+  }
+}
+
+/* ============================================================
+   场景与开关
+   ============================================================ */
+function resetBase() {
+  state.chains = clone(INITIAL_CHAINS)
+  state.materials = clone(PRISTINE_MATERIALS)
+  state.activeChain = 0
+  state.selection = { kind: 'chain', idx: 0 }
+  state.editing = false
+  state.historyOpen = false
+  state.immersive = false
+  state.justCreated = false
+  state.notice = ''
+  state.editorBody = DRAFT_BODY
+}
+
+function enterMode(mode) {
+  state.notice = ''
+  state.immersive = false
+  switch (mode) {
+    case 'overview':
+    case 'menu':
+    case 'header':
+      resetBase()
+      break
+    case 'history':
+      resetBase()
+      state.historyOpen = true
+      break
+    case 'dialog':
+      resetBase()
+      openDialog('复习讲义') // 场景演示改名 = 新链；真实默认名 = 课次标题
+      break
+    case 'editor': {
+      resetBase()
+      if (!state.chains.some((c) => c.base === '复习讲义')) state.chains.push({ base: '复习讲义', versions: [1] })
+      state.activeChain = 1
+      state.selection = { kind: 'chain', idx: 1 }
+      state.editing = true
+      state.justCreated = true
+      state.editorBody = DRAFT_BODY
+      break
+    }
+    case 'empty':
+      state.chains = []
+      state.materials = { exercise: [], exam: [], misc: [] }
+      state.activeChain = 0
+      state.selection = null
+      state.editing = false
+      state.historyOpen = false
+      state.justCreated = false
+      break
+  }
+}
+
+const modeBtns = document.querySelectorAll('.demo-mode-btn')
+function syncModeButtons() {
+  modeBtns.forEach((b) => b.classList.toggle('is-active', b.dataset.mode === state.mode))
+}
+modeBtns.forEach((b) => b.addEventListener('click', () => {
+  state.mode = b.dataset.mode
+  closeDialog()
+  enterMode(state.mode)
+  syncModeButtons()
+  render()
+}))
+document.getElementById('anno-toggle').addEventListener('change', (e) => {
+  document.body.classList.toggle('with-annotations', e.target.checked)
+  placeLabels()
+})
+document.getElementById('compare-toggle').addEventListener('change', (e) => {
+  state.legacy = e.target.checked
+  state.mode = 'overview'
+  enterMode('overview')
+  syncModeButtons()
+  render()
+})
+
+/* 初始：场景 ① */
+enterMode('overview')
+syncModeButtons()
+render()
+</script>
+</body>
+</html>

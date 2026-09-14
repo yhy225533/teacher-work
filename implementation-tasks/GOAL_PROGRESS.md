@@ -1820,3 +1820,12 @@ V1.12 最终验收前维护增量（D73，V1.10.1/V1.5.3.1 先例——证据并
 - **设计基准**：`docs/v1.14-lesson-doc-create-and-tree-declutter-plan.md`；决策 D82–D85（`implementation-tasks/V1_14_DECISIONS.md`）：D82 新建讲义=版本链产物（`名称 · 第 1 版.md`，重名顺延，与设为讲义底稿同管线）；D83 双入口 + requestText 默认名=课次标题 + 创建后直进编辑态 + contentChanged 补发；D84 降噪四件套（空组一行化/树头去重/lessonFileBadgeLabel 徽标降噪/exercise 词表补 `特训|精练|全解全析|分层|\d{1,3}题`）；D85 门禁与冒烟扩展。
 - **任务链**：`implementation-tasks/v1.14-tasks/` V114-A（契约/服务/通道）→ B（双入口+降噪）→ C（全量门禁+冒烟）；新 IPC 仅 `files:create-lesson-doc`；零 migration/依赖；D46 零变化。
 - Git：本地提交 `plan(V1.14): lesson doc create entry and courseware tree declutter`。
+
+## V1.14 · 复审修订（2026-09-14 交互示意评审，D86/D87 拍板）
+
+产品负责人复审交互示意（`docs/v1.14-ui-mock.html`，全量重写并逐场景浏览器验证）后确认两项修订；复审过程发现一个 V1.13.2 即存在的分类缺陷（classify 单链假设——不同基名的第二链链头被误吞进历史块，V1.14 自定义名新建讲义会将其主流化），随 D86 一并修复：
+
+- **D86 版本链分链 + 历史按需**：classify 按基名聚合（每链最高版进树、其余按链入历史）；讲义组树行显示基名不带版本后缀；主讲义 = 各链头 createdAt 最新（徽标/自动选中/currentLectureId 跟随）；hover ✕ 白名单扩至全部链头；底部常驻历史块退役，改 ⋯「本文件」组「🕘 历史版本（N）」按需唤出（按链分组展开，系统打开/移除语义不变）。
+- **D87 工具行重排**：恢复 v1.9/D57 冻结原序（修改这份｜编辑｜导出 PDF｜⛶｜⋯）；沉浸阅读从第一顺位全宽按钮降为行尾 38px 图标（title/aria 完整、激活态高亮）；新建讲义维持组头「＋」为主入口不升工具行大按钮；readOnly=导出+⛶+⋯、无 md=引导+AI 主键+⛶（不渲染 ⋯）。
+- 落笔：设计基准 §2/§3 重写（§5 任务表与 §6 红线同步）；D86/D87 决策追加；V114-B/C 任务内容与冒烟场景扩展（自定义名新链并立 + 历史按链唤出 + 工具行顺序断言）；STATUS V1.14 段更新。
+- Git：本地方案修订提交 `plan(V1.14): chain-per-base display, history on demand and toolbar reorder (D86/D87)`。
