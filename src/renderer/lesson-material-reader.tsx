@@ -11,8 +11,9 @@ import {
   groupLessonMaterialNodes,
   isLessonLectureFile,
   isSelectableLessonPrepFile,
+  lectureChainBaseName,
   LESSON_MATERIAL_GROUP_META,
-  lessonFileSourceLabel,
+  lessonFileBadgeLabel,
   lessonMaterialGroupRole,
   type LessonMaterialTreeNode,
 } from './lesson-prep-context'
@@ -57,6 +58,7 @@ export default function LessonMaterialReader({
   removableFileIds = null,
   grouping,
   onSetFileGroup,
+  onAddLectureDoc,
 }: {
   readonly files: readonly ManagedFileRecord[]
   readonly selectedFileId: string
@@ -80,6 +82,8 @@ export default function LessonMaterialReader({
   }
   /** V1.13/D76：手动改组回调（透传 LessonMaterialTree；未传即不出改组菜单）。 */
   readonly onSetFileGroup?: (fileId: string, group: LessonMaterialGroup | null) => void
+  /** V1.14/D83：讲义组头轻量「＋」新建入口（未传即不渲染；readOnly 由调用方不传）。 */
+  readonly onAddLectureDoc?: () => void
   readonly onFileSaved?: (fileId: string) => void
   readonly hideTree?: boolean
   readonly treeTitle?: string
@@ -155,6 +159,7 @@ export default function LessonMaterialReader({
             removableFileIds={removableFileIds}
             grouping={grouping}
             onSetFileGroup={onSetFileGroup}
+            onAddLectureDoc={onAddLectureDoc}
           />
         </aside>
       )}
@@ -244,6 +249,7 @@ export function LessonMaterialTree({
   removableFileIds = null,
   grouping,
   onSetFileGroup,
+  onAddLectureDoc,
 }: {
   readonly files: readonly ManagedFileRecord[]
   readonly selectedFileId: string
@@ -274,6 +280,8 @@ export function LessonMaterialTree({
   }
   /** V1.13/D76：手动改组回调（group = null 恢复自动；未传即不出改组菜单）。 */
   readonly onSetFileGroup?: (fileId: string, group: LessonMaterialGroup | null) => void
+  /** V1.14/D83：讲义组头轻量「＋」新建入口（未传即不渲染）。 */
+  readonly onAddLectureDoc?: () => void
 }): React.JSX.Element {
   const markdownFiles = useMemo(
     () => files.filter((file) => file.mimeType === 'text/markdown'),
@@ -355,8 +363,13 @@ export function LessonMaterialTree({
     <div className="material-reader-tree-content">
       {showHeading && (
         <div className="material-reader-tree-heading">
-          <span className="material-reader-folder-icon" aria-hidden="true">▾</span>
-          <strong>{treeTitle}</strong>
+          {/* V1.14/D84-2：treeTitle 为空串时不再渲染标题（课件区树头去重，只留 N 项 + 管理）。 */}
+          {treeTitle !== '' && (
+            <>
+              <span className="material-reader-folder-icon" aria-hidden="true">▾</span>
+              <strong>{treeTitle}</strong>
+            </>
+          )}
           <small>{files.length} 项</small>
           {onToggleManageMode !== undefined && (
             <button className="tree-manage-toggle" type="button" aria-pressed={manageMode} onClick={onToggleManageMode}>
@@ -390,10 +403,20 @@ export function LessonMaterialTree({
             const groupNodes = groupedNodes.buckets[group]
             return (
               <li key={group} className="material-role-group" aria-label={`${meta.label}分组`}>
-                <div className="material-role-group-title"><span aria-hidden="true">{meta.icon}</span>{meta.label}<small>{groupNodes.length} 项</small></div>
-                {groupNodes.length === 0 && (
-                  <p className="material-role-group-empty">{meta.emptyText}</p>
-                )}
+                <div className="material-role-group-title">
+                  <span aria-hidden="true">{meta.icon}</span>
+                  {/* V1.14/D84-1：空组一行化——标题直接带「· 暂无」，不再渲染空态 <p>。 */}
+                  {groupNodes.length === 0 ? `${meta.label} · 暂无` : meta.label}
+                  {group === 'lecture' && onAddLectureDoc !== undefined && (
+                    <button
+                      className="group-add-btn"
+                      type="button"
+                      title="新建讲义（创建后直接进入编辑）"
+                      onClick={onAddLectureDoc}
+                    >＋</button>
+                  )}
+                  <small>{groupNodes.length} 项</small>
+                </div>
                 <ul>
                   {groupNodes.map((node) => (
                     <MaterialTreeNodeRow
@@ -407,7 +430,7 @@ export function LessonMaterialTree({
                       onToggleFile={onToggleFile}
                       onToggleExpanded={toggleExpanded}
                       isCurrentLecture={group === 'lecture' && node.file.id === currentLectureId}
-                      sourceLabel={lessonFileSourceLabel(node.file)}
+                      sourceLabel={lessonFileBadgeLabel(node.file)}
                       onRemoveFile={onRemoveFile}
                       manageMode={manageMode}
                       manageSelectedIds={manageSelectedIds}
@@ -425,7 +448,7 @@ export function LessonMaterialTree({
             )
           })}
       </ul>
-      {files.length === 0 && <p className="empty-state">本课次还没有资料。</p>}
+      {files.length === 0 && <p className="empty-state">本课次还没有资料——可从外部资料/素材库导入，或点讲义组的 ＋ 新建讲义、用 AI 生成第一版课件。</p>}
     </div>
   )
 }
@@ -530,7 +553,8 @@ function MaterialTreeNodeRow({
           onClick={() => onSelectFile(node.file.id)}
         >
           <span className="material-file-icon" aria-hidden="true">{fileIcon(node.file)}</span>
-          <span>{displayFileName(node.file.originalName)}</span>
+          {/* V1.14/D86：讲义链头行显示基名（链头即最新版，版本号属历史细节；完整名保留在胶囊/历史块）。 */}
+          <span>{lectureChainBaseName(node.file.originalName) ?? displayFileName(node.file.originalName)}</span>
           {isCurrentLecture && <small className="material-role-badge is-current">当前</small>}
           {sourceLabel !== null && <small className="material-role-badge is-source">{sourceLabel}</small>}
           {hasChildren && <small>{node.children.length}</small>}

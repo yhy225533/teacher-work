@@ -2415,6 +2415,50 @@ button:disabled {
 .material-reader-tree-row .tree-group-menu-btn:hover,
 .material-reader-tree-row .tree-group-menu-btn[aria-expanded='true'] { opacity: 1; color: var(--color-primary-active); background: #f1f5f9; }
 .material-reader-tree-row .tree-group-menu-btn[disabled] { opacity: 0.25; cursor: default; }
+
+/* V1.14/D87：沉浸阅读降为工具行行尾图标按钮（视图开关不占内容动作位）。 */
+.lesson-files-toolbar-actions .toolbar-icon-btn {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #c7d2fe;
+  border-radius: 9px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-active);
+  font-family: "Segoe UI Symbol", "Microsoft YaHei", sans-serif;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.lesson-files-toolbar-actions .toolbar-icon-btn:hover { background: #e0e7ff; }
+.lesson-files-toolbar-actions .toolbar-icon-btn.is-active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+/* V1.14/D83：讲义组头轻量「＋」新建入口（基调同 tree-group-menu-btn）。 */
+.material-role-group-title .group-add-btn {
+  margin-left: 6px;
+  flex: 0 0 auto;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  border-radius: 4px;
+  opacity: 0.5;
+}
+.material-role-group-title .group-add-btn:hover,
+.material-role-group-title .group-add-btn:focus-visible {
+  opacity: 1;
+  color: var(--color-primary-active);
+  background: #f1f5f9;
+}
 .confirm-file-list { margin: 6px 0; padding-left: 18px; max-height: 180px; overflow: auto; }
 .confirm-file-list li { font-size: 12px; line-height: 1.7; }
 

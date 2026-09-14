@@ -24,13 +24,14 @@ describe('V1.8.1 课件区讲义/材料分组（方案 A）', () => {
     expect(reader).toContain('LESSON_MATERIAL_GROUP_META')
     expect(reader).toContain("['lecture', 'exercise', 'exam', 'misc']")
     expect(reader).toContain('material-role-group')
-    // 当前徽标 + 来源标签（复用 lessonFileSourceLabel，全组生效）
+    // 当前徽标 + 来源标签（V1.14/D84-3 演进：徽标降噪换 lessonFileBadgeLabel——外部资料 → null 不显示）
     expect(reader).toContain('material-role-badge is-current')
     expect(reader).toContain('material-role-badge is-source')
-    expect(reader).toContain('lessonFileSourceLabel(node.file)')
-    // 讲义组空态引导（与 V17-B 无 md 引导语义衔接；文案随 META 迁至 prep-context）
+    expect(reader).toContain('lessonFileBadgeLabel(node.file)')
+    // V1.14/D84-1 空组一行化：META emptyText 退役，空组标题直接带「· 暂无」
     const context = source('src/renderer/lesson-prep-context.ts')
-    expect(context).toContain('还没有讲义——选中材料区的 Markdown 可「设为讲义底稿」，或用 AI 生成第一版课件。')
+    expect(reader).toContain('· 暂无')
+    expect(context).not.toContain('还没有讲义——选中材料区的 Markdown 可「设为讲义底稿」')
     // grouped 默认 false：既有调用（draft-panel 等）零改动
     expect(reader).toContain('grouped = false')
     expect(reader).toContain('readonly grouped?: boolean')

@@ -9,6 +9,7 @@ import {
   isAiEditableFile,
   isAppGeneratedCoursewareFile,
   isLessonLectureFile,
+  lectureChainBaseName,
   lessonFileSourceLabel,
   listLessonPrepFiles,
   type LessonPrepContext,
@@ -43,7 +44,7 @@ export default function LessonFilesSection({
   readonly onStartPrep: (context: LessonPrepContext, intent?: PrepLaunchIntent) => void
   readonly onOpenDraft: (context: LessonPrepContext, noteId: string) => void
 }): React.JSX.Element {
-  const { confirm } = useAppDialog()
+  const { confirm, requestText } = useAppDialog()
   const { overview: core, reload: reloadCore } = useCoreOverview()
   const [overview, setOverview] = useState<ManagedFileOverview | null>(null)
   const [busy, setBusy] = useState(false)
@@ -69,13 +70,15 @@ export default function LessonFilesSection({
   const currentVersionFile = classifiedFiles.currentVersion
   const historyFiles = classifiedFiles.history
   const displayFiles = classifiedFiles.currentMaterials
+  // V1.14/D86：hover ✕ 白名单从"唯一当前版"扩至全部链头（误移除正文是高后悔动作；移除仍走 ⋯ 红区）。
+  const lectureChainHeads = classifiedFiles.lectureChainHeads
   const selectedFile = displayFiles.find((file) => file.id === selectedFileId) ?? null
-  // V1.10/D62：hover ✕ 白名单 = 全部当前资料，唯一例外是"当前讲义当前版"（唯一正文，仍只走 ⋯ 入口）。
+  // V1.10/D62：hover ✕ 白名单 = 全部当前资料，例外是讲义链头（唯一/多链正文，仍只走 ⋯ 入口）。
   const removableFileIds = useMemo(() => {
     const ids = new Set(displayFiles.map((file) => file.id))
-    if (currentVersionFile !== null) ids.delete(currentVersionFile.id)
+    for (const headId of lectureChainHeads) ids.delete(headId)
     return ids
-  }, [displayFiles, currentVersionFile])
+  }, [displayFiles, lectureChainHeads])
   // D27（V17-B）：AI 修改面向本课全部 md（含外部导入 md）；office/pdf/图片保持只读浏览。
   const canModifySelectedFile = selectedFile !== null && isAiEditableFile(selectedFile)
   const hasAnyMarkdown = displayFiles.some(isAiEditableFile)
@@ -332,6 +335,10 @@ export default function LessonFilesSection({
 
   // V19-B（D57）：编辑态提升到工具行（✎ 编辑主键），阅读器只消费受控态
   const [editing, setEditing] = useState(false)
+  // V1.14/D86：历史版本按需唤出——底部不再常驻，⋯「本文件」组点击后展开（按链分组）。
+  // 切换选中文件即收起（历史块始终跟随当前链头）。
+  const [historyOpenFileId, setHistoryOpenFileId] = useState<string | null>(null)
+  useEffect(() => { setHistoryOpenFileId(null) }, [selectedFileId])
   useEffect(() => { setEditing(false) }, [selectedFileId])
   const canEditSelectedFile = !readOnly && selectedFile !== null && selectedFile.mimeType === 'text/markdown'
   const canPromoteSelectedFile = !readOnly && selectedFile !== null
@@ -340,12 +347,24 @@ export default function LessonFilesSection({
   const mineruEnhanceable = selectedFile !== null && isMineruEnhanceableFile(selectedFile) && mineruStatus?.state !== 'done'
   const mineruRunning = mineruBusy || mineruStatus?.state === 'running' || mineruStatus?.state === 'queued'
 
+  /** V1.14/D86：选中链头的链内历史版本（⋯ 按链唤出；非链头/无旧版不渲染）。 */
+  const selectedChainHistory = useMemo(() => {
+    if (selectedFile === null || !lectureChainHeads.has(selectedFile.id)) return []
+    const base = lectureChainBaseName(selectedFile.originalName)
+    if (base === null) return []
+    return historyFiles.filter((file) => lectureChainBaseName(file.originalName) === base)
+  }, [historyFiles, lectureChainHeads, selectedFile])
+
   /** V19-B（D57）：⋯ 收纳菜单——分组"本课/本文件"，危险项在底部红区（从本课移除）。 */
   const menuEntries = useMemo<AppMenuEntry[]>(() => {
     const entries: AppMenuEntry[] = [
       { kind: 'group', key: 'lesson-group', label: '本课' },
-      { kind: 'item', key: 'refresh', label: '刷新', onSelect: () => { void reload() }, disabled: busy },
     ]
+    if (!readOnly) {
+      // V1.14/D83：新建讲义第一位（双入口之一；组头「＋」为主入口）。
+      entries.push({ kind: 'item', key: 'create-lecture-doc', label: '＋ 新建讲义', title: '从零手写一份讲义（版本链形态，创建后直接进入编辑）', onSelect: () => { void createLectureDoc() }, disabled: busy })
+    }
+    entries.push({ kind: 'item', key: 'refresh', label: '刷新', onSelect: () => { void reload() }, disabled: busy })
     if (!readOnly) {
       if (draft !== null) {
         entries.push({ kind: 'item', key: 'continue', label: '继续上次修改', onSelect: () => { if (prepContext !== null) onOpenDraft(prepContext, draft.id) }, disabled: busy })
@@ -356,6 +375,16 @@ export default function LessonFilesSection({
     }
     entries.push({ kind: 'group', key: 'file-group', label: '本文件' })
     if (selectedFile !== null) {
+      if (selectedChainHistory.length > 0) {
+        entries.push({
+          kind: 'item',
+          key: 'history',
+          label: `🕘 历史版本（${selectedChainHistory.length}）`,
+          title: '按需唤出该讲义链的旧版；不再常驻页面底部',
+          onSelect: () => { setHistoryOpenFileId(selectedFile.id) },
+          disabled: busy,
+        })
+      }
       if (canPromoteSelectedFile) {
         entries.push({ kind: 'item', key: 'promote', label: '设为讲义底稿', title: '复制为“基名 · 第 N 版.md”进入本课讲义版本链，原件保留在材料区', onSelect: () => { void promoteToLecture(selectedFile.id) }, disabled: busy })
       }
@@ -383,7 +412,36 @@ export default function LessonFilesSection({
       }
     }
     return entries
-  }, [busy, canPromoteSelectedFile, draft, hasAppGeneratedCourseware, mineruEnhanceable, mineruRunning, mineruTokenConfigured, readOnly, selectedFile])
+  }, [busy, canPromoteSelectedFile, draft, hasAppGeneratedCourseware, mineruEnhanceable, mineruRunning, mineruTokenConfigured, readOnly, selectedChainHistory, selectedFile])
+
+  /** V1.14/D83：新建讲义——requestText 默认名=课次标题 → createLessonDoc → 选中 + 直进编辑态。 */
+  async function createLectureDoc(): Promise<void> {
+    if (lesson === null || busy) return
+    const name = await requestText({
+      title: '新建讲义',
+      description: `在「${lesson.title}」创建一份从零手写的讲义，创建后直接开始编辑。`,
+      label: '讲义名称',
+      initialValue: lesson.title,
+      placeholder: '如：复习讲义',
+      submitLabel: '创建并开始编辑',
+    })
+    if (name === null || name.trim() === '') return
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const created = await window.teacherWorkbench.files.createLessonDoc({ lessonId: lesson.id, name })
+      await reload()
+      await reloadCore()
+      setSelectedFileId(created.file.id)
+      setEditing(true)
+      setNotice(`已创建《${created.file.originalName}》（第 ${created.version} 版），直接开始编辑——保存为新版本后旧版永不丢失。`)
+    } catch (createError) {
+      setError(toErrorMessage(createError, '讲义创建失败，请稍后重试。'))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   /** V17-C：人工编辑保存新版本后刷新课件清单与共享 overview（manual_edit 标注由 overview 数据驱动）。 */
   async function handleManualEditSaved(fileId: string): Promise<void> {
@@ -401,6 +459,18 @@ export default function LessonFilesSection({
       </div>
     )
   }
+
+  // V1.14/D87：沉浸阅读图标按钮（行尾位，⋯ 之前；视图开关不占内容动作位）。
+  const immersiveButton = onToggleImmersive === undefined ? null : (
+    <button
+      className={`toolbar-icon-btn${immersive ? ' is-active' : ''}`}
+      type="button"
+      title={immersive ? '退出沉浸阅读' : '沉浸阅读（隐藏目录树，全宽阅读）'}
+      aria-label={immersive ? '退出沉浸阅读' : '沉浸阅读'}
+      aria-pressed={immersive}
+      onClick={onToggleImmersive}
+    >⛶</button>
+  )
 
   return (
     <div className={`lesson-files-section${immersive ? ' is-immersive' : ''}`} aria-live="polite">
@@ -422,11 +492,12 @@ export default function LessonFilesSection({
           )}
         </div>
         <div className="lesson-files-toolbar-actions">
-          {onToggleImmersive !== undefined && <button className="secondary-button" type="button" onClick={onToggleImmersive}>{immersive ? '退出沉浸阅读' : '沉浸阅读'}</button>}
+          {/* V1.14/D87：三主键直达，沉浸阅读图标行尾（⋯ 之前）；无 md 分支为 引导+AI 主键+⛶。 */}
           {!readOnly && !hasAnyMarkdown && (
             <>
               <span className="lesson-files-guide" role="status">本课还没有 Markdown 课件，可先导入 md 讲义或用 AI 生成第一版课件。</span>
               <button className="primary-button" type="button" disabled={busy} onClick={openNewPrep}>{draft === null ? 'AI 新建备课' : '继续上次备课'}</button>
+              {immersiveButton}
             </>
           )}
           {!readOnly && hasAnyMarkdown && (
@@ -458,6 +529,7 @@ export default function LessonFilesSection({
               >
                 {exportBusy ? '导出中…' : '⬇ 导出 PDF'}
               </button>
+              {immersiveButton}
               <AppMenuButton label="⋯" entries={menuEntries} align="right" disabled={busy} title="更多操作（本课 / 本文件）" />
             </>
           )}
@@ -474,6 +546,7 @@ export default function LessonFilesSection({
                   {exportBusy ? '导出中…' : '⬇ 导出 PDF'}
                 </button>
               )}
+              {immersiveButton}
               <AppMenuButton label="⋯" entries={menuEntries} align="right" disabled={busy} title="更多操作（本文件）" />
             </>
           )}
@@ -491,12 +564,14 @@ export default function LessonFilesSection({
           editable={!readOnly}
           onFileSaved={(fileId: string) => { void handleManualEditSaved(fileId) }}
           hideTree={immersive}
-          treeTitle={lesson.title}
           grouped
+          /* V1.14/D84-2：树头去重——课次标题已在工具行，树头只留 "N 项 [管理]"。 */
+          treeTitle=""
           currentLectureId={currentVersionFile?.id ?? null}
           editing={editing}
           onToggleEditing={() => { setEditing((current) => !current) }}
           onRemoveFile={!readOnly ? (fileId: string) => { void removeFile(fileId) } : undefined}
+          onAddLectureDoc={!readOnly ? createLectureDoc : undefined}
           manageMode={manageMode}
           manageSelectedIds={manageSelectedIds}
           onToggleManageId={toggleManageId}
@@ -524,11 +599,12 @@ export default function LessonFilesSection({
         )}
         </>
       )}
-      {historyFiles.length > 0 && (
-        <details className="lesson-history-block">
-          <summary>🕘 历史版本（{historyFiles.length}）——点开可系统打开查看，旧版永不丢失</summary>
+      {/* V1.14/D86：历史版本按需唤出——底部常驻块退役；⋯「本文件」组选中链头后展开（按链分组）。 */}
+      {historyOpenFileId !== null && selectedFile !== null && historyOpenFileId === selectedFile.id && selectedChainHistory.length > 0 && (
+        <details className="lesson-history-block" open>
+          <summary>🕘 「{lectureChainBaseName(selectedFile.originalName) ?? selectedFile.originalName}」历史版本（{selectedChainHistory.length}）——从 ⋯ 按需唤出</summary>
           <ul className="lesson-history-list">
-            {historyFiles.map((file) => (
+            {selectedChainHistory.map((file) => (
               <li key={file.id}>
                 <span>{file.originalName}</span>
                 <button className="secondary-button" type="button" onClick={() => { void openFile(file.id) }}>系统打开</button>

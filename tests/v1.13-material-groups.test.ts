@@ -62,13 +62,26 @@ describe('V1.13/D75 启发式分组规则表（首中即停）', () => {
     expect(lessonMaterialGroupRole(file('1', '数论补充材料 - 奇偶性、连续整数与周期.md'), emptyContext())).toBe('lecture')
     expect(lessonMaterialGroupRole(file('2', '盐水浓度补充材料.md'), emptyContext())).toBe('lecture')
     expect(lessonMaterialGroupRole(file('3', 'AMC8 余数 - 例题.md'), emptyContext())).toBe('lecture')
-    // 思源薄壳 + assets docx 讲义本体（文件名含"学生讲义"）
+    // 思源薄壳 + assets docx 讲义本体（文件名含"学生讲义"）。
+    // V1.14/D84-4 演进：exercise 词表补 `特训|精练|全解全析|分层|\d{1,3}题` 后
+    // "核心4题"首中即停 → 习题与作业（误判由 V1.13 手动改组兜底，D84 拍板接受）。
     expect(lessonMaterialGroupRole(
       file('4', '一线三等角与K字模型专题精讲与核心4题_学生讲义-20260906020746-fbtvwbb.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
       emptyContext('综合几何'),
-    )).toBe('lecture')
+    )).toBe('exercise')
+    // 讲义关键词本体命中不受新词影响
     expect(lessonMaterialGroupRole(file('5', '一线三等角与K字模型专题精讲.md'), emptyContext('综合几何'))).toBe('lecture')
     expect(lessonMaterialGroupRole(file('6', '教师版.md'), emptyContext())).toBe('lecture')
+  })
+
+  it('rule 2 V1.14/D84-4 补词：特训/精练/全解全析/分层/N题 → exercise', () => {
+    expect(lessonMaterialGroupRole(file('1', '二次根式80题全题型.md'), emptyContext())).toBe('exercise')
+    expect(lessonMaterialGroupRole(file('2', '中考特训营.md'), emptyContext())).toBe('exercise')
+    expect(lessonMaterialGroupRole(file('3', '函数精练.md'), emptyContext())).toBe('exercise')
+    expect(lessonMaterialGroupRole(file('4', '全解全析.md'), emptyContext())).toBe('exercise')
+    expect(lessonMaterialGroupRole(file('5', '分层练习.md'), emptyContext())).toBe('exercise')
+    // 纯数字串（无题/练等字）不命中词表，兜底 misc
+    expect(lessonMaterialGroupRole(file('6', '20260914.md'), emptyContext())).toBe('misc')
   })
 
   it('rule 5: 文件名主干与课次标题互相包含（≥2 字符）→ lecture', () => {
@@ -165,17 +178,20 @@ describe('V1.13/D76 LessonMaterialTree 四组渲染与改组菜单', () => {
     // 手动覆盖：英语词汇（启发式 misc）被移入试卷组
     const examSlice = markup.slice(examIndex)
     expect(examSlice.indexOf('英语词汇')).toBeGreaterThan(-1)
-    // misc 组空态（0 项）
-    expect(markup.slice(miscIndex)).toContain('本课还没有其他资料。')
+    // V1.14/D84-1 空组一行化：misc 组 0 项 = 标题带「· 暂无」，不再渲染空态 <p>
+    expect(markup.slice(miscIndex)).toContain('其他资料 · 暂无')
+    expect(markup.slice(miscIndex)).not.toContain('本课还没有其他资料。')
   })
 
   it('renders per-row regroup menus for non-lecture files only', () => {
     const markup = renderTree()
     expect(markup).toContain('tree-group-menu-btn')
     expect(markup).toContain('移动到分组')
-    // 版本链讲义文件（isLessonLectureFile）所在行无菜单触发按钮
-    const at = markup.indexOf('第2讲 · 第 1 版')
+    // 版本链讲义文件（isLessonLectureFile）所在行无菜单触发按钮；
+    // V1.14/D86：链头行显示基名（不带「· 第 N 版」）
+    const at = markup.indexOf('第2讲')
     expect(at).toBeGreaterThan(-1)
+    expect(markup).not.toContain('第2讲 · 第 1 版')
     expect(markup.slice(at, at + 260)).not.toContain('app-menu')
   })
 

@@ -30,10 +30,10 @@ describe('V110-B 资料移除可达性', () => {
 
   it('section owns batch state, serial softDeleteFile orchestration, and the whitelist', () => {
     const section = source('../src/renderer/lesson-files-section.tsx')
-    // 批量状态与白名单（当前讲义当前版 = 唯一例外）
+    // 批量状态与白名单（V1.14/D86 演进：例外从"当前讲义当前版"扩至全部链头）
     expect(section).toContain('const [manageMode, setManageMode] = useState(false)')
     expect(section).toContain('const [manageSelectedIds, setManageSelectedIds] = useState<string[]>([])')
-    expect(section).toContain('if (currentVersionFile !== null) ids.delete(currentVersionFile.id)')
+    expect(section).toContain('for (const headId of lectureChainHeads) ids.delete(headId)')
     // 批量确认：列文件名清单 + 原件不受影响文案
     expect(section).toContain('title: `从本课移除 ${targets.length} 份资料？`')
     expect(section).toContain('只移除本课的独立副本，不会影响素材库原件或外部资料。')

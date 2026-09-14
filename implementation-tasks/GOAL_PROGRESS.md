@@ -1836,3 +1836,12 @@ V1.12 最终验收前维护增量（D73，V1.10.1/V1.5.3.1 先例——证据并
 - 测试：contracts/service/ipc 三组新增（首版正文与挂课、同基名顺延 + 异基名独立（D86 语义）+ 跨入口共享版本号空间、空名/超长/坏课次/已删除课次、控制字符清洗、五种伪造载荷、contentChanged 与索引计数）；ipc-security 白名单回归。
 - 门禁：相关测试 33/33、typecheck、lint 全绿。
 - Git：本地提交 `v1.14(V114-A): lesson doc create contract, service and channel`。
+
+### V114-B 新建双入口 + 创建直进编辑 + 分链显示与工具行重排 + 树降噪（2026-09-14 DONE）
+
+- **D86 分链**：classify 按基名聚合版本链（每链最高版进树、其余按链入历史；主讲义=各链头 createdAt 最新），修复 V1.13.2 即存在的单链假设（第二基名链头被误吞进历史块）；讲义组树行显示基名不带版本后缀；hover ✕ 白名单扩至全部链头；底部常驻历史块退役 → ⋯「本文件」按需唤出（切换文件自动收起）；orderAiEditableFiles 同步分链演进（链头在前、链间按链头 createdAt、单链与 V17-B 冻结行为等价）。
+- **D83 双入口 + 直进编辑**：⋯ 菜单「本课」组第一位 + 讲义组头「＋」（hover 显现）；requestText 默认名=课次标题；创建后 reload → 选中 → setEditing(true) 直进编辑器。
+- **D87 工具行重排**：修改这份｜编辑｜导出 PDF｜⛶ 38px 图标｜⋯（恢复 v1.9/D57 冻结原序）；无 md 分支=引导+AI 主键+⛶（不渲染 ⋯）；readOnly=导出+⛶+⋯。
+- **D84 降噪**：空组一行化（`label · 暂无`）、树头去重（treeTitle=""）、lessonFileBadgeLabel（外部资料徽标隐藏、素材库保留）、exercise 词表补 `特训|精练|全解全析|分层|\d{1,3}题`。
+- **测试与门禁**：lesson-prep-context 新增 D86/D83/D87 钉测两组 + v1.8.1/v1.9/v1.10/v1.13 既有钉测演进；全量 102 files / 616 tests + typecheck + lint + production build 全绿。
+- Git：本地提交 `v1.14(V114-B): dual create entries, chain-per-base display and toolbar reorder`。

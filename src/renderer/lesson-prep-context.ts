@@ -28,9 +28,17 @@ export interface LessonCoursewareFiles {
   readonly currentVersion: ManagedFileRecord | null
   readonly history: readonly ManagedFileRecord[]
   readonly currentMaterials: readonly ManagedFileRecord[]
+  /** V1.14/D86：链头集合（各版本链最高版 + 非版本链讲义不在此列；hover ✕ 白名单扩至全部链头）。 */
+  readonly lectureChainHeads: ReadonlySet<string>
 }
 
 const lessonVersionPattern = / · 第 (\d+) 版\.md$/u
+
+/** V1.14/D86：版本链基名（`基名 · 第 N 版.md` 去尾部版本段；非版本链文件返回 null）。 */
+export function lectureChainBaseName(name: string): string | null {
+  const match = lessonVersionPattern.exec(name)
+  return match === null ? null : name.slice(0, match.index)
+}
 
 export function createLessonPrepContext(
   course: NodeRecord,
@@ -99,6 +107,15 @@ export function lessonFileSourceLabel(file: ManagedFileRecord): LessonFileSource
   return file.originFileId === null ? '外部资料' : '素材库'
 }
 
+/**
+ * V1.14/D84-3：树行来源徽标降噪——「外部资料」是默认来源无信息量，徽标只显示「素材库」
+ * （工作台产物本就为 null）。完整来源标签保留 `lessonFileSourceLabel` 给胶囊等场景。
+ */
+export function lessonFileBadgeLabel(file: ManagedFileRecord): LessonFileSourceLabel | null {
+  const label = lessonFileSourceLabel(file)
+  return label === '外部资料' ? null : label
+}
+
 /** D27（V17-B）：任意 text/markdown managed 文件均可作 AI 修改对象（含外部导入 md）；office/pdf/图片/纯文本不在其列。 */
 export function isAiEditableFile(file: ManagedFileRecord): boolean {
   return file.mimeType === 'text/markdown'
@@ -125,15 +142,15 @@ export interface LessonFilesByRole {
   readonly materials: readonly ManagedFileRecord[]
 }
 
-/** V1.13/D75：材料四组元数据（组序 = 展示序）。 */
+/** V1.13/D75：材料四组元数据（组序 = 展示序；V1.14/D84 空组一行化后 emptyText 退役，仅保留 icon/label）。 */
 export const LESSON_MATERIAL_GROUP_META: Record<
   LessonMaterialGroup,
   { readonly icon: string; readonly label: string; readonly emptyText: string }
 > = {
-  lecture: { icon: '📘', label: '本课讲义', emptyText: '还没有讲义——选中材料区的 Markdown 可「设为讲义底稿」，或用 AI 生成第一版课件。' },
-  exercise: { icon: '✏️', label: '习题与作业', emptyText: '本课还没有习题与作业。' },
-  exam: { icon: '📄', label: '试卷与复习', emptyText: '本课还没有试卷与复习资料。' },
-  misc: { icon: '📎', label: '其他资料', emptyText: '本课还没有其他资料。' },
+  lecture: { icon: '📘', label: '本课讲义', emptyText: '' },
+  exercise: { icon: '✏️', label: '习题与作业', emptyText: '' },
+  exam: { icon: '📄', label: '试卷与复习', emptyText: '' },
+  misc: { icon: '📎', label: '其他资料', emptyText: '' },
 }
 
 /** V1.13/D75：分组上下文——课次标题 + 本课全部挂课文件 + md 正文快照（规则 6 需要）。 */
@@ -143,7 +160,7 @@ export interface LessonMaterialGroupContext {
   readonly markdownBodies: ReadonlyMap<string, string>
 }
 
-const lessonMaterialExercisePattern = /习题|作业|题目|答案|真题|练习/u
+const lessonMaterialExercisePattern = /习题|作业|题目|答案|真题|练习|特训|精练|全解全析|分层|\d{1,3}题/u
 const lessonMaterialExamPattern = /试卷|卷子|期中|期末|一模|二模|月考|复习|错题|专项|填选|选填/u
 const lessonMaterialLecturePattern = /讲义|精讲|补充|例题|教师版|学生版/u
 
@@ -201,39 +218,64 @@ export function splitLessonFilesByRole(files: readonly ManagedFileRecord[]): Les
   return { lecture, materials }
 }
 
-/** 修改候选排序（V17-B）：版本链最新版在前，其余 md 依原序跟后。 */
+/**
+ * 修改候选排序（V17-B；V1.14/D86 分链演进）：链头在前、同链相邻（链内版本降序），
+ * 链间按链头 createdAt 降序（主讲义链最先，与 classify 的主讲义语义一致），非链 md 依原序跟后。
+ */
 export function orderAiEditableFiles(files: readonly ManagedFileRecord[]): ManagedFileRecord[] {
-  const versioned = files
-    .map((file) => {
-      const match = lessonVersionPattern.exec(file.originalName)
-      return match === null ? null : { file, version: Number(match[1]) }
-    })
-    .filter((item): item is { file: ManagedFileRecord; version: number } => item !== null)
-    .sort((left, right) => right.version - left.version)
-  const versionedIds = new Set(versioned.map((item) => item.file.id))
-  return [...versioned.map((item) => item.file), ...files.filter((file) => !versionedIds.has(file.id))]
+  const chains = new Map<string, { file: ManagedFileRecord; version: number }[]>()
+  const nonChain: ManagedFileRecord[] = []
+  for (const file of files) {
+    const match = lessonVersionPattern.exec(file.originalName)
+    if (match === null) { nonChain.push(file); continue }
+    const base = file.originalName.slice(0, match.index)
+    const bucket = chains.get(base) ?? []
+    bucket.push({ file, version: Number(match[1]) })
+    chains.set(base, bucket)
+  }
+  const orderedChains = [...chains.values()]
+    .map((bucket) => bucket.sort((left, right) => right.version - left.version))
+    .sort((left, right) =>
+      right[0].file.createdAt.localeCompare(left[0].file.createdAt)
+      || right[0].file.id.localeCompare(left[0].file.id))
+  return [...orderedChains.flatMap((bucket) => bucket.map((item) => item.file)), ...nonChain]
 }
 
 export function classifyLessonCoursewareFiles(
   files: readonly ManagedFileRecord[],
 ): LessonCoursewareFiles {
-  const versioned = files
-    .map((file) => {
-      const match = lessonVersionPattern.exec(file.originalName)
-      return match === null ? null : { file, version: Number(match[1]) }
-    })
-    .filter((item): item is { file: ManagedFileRecord; version: number } => item !== null)
-    .sort((left, right) => right.version - left.version)
-  const currentVersion = versioned[0]?.file ?? null
-  const history = versioned.slice(1).map((item) => item.file)
+  // V1.14/D86 分链：按基名聚合版本链（`基名 · 第 N 版.md`），每链最高版进 currentMaterials、
+  // 其余入 history（按链分组）。修复单链假设——不同基名的第二链不再被误吞进历史。
+  const chains = new Map<string, { file: ManagedFileRecord; version: number }[]>()
+  for (const file of files) {
+    const match = lessonVersionPattern.exec(file.originalName)
+    if (match === null) continue
+    const base = file.originalName.slice(0, match.index)
+    const bucket = chains.get(base) ?? []
+    bucket.push({ file, version: Number(match[1]) })
+    chains.set(base, bucket)
+  }
+  const chainHeads: ManagedFileRecord[] = []
+  const history: ManagedFileRecord[] = []
+  for (const bucket of chains.values()) {
+    bucket.sort((left, right) => right.version - left.version)
+    chainHeads.push(bucket[0].file)
+    history.push(...bucket.slice(1).map((item) => item.file))
+  }
+  // 主讲义 = 最近保存的链（链头 createdAt 最新；保存新版本即新建文件记录）。
+  chainHeads.sort((left, right) => right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id))
+  const currentVersion = chainHeads[0] ?? null
   const historyIds = new Set(history.map((file) => file.id))
-  const currentMaterials = currentVersion === null
-    ? files.filter((file) => !historyIds.has(file.id))
-    : [
-        currentVersion,
-        ...files.filter((file) => file.id !== currentVersion.id && !historyIds.has(file.id)),
-      ]
-  return { currentVersion, history, currentMaterials }
+  const currentMaterials = [
+    ...chainHeads,
+    ...files.filter((file) => !historyIds.has(file.id) && !chainHeads.some((head) => head.id === file.id)),
+  ]
+  return {
+    currentVersion,
+    history,
+    currentMaterials,
+    lectureChainHeads: new Set(chainHeads.map((head) => head.id)),
+  }
 }
 
 export function filterLessonMaterialFiles(

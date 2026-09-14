@@ -1,6 +1,6 @@
 # V114-B · 新建双入口 + 创建后直进编辑 + 分链显示与工具行重排 + 树降噪
 
-状态：TODO
+状态：DONE
 
 ## 目标
 
@@ -30,4 +30,14 @@
 
 ## 完成记录
 
-（待填）
+2026-09-14 完成。
+
+- **D86 分链 classify（lesson-prep-context.ts）**：`classifyLessonCoursewareFiles` 改为按基名聚合 ` · 第 N 版.md`（`chains` Map），每链版本降序取链头进 currentMaterials、其余按链入 history；链头按 `createdAt desc`（+id 兜底）排——主讲义 = 最近保存链头（修复单链假设：第二基名链头不再被误吞进历史）。新增 `lectureChainBaseName`（基名提取，学生版等非 pattern 名返回 null）与 `lectureChainHeads` 导出；META emptyText 全退役（空态改由树空组一行化承担）。
+- **orderAiEditableFiles 分链演进**：链头在前、同链相邻（链内版本降序）、链间按链头 createdAt 降序（与 classify 主讲义语义一致——AI 单文件修改候选不再让旧链高版本号压过最近主讲义链头），非链 md 原序跟后；单链场景与 V17-B 冻结行为等价（v17-b 测试原样通过）。
+- **D84 降噪**：`lessonFileBadgeLabel`（外部资料默认徽标 → null，素材库保留；`lessonFileSourceLabel` 完整语义不动，仍用于工具行胶囊）；exercise 词表追加 `特训|精练|全解全析|分层|\d{1,3}题`。
+- **lesson-files-section.tsx**：`createLectureDoc()`（requestText 默认名=课次标题 → `files.createLessonDoc` → reload+reloadCore → 选中新建文件 → `setEditing(true)` 直进编辑态 + notice）；⋯ 菜单「本课」组第一位「＋ 新建讲义」（readOnly 不渲染）；hover ✕ 白名单 `removableFileIds` 扩至全部链头；底部常驻历史块退役 → `historyOpenFileId` 状态 + ⋯「本文件」组「🕘 历史版本（N）」按需唤出（选中链头且链内旧版 > 0 时渲染；切换选中文件自动收起）。
+- **D87 工具行重排**：`immersiveButton` 提取为常量（`toolbar-icon-btn` 38px、aria-pressed、title/aria-label 完整语义），三分支统一渲染于 ⋯ 之前行尾位——主分支 修改这份｜编辑｜导出 PDF｜⛶｜⋯；无 md 分支 引导+AI 主键+⛶（不渲染 ⋯）；readOnly 导出+⛶+⋯。
+- **lesson-material-reader.tsx**：讲义组头「＋」（onAddLectureDoc，readOnly 不渲染，hover 显现）；讲义组树行显示基名（`lectureChainBaseName` 回退 displayFileName）；空组一行化 `${label} · 暂无`（删除各组空态 <p>）；树头去重 `treeTitle=""`（树头只留 N 项计数）；来源徽标改用 `lessonFileBadgeLabel`；整课空文件态文案合并新建/AI 指引。
+- **styles.css**：`.lesson-files-toolbar-actions .toolbar-icon-btn`（38px 方形、is-active 激活态）+ `.material-role-group-title .group-add-btn`（紧凑、hover 显现，同 tree-group-menu-btn 基调）。
+- **测试**：lesson-prep-context.test.ts 新增 D86 describe（双链并立/主讲义=最近创建链头/单链等价/lectureChainBaseName/lessonFileBadgeLabel/orderAiEditableFiles 链内相邻）+ D83/D87 源码结构 describe（createLectureDoc 流程/双入口/历史按需/工具行顺序限 hasAnyMarkdown 分支/树头去重钉测）；v1.13-material-groups 演进（'核心4题' docx 落 exercise、'20260914.md' 纯数字兜底 misc 反例）；v1.8.1-courseware-groups（徽标降噪 + 空组一行化钉）；v1.9-courseware-toolbar（⛶ 图标钉 + 全宽文字按钮退役钉 + 历史按需钉）；v1.10-remove-entry-points（白名单=全部链头钉）。
+- **门禁**：全量 102 files / 616 tests passed（1 skipped 既有）、typecheck、lint、production build 全绿。

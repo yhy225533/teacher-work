@@ -56,10 +56,10 @@ describe('V19-B 课件区合并工具行与 ⋯ 收纳', () => {
       expect(styles).toContain('.lesson-file-capsule small.is-source {')
     })
 
-    it('keeps five visible actions: 修改这份 / 编辑 / 导出PDF / 沉浸阅读 / ⋯', () => {
+    it('keeps five visible actions: 修改这份 / 编辑 / 导出PDF / ⛶ 沉浸图标 / ⋯（V1.14/D87 演进）', () => {
       const section = source('../src/renderer/lesson-files-section.tsx')
 
-      // 三主键 + 沉浸 + ⋯；⬇ 导出 PDF 已由 V19-E 接线为真实按钮（占位注释退役）
+      // 三主键 + ⛶ 图标 + ⋯；⬇ 导出 PDF 已由 V19-E 接线为真实按钮（占位注释退役）
       expect(section).toContain('✦ 修改这份')
       expect(section).toContain("aria-pressed={editing}")
       expect(section).toContain("{editing ? '✓ 预览' : '✎ 编辑'}")
@@ -67,6 +67,10 @@ describe('V19-B 课件区合并工具行与 ⋯ 收纳', () => {
       expect(section).toContain("{exportBusy ? '导出中…' : '⬇ 导出 PDF'}")
       expect(section).not.toContain('本节点仅占位')
       expect(section).toContain("label=\"⋯\"")
+      // V1.14/D87：沉浸阅读从第一顺位全宽文字按钮降为行尾图标（toolbar-icon-btn + aria-pressed；恢复 v1.9/D57 冻结原序）
+      expect(section).toContain("className={`toolbar-icon-btn${immersive ? ' is-active' : ''}`")
+      expect(section).toContain('aria-pressed={immersive}')
+      expect(section).not.toContain("'>退出沉浸阅读' : '沉浸阅读</button>")
       expect(section).not.toContain('>刷新</button>')
       expect(section).not.toContain('继续上次修改</button>')
       expect(section).not.toContain('整课重做</button>')
@@ -136,14 +140,15 @@ describe('V19-B 课件区合并工具行与 ⋯ 收纳', () => {
       expect(styles).not.toContain('.material-reader-actions')
     })
 
-    it('keeps V1.8.1 grouping, source badges and current badge untouched in the tree', () => {
+    it('keeps V1.8.1 grouping, source badges and current badge in the tree (V1.14 演进)', () => {
       const reader = source('../src/renderer/lesson-material-reader.tsx')
 
       // V1.13/D76 语义演进：分组实现从 splitLessonFilesByRole 委托改为 groupLessonMaterialNodes 四组桶
       expect(reader).toContain('groupLessonMaterialNodes')
       expect(reader).toContain('material-role-group')
       expect(reader).toContain('isCurrentLecture')
-      expect(reader).toContain('sourceLabel={lessonFileSourceLabel(node.file)}')
+      // V1.14/D84-3 演进：来源徽标降噪 lessonFileBadgeLabel（外部资料 → null 不显示；胶囊仍用完整 lessonFileSourceLabel）
+      expect(reader).toContain('sourceLabel={lessonFileBadgeLabel(node.file)}')
       expect(reader).toContain('isSelectableLessonPrepFile')
     })
   })
@@ -161,11 +166,14 @@ describe('V19-B 课件区合并工具行与 ⋯ 收纳', () => {
       expect(section).toContain('handleManualEditSaved')
     })
 
-    it('keeps the history block and manual-edit notes below the reader', () => {
+    it('keeps the on-demand history block and manual-edit notes below the reader (V1.14/D86 演进)', () => {
       const section = source('../src/renderer/lesson-files-section.tsx')
 
+      // V1.14/D86：底部常驻历史块退役——⋯「本文件」组「🕘 历史版本（N）」按需唤出，按链分组
       expect(section).toContain('lesson-history-block')
       expect(section).toContain('历史版本（')
+      expect(section).toContain('historyOpenFileId')
+      expect(section).toContain('selectedChainHistory')
       expect(section).toContain('lesson-manual-edit-notes')
       expect(section).toContain('manual_edit')
     })
