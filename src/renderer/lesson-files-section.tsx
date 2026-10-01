@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { NodeRecord, NoteRecord } from '../shared/core-contracts'
 import type { LessonMaterialGroup, ManagedFileOverview } from '../shared/file-contracts'
+import { FILE_PAIR_DETACHED } from '../shared/file-contracts'
 import { useCoreOverview } from './core-overview-provider'
 import {
   classifyLessonCoursewareFiles,
@@ -156,6 +157,18 @@ export default function LessonFilesSection({
     return map
   }, [lesson, overview])
 
+  // V1.15/D88：答案归属覆盖（lesson_files.pair_parent_file_id）——仅非空值入 map（含解除哨兵）。
+  const pairOverrides = useMemo(() => {
+    const map = new Map<string, string>()
+    if (lesson === null || overview === null) return map
+    for (const link of overview.links) {
+      if (link.targetType === 'lesson' && link.targetId === lesson.id && link.pairParentFileId !== undefined && link.pairParentFileId !== null) {
+        map.set(link.fileId, link.pairParentFileId)
+      }
+    }
+    return map
+  }, [lesson, overview])
+
   /** V1.13/D77：手动改组——成功后 Main 补发 contentChanged，既有 onContentChanged → reload 链刷新四组与计数。 */
   async function setFileGroup(fileId: string, group: LessonMaterialGroup | null): Promise<void> {
     setBusy(true)
@@ -164,6 +177,27 @@ export default function LessonFilesSection({
       await window.teacherWorkbench.files.setMaterialGroup({ fileId, group })
     } catch (groupError) {
       setError(toErrorMessage(groupError, '资料分组设置失败，请稍后重试。'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /**
+   * V1.15/D88：答案归属——把文件挂到同课父 md 下（parentFileId = null 解除）。
+   * 成功补发 contentChanged → reload 刷新树；解除写显式哨兵，避免又被自动配对回去。
+   */
+  async function setFilePair(fileId: string, parentFileId: string | null): Promise<void> {
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      await window.teacherWorkbench.files.setFilePair({
+        fileId,
+        parentFileId: parentFileId === null ? FILE_PAIR_DETACHED : parentFileId,
+      })
+      if (parentFileId === null) setNotice('已解除归属，该文件恢复到所在分组清单。')
+    } catch (pairError) {
+      setError(toErrorMessage(pairError, '答案归属设置失败，请稍后重试。'))
     } finally {
       setBusy(false)
     }
@@ -589,9 +623,12 @@ export default function LessonFilesSection({
           removableFileIds={removableFileIds}
           grouping={{
             lessonTitle: lesson.title,
+            periodTitle,
             groupOverrides,
           }}
           onSetFileGroup={!readOnly ? (fileId: string, group: LessonMaterialGroup | null) => { void setFileGroup(fileId, group) } : undefined}
+          pairOverrides={pairOverrides}
+          onSetFilePair={!readOnly ? (fileId: string, parentFileId: string | null) => { void setFilePair(fileId, parentFileId) } : undefined}
         />
         {manageMode && (
           <div className="lesson-manage-bar">

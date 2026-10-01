@@ -29,8 +29,14 @@ function file(id: string, originalName: string, mimeType = 'text/markdown'): Man
   }
 }
 
-const emptyContext = (lessonTitle = ''): { lessonTitle: string; files: readonly ManagedFileRecord[]; markdownBodies: ReadonlyMap<string, string> } => ({
+const emptyContext = (lessonTitle = '', periodTitle?: string): {
+  lessonTitle: string
+  periodTitle?: string
+  files: readonly ManagedFileRecord[]
+  markdownBodies: ReadonlyMap<string, string>
+} => ({
   lessonTitle,
+  ...(periodTitle === undefined ? {} : { periodTitle }),
   files: [],
   markdownBodies: new Map(),
 })
@@ -89,6 +95,32 @@ describe('V1.13/D75 启发式分组规则表（首中即停）', () => {
     expect(lessonMaterialGroupRole(file('2', '二次函数综合题.md'), emptyContext('二次函数综合题 第2课时'))).toBe('lecture')
     // 单字符标题不参与包含判断
     expect(lessonMaterialGroupRole(file('3', '习题.md'), emptyContext('题'))).toBe('exercise')
+  })
+
+  it('V1.15.1/D89 rule 5: 真实语料命名差异（空格 + 全角括号 + 中文数字）归一后命中', () => {
+    // 测试夹具覆盖：课次标题与文件名存在空格、括号和序号写法差异——
+    // 空格、全角括号、中文数字/阿拉伯数字三处写法都不同，归一后视为同一主题。
+    const lesson = 'AMC8不等式（一）'
+    const period = 'AMC8 一对一（春季学期）'
+    expect(lessonMaterialGroupRole(file('1', 'AMC8 不等式（1）.md'), emptyContext(lesson, period))).toBe('lecture')
+    // 规则 2 仍先于规则 5：作业/习题文件不因命中主题被抬进讲义组
+    expect(lessonMaterialGroupRole(file('2', 'AMC8 不等式（1）-作业.md'), emptyContext(lesson, period))).toBe('exercise')
+    expect(lessonMaterialGroupRole(file('3', 'AMC8 不等式（1）-习题.md'), emptyContext(lesson, period))).toBe('exercise')
+    // 同一课次另一册的文件不该被吸附
+    expect(lessonMaterialGroupRole(file('4', 'AMC8 不等式（2）.md'), emptyContext(lesson, period))).toBe('misc')
+    // 课后反馈维持既有 misc
+    expect(lessonMaterialGroupRole(file('5', '课后反馈.md'), emptyContext(lesson, period))).toBe('misc')
+  })
+
+  it('V1.15.1/D89 rule 5: 归一不破坏词素（三角形/二次根式的「三」「二」不是数字）', () => {
+    // 「全等三角形」的「三」、「二次根式」的「二」是词素；只有序号位（括号/第N讲/结尾）才转换。
+    expect(lessonMaterialGroupRole(file('1', '全等三角形定义／性质.md'), emptyContext('全等三角形'))).toBe('lecture')
+    expect(lessonMaterialGroupRole(file('2', '二次根式加减法.md'), emptyContext('二次根式'))).toBe('lecture')
+    expect(lessonMaterialGroupRole(file('3', '等腰三角形／等边三角形.md'), emptyContext('等腰三角形/等边三角形'))).toBe('lecture')
+    // 序号仍能对上：第十七讲 ↔ 第17讲
+    expect(lessonMaterialGroupRole(file('4', '第17讲 实数综合.md'), emptyContext('第十七讲'))).toBe('lecture')
+    // 方向敏感：换一节无关主题不命中
+    expect(lessonMaterialGroupRole(file('5', '英语词汇.md'), emptyContext('化学实验'))).toBe('misc')
   })
 
   it('rule 6: md 正文引用非图片本地文件（薄壳外链容器）→ lecture；纯图片引用不算', () => {

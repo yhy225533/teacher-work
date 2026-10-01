@@ -7,6 +7,16 @@ export interface LessonMaterialTreeNode {
   readonly children: readonly ManagedFileRecord[]
 }
 
+/**
+ * V1.15/D88：答案归属覆盖——childFileId → parentFileId（来自 lesson_files.pair_parent_file_id）。
+ * 值为 FILE_PAIR_DETACHED 时表示老师显式解除（不参与自动配对）；未覆盖的文件走保守自动配对。
+ */
+export type LessonMaterialPairOverrides = ReadonlyMap<string, string>
+
+export interface LessonMaterialTreeOptions {
+  readonly pairOverrides?: LessonMaterialPairOverrides
+}
+
 export interface LessonPrepContext {
   readonly courseId: string
   readonly courseTitle: string
@@ -156,6 +166,8 @@ export const LESSON_MATERIAL_GROUP_META: Record<
 /** V1.13/D75：分组上下文——课次标题 + 本课全部挂课文件 + md 正文快照（规则 6 需要）。 */
 export interface LessonMaterialGroupContext {
   readonly lessonTitle: string
+  /** V1.15.1/D89：阶段（period）标题——规则 5 的第二主题候选，课次标题为通用序号时的兜底信号。 */
+  readonly periodTitle?: string
   readonly files: readonly ManagedFileRecord[]
   readonly markdownBodies: ReadonlyMap<string, string>
 }
@@ -168,11 +180,75 @@ function nameWithoutExtension(originalName: string): string {
   return originalName.replace(/\.[^.]+$/u, '')
 }
 
+/** 纯通用词主题（「第一讲」「课时2」这类）：单独出现时无主题信息，不能作规则 5 的匹配依据。 */
+const genericTopicPattern = /^(?:第[\d一二三四五六七八九十百]+[讲课时节次篇单元]|[\d一二三四五六七八九十百]+[讲课时节次篇单元]|[（(]?\d{1,3}[）)]?|课时|课次|面授|线上|线下)$/u
+
+/** 课次标题里的课时尾缀（「相似三角形模型 第2课时」→ 主题「相似三角形模型」）。 */
+const lessonTitlePeriodSuffixPattern = /[\s·\-—]*第\s*[\d一二三四五六七八九十百]+\s*课时$/u
+
+/** 中文数字 → 阿拉伯数字（1–99）。只在明确的序号位置替换，绝不逐字全局替换——
+ *「全等三角形」的「三」、「二次根式」的「二」是词素不是数字，全局替换会把文件名改坏。 */
+const chineseDigitMap: Record<string, string> = {
+  一: '1', 二: '2', 三: '3', 四: '4', 五: '5', 六: '6', 七: '7', 八: '8', 九: '9',
+}
+
+/** 十位以上（十一、二十三…）。 */
+function chineseTwoDigitToArabic(match: string): string {
+  const rest = match.slice(1)
+  return rest === '' ? '10' : `1${chineseDigitMap[rest]}`
+}
+
+/**
+ * 规则 5 的主题比较前做归一，让「同一节课的不同写法」能对上：
+ * - 去空白：「AMC8不等式」↔「AMC8 不等式」；
+ * - 中文数字 ↔ 阿拉伯数字：「AMC8不等式（一）」↔「AMC8 不等式（1）」（实测语料两种写法混用）。
+ * 中文数字只在「其一」「（一）」「第一讲」这类序号位置转换。
+ */
+function normalizeTopicText(value: string): string {
+  return value
+    .replace(/\s+/gu, '')
+    // 全角括号/斜杠 → 半角：实测语料里「不等式（1）」与「不等式(1)」、「A／B」与「A/B」混用
+    .replace(/[（]/gu, '(')
+    .replace(/[）]/gu, ')')
+    .replace(/[／]/gu, '/')
+    // 括号序号：（一）(二) → (1)(2)
+    .replace(/\(([一二三四五六七八九十]{1,3})\)/gu, (_m, num: string) => `(${chineseNumeralToArabic(num)})`)
+    // 「第N讲/课/课时/章」：第十七讲 → 第17讲
+    .replace(/第([一二三四五六七八九十]{1,3})(?=[讲课时节次篇单元])/gu, (_m, num: string) => `第${chineseNumeralToArabic(num)}`)
+    // 名字结尾的序号（「韦达定理二」）——仅当结尾是纯中文数字时才转换。
+    .replace(/([一二三四五六七八九十]{1,3})$/u, (_m, num: string) => chineseNumeralToArabic(num))
+}
+
+/** 「一」…「九十九」→ 1…99（仅接受纯中文数字串）。 */
+function chineseNumeralToArabic(numeral: string): string {
+  if (numeral === '十') return '10'
+  if (numeral.startsWith('十')) return chineseTwoDigitToArabic(numeral)
+  if (numeral.length === 1) return chineseDigitMap[numeral] ?? numeral
+  const [tens, ones] = numeral.split('十')
+  if (tens === undefined || ones === undefined) return numeral
+  return `${chineseDigitMap[tens] ?? tens}${chineseDigitMap[ones] ?? ones}`
+}
+
+/**
+ * V1.15.1/D89：规则 5 的主题候选——课次标题（先剥「第N课时」尾缀）+ 阶段标题。
+ * 判定改为方向敏感的「文件名主干包含主题」：阶段标题（如「AMC8 不等式（一）」）常比课次标题
+ * 更长，双向包含会漏判；反向不判定，避免「英语词汇.md」被短主题误判为讲义。
+ * 两段式：先取全部非通用主题（课次 + 阶段），一个都没命中时再退回通用主题（「第二讲」类
+ * 通用课次名，此时阶段标题就是唯一主题）。
+ */
+function lessonTopicTitles(context: LessonMaterialGroupContext): string[] {
+  const candidates = [context.lessonTitle.replace(lessonTitlePeriodSuffixPattern, ''), context.periodTitle ?? '']
+    .map((title) => title.trim())
+    .filter((title) => title.length >= 2)
+  const specific = candidates.filter((title) => !genericTopicPattern.test(title))
+  return specific.length > 0 ? specific : candidates
+}
+
 /**
  * V1.13/D75：启发式归组——冻结顺序规则表，首中即停：
  * 1) D46 讲义命名 → lecture；2) 习题作业关键词 → exercise；3) 试卷复习关键词 → exam；
  * 4) 讲义类关键词（「补充讲义」= 讲义+习题一体系统，产品负责人裁决归 lecture）→ lecture；
- * 5) 文件名主干与课次标题互相包含（≥2 字符）→ lecture；
+ * 5) 文件名主干与主题名互相包含（≥2 字符）→ lecture；
  * 6) md 正文引用非图片本地文件（薄壳外链容器）→ lecture；7) 兜底 → misc。
  * 规则识别错由手动改组（lesson_files.role）兜底。
  */
@@ -185,9 +261,8 @@ export function lessonMaterialGroupRole(
   if (lessonMaterialExercisePattern.test(name)) return 'exercise'
   if (lessonMaterialExamPattern.test(name)) return 'exam'
   if (lessonMaterialLecturePattern.test(name)) return 'lecture'
-  const title = context.lessonTitle.trim()
-  const stem = name.trim()
-  if (title.length >= 2 && stem.length >= 2 && (stem.includes(title) || title.includes(stem))) {
+  const stem = normalizeTopicText(name)
+  if (stem.length >= 2 && lessonTopicTitles(context).some((topic) => stem.includes(normalizeTopicText(topic)))) {
     return 'lecture'
   }
   if (file.mimeType === 'text/markdown') {
@@ -310,6 +385,7 @@ function isStructuralLessonIndexFile(
 export function buildLessonMaterialTree(
   files: readonly ManagedFileRecord[],
   markdownBodies: ReadonlyMap<string, string>,
+  options: LessonMaterialTreeOptions = {},
 ): LessonMaterialTreeNode[] {
   const childrenByParent = new Map<string, ManagedFileRecord[]>()
   const referencedChildIds = new Set<string>()
@@ -331,12 +407,109 @@ export function buildLessonMaterialTree(
     }
   }
 
+  // V1.15/D88：答案归属——md 子（题目 ↔ 答案）也纳入父子表。
+  // 两遍处理保证与迭代顺序无关：①先落全部手动覆盖（含解除）；②再对无覆盖者自动配对。
+  const markdownIds = new Set(files.filter((file) => file.mimeType === 'text/markdown').map((file) => file.id))
+  // 资源嵌套的子项 + 手动指定为子的项——这些都不能再作父（单层语义，防成环）。
+  const takenAsChild = new Set(referencedChildIds)
+  const manualPairs: Array<{ readonly childId: string; readonly parentId: string }> = []
+  for (const [childId, parentId] of options.pairOverrides ?? []) {
+    if (!markdownIds.has(childId) || !markdownIds.has(parentId)) continue
+    if (childId === parentId) continue
+    if (takenAsChild.has(childId)) continue
+    // 父若已是别处子项，则本对手动覆盖非法——跳过而非反向破坏既有嵌套。
+    if (takenAsChild.has(parentId)) continue
+    manualPairs.push({ childId, parentId })
+    takenAsChild.add(childId)
+  }
+  for (const pair of manualPairs) {
+    const children = childrenByParent.get(pair.parentId) ?? []
+    const child = files.find((candidate) => candidate.id === pair.childId)
+    if (child === undefined) continue
+    if (children.some((existing) => existing.id === child.id)) continue
+    children.push(child)
+    childrenByParent.set(pair.parentId, children)
+  }
+  // 自动配对：仅作用于无手动覆盖的答案类 md；父候选（非答案 md）不能是子项。
+  for (const child of files) {
+    if (child.mimeType !== 'text/markdown') continue
+    if (takenAsChild.has(child.id)) continue
+    if (options.pairOverrides?.has(child.id) === true) continue
+    const parentId = resolveAutoAnswerParentId(child, files, markdownBodies)
+    if (parentId === null || parentId === child.id || !markdownIds.has(parentId)) continue
+    if (takenAsChild.has(parentId)) continue
+    const children = childrenByParent.get(parentId) ?? []
+    if (children.some((existing) => existing.id === child.id)) continue
+    children.push(child)
+    childrenByParent.set(parentId, children)
+    takenAsChild.add(child.id)
+  }
+
   return files
-    .filter((file) => !referencedChildIds.has(file.id))
+    .filter((file) => !takenAsChild.has(file.id))
     .map((file) => ({
       file,
       children: childrenByParent.get(file.id) ?? [],
     }))
+}
+
+/**
+ * V1.15/D88：保守自动配对——只在无歧义时给答案类 md 找父文件，首中即停：
+ * 1) 显式链接：答案 md 正文引用本课另一 md → 配对（md→md 引用即归属信号）；
+ * 2) 主干包含：答案名去掉答案类词干后的主干，与**恰好一个**本课非答案 md 主干互为包含
+ *    （主干长度 ≥ 3，避免 `代数` 这类过短词误配）→ 配对。
+ * 多候选一律不配对（交老师手动指定，避免误配高后悔动作）。
+ */
+const lessonMaterialAnswerPattern = /答案|解析|解答|核对表|全解全析|详解|教师版/u
+
+export function isLessonAnswerFileName(originalName: string): boolean {
+  return lessonMaterialAnswerPattern.test(originalName.replace(/\.[^.]+$/u, ''))
+}
+
+/** 主干包含匹配的最短长度——低于此长度（如「代数」）视为信号不足，交手动。 */
+const ANSWER_STEM_MIN_CHARS = 3
+
+export function resolveAutoAnswerParentId(
+  child: ManagedFileRecord,
+  files: readonly ManagedFileRecord[],
+  markdownBodies: ReadonlyMap<string, string>,
+): string | null {
+  if (!isLessonAnswerFileName(child.originalName)) return null
+  const markdownFiles = files.filter((file) => file.mimeType === 'text/markdown' && file.id !== child.id)
+  const questionFiles = markdownFiles.filter((file) => !isLessonAnswerFileName(file.originalName))
+  if (questionFiles.length === 0) return null
+
+  // 规则 1：答案正文里显式引用本课另一 md（含题目文件时才认，避免引用图片/附件误判）。
+  const body = markdownBodies.get(child.id)
+  if (body !== undefined) {
+    const referenced = new Set<string>()
+    for (const reference of extractResourceReferences(body)) {
+      const name = normalizeReferenceName(reference)
+      for (const candidate of questionFiles) {
+        if (candidate.originalName.toLocaleLowerCase('zh-CN') === name) referenced.add(candidate.id)
+      }
+    }
+    if (referenced.size === 1) return [...referenced][0]
+    if (referenced.size > 1) return null
+  }
+
+  // 规则 2：答案名去词干后的主干，恰好与本课一个非答案 md 主干互为包含。
+  const stem = stripAnswerStem(child.originalName.replace(/\.[^.]+$/u, ''))
+  if (Array.from(stem).length < ANSWER_STEM_MIN_CHARS) return null
+  const matches = questionFiles.filter((candidate) => {
+    const candidateStem = candidate.originalName.replace(/\.[^.]+$/u, '')
+    return candidateStem.includes(stem) || stem.includes(candidateStem)
+  })
+  return matches.length === 1 ? matches[0].id : null
+}
+
+function stripAnswerStem(name: string): string {
+  return name
+    // 先去尾部括号组（如「（教师答案与全解全析）」），再剥裸词干（如「-答案」「 核对表」）。
+    .replace(/[\s\-_（(]*[（(][^（()）]*(?:答案|解析|解答|核对|全解全析|详解|教师版)[^（()）]*[）)][\s\-_]*$/u, '')
+    .replace(/[\s\-_（(]*(?:参考答案与解析|参考答案|答案与全解全析|全解全析|答案|解析|解答|核对表|教师版|详解)$/u, '')
+    .replace(/[\s\-_（(]+$/u, '')
+    .trim()
 }
 
 /** V1.13/D76：树节点级四组分组（树构建不变，仅切分组桶；手动覆盖由调用方先并入 effective role）。 */

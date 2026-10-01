@@ -15,9 +15,10 @@ import {
   LESSON_MATERIAL_GROUP_META,
   lessonFileBadgeLabel,
   lessonMaterialGroupRole,
+  type LessonMaterialPairOverrides,
   type LessonMaterialTreeNode,
 } from './lesson-prep-context'
-import { AppMenuButton } from './app-menu'
+import { AppMenuButton, type AppMenuEntry } from './app-menu'
 import { normalizeMarkdownImageReferences, normalizeRichText } from './rich-text'
 import { toErrorMessage } from './ui-utils'
 
@@ -59,6 +60,8 @@ export default function LessonMaterialReader({
   grouping,
   onSetFileGroup,
   onAddLectureDoc,
+  pairOverrides,
+  onSetFilePair,
 }: {
   readonly files: readonly ManagedFileRecord[]
   readonly selectedFileId: string
@@ -78,12 +81,18 @@ export default function LessonMaterialReader({
   /** V1.13/D76：分组上下文（透传 LessonMaterialTree，见其类型注释）。 */
   readonly grouping?: {
     readonly lessonTitle: string
+    /** V1.15.1/D89：阶段标题——规则 5 的第二主题候选。 */
+    readonly periodTitle?: string
     readonly groupOverrides?: ReadonlyMap<string, LessonMaterialGroup>
   }
   /** V1.13/D76：手动改组回调（透传 LessonMaterialTree；未传即不出改组菜单）。 */
   readonly onSetFileGroup?: (fileId: string, group: LessonMaterialGroup | null) => void
   /** V1.14/D83：讲义组头轻量「＋」新建入口（未传即不渲染；readOnly 由调用方不传）。 */
   readonly onAddLectureDoc?: () => void
+  /** V1.15/D88：答案归属覆盖（childFileId → parentFileId；透传树构建）。 */
+  readonly pairOverrides?: LessonMaterialPairOverrides
+  /** V1.15/D88：指定/解除答案归属回调（未传即不出归属菜单）。 */
+  readonly onSetFilePair?: (fileId: string, parentFileId: string | null) => void
   readonly onFileSaved?: (fileId: string) => void
   readonly hideTree?: boolean
   readonly treeTitle?: string
@@ -160,6 +169,8 @@ export default function LessonMaterialReader({
             grouping={grouping}
             onSetFileGroup={onSetFileGroup}
             onAddLectureDoc={onAddLectureDoc}
+            pairOverrides={pairOverrides}
+            onSetFilePair={onSetFilePair}
           />
         </aside>
       )}
@@ -250,6 +261,8 @@ export function LessonMaterialTree({
   grouping,
   onSetFileGroup,
   onAddLectureDoc,
+  pairOverrides,
+  onSetFilePair,
 }: {
   readonly files: readonly ManagedFileRecord[]
   readonly selectedFileId: string
@@ -276,12 +289,18 @@ export function LessonMaterialTree({
    */
   readonly grouping?: {
     readonly lessonTitle: string
+    /** V1.15.1/D89：阶段标题——规则 5 的第二主题候选。 */
+    readonly periodTitle?: string
     readonly groupOverrides?: ReadonlyMap<string, LessonMaterialGroup>
   }
   /** V1.13/D76：手动改组回调（group = null 恢复自动；未传即不出改组菜单）。 */
   readonly onSetFileGroup?: (fileId: string, group: LessonMaterialGroup | null) => void
   /** V1.14/D83：讲义组头轻量「＋」新建入口（未传即不渲染）。 */
   readonly onAddLectureDoc?: () => void
+  /** V1.15/D88：答案归属覆盖（childFileId → parentFileId；来自 lesson_files.pair_parent_file_id）。 */
+  readonly pairOverrides?: LessonMaterialPairOverrides
+  /** V1.15/D88：指定/解除答案归属回调（fileId 为子文件；未传即不出归属菜单）。 */
+  readonly onSetFilePair?: (fileId: string, parentFileId: string | null) => void
 }): React.JSX.Element {
   const markdownFiles = useMemo(
     () => files.filter((file) => file.mimeType === 'text/markdown'),
@@ -314,8 +333,8 @@ export function LessonMaterialTree({
   }, [markdownSnapshot])
 
   const nodes = useMemo(
-    () => buildLessonMaterialTree(files, markdownBodies),
-    [files, markdownBodies],
+    () => buildLessonMaterialTree(files, markdownBodies, { pairOverrides }),
+    [files, markdownBodies, pairOverrides],
   )
   const treeSnapshot = nodes.map((node) => `${node.file.id}:${node.children.map((child) => child.id).join(',')}`).join('|')
 
@@ -325,6 +344,7 @@ export function LessonMaterialTree({
     const overrides = grouping?.groupOverrides
     const groupContext = {
       lessonTitle: grouping?.lessonTitle ?? '',
+      ...(grouping?.periodTitle === undefined ? {} : { periodTitle: grouping.periodTitle }),
       files,
       markdownBodies,
     }
@@ -357,6 +377,23 @@ export function LessonMaterialTree({
       else next.add(fileId)
       return next
     })
+  }
+
+  /**
+   * V1.15/D88：某文件的「指定答案归属」父候选 = 本课其它 md。
+   * 排除：自身；已是某父之子的文件（单层语义，候选父不能是子）；
+   * 另外只有「不是父」的顶层行才显示该菜单（父不能同时是别人的子）——由 isParent 控制。
+   */
+  const childFileIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const node of nodes) for (const child of node.children) ids.add(child.id)
+    return ids
+  }, [nodes])
+  function pairParentCandidatesFor(file: ManagedFileRecord): { readonly id: string; readonly label: string }[] {
+    if (onSetFilePair === undefined || file.mimeType !== 'text/markdown') return []
+    return markdownFiles
+      .filter((candidate) => candidate.id !== file.id && !childFileIds.has(candidate.id))
+      .map((candidate) => ({ id: candidate.id, label: displayFileName(candidate.originalName) }))
   }
 
   return (
@@ -441,6 +478,8 @@ export function LessonMaterialTree({
                         : undefined}
                       currentGroupRole={groupedNodes.roleByFileId.get(node.file.id)}
                       hasGroupOverride={groupedNodes.overriddenFileIds.has(node.file.id)}
+                      pairParentCandidates={pairParentCandidatesFor(node.file)}
+                      onSetFilePair={onSetFilePair}
                     />
                   ))}
                 </ul>
@@ -472,6 +511,8 @@ function MaterialTreeNodeRow({
   onSetFileGroup,
   currentGroupRole,
   hasGroupOverride = false,
+  pairParentCandidates,
+  onSetFilePair,
 }: {
   readonly node: LessonMaterialTreeNode
   readonly selectedFileId: string
@@ -497,6 +538,10 @@ function MaterialTreeNodeRow({
   readonly currentGroupRole?: LessonMaterialGroup
   /** V1.13/D74：本文件是否有手动覆盖——决定「恢复自动」可用性。 */
   readonly hasGroupOverride?: boolean
+  /** V1.15/D88：可指定的父文件候选（本课其它 md；未传/为空即不出归属菜单）。 */
+  readonly pairParentCandidates?: readonly { readonly id: string; readonly label: string }[]
+  /** V1.15/D88：指定答案归属回调（绑定到本文件为子）。 */
+  readonly onSetFilePair?: (fileId: string, parentFileId: string | null) => void
 }): React.JSX.Element {
   const hasChildren = node.children.length > 0
   const canRemove = onRemoveFile !== undefined && (removableFileIds === null || removableFileIds.has(node.file.id))
@@ -518,6 +563,24 @@ function MaterialTreeNodeRow({
       onSelect: () => onSetFileGroup(null),
     },
   ]
+  // V1.15/D88：答案归属菜单——仅 md 且提供了候选时出现（分组标题 + 候选父项）。
+  const pairMenuEntries: AppMenuEntry[] | null = onSetFilePair === undefined
+    || pairParentCandidates === undefined
+    || pairParentCandidates.length === 0
+    ? null
+    : [
+      { kind: 'group' as const, key: 'pair-group', label: '指定答案归属' },
+      ...pairParentCandidates.map((candidate) => ({
+        kind: 'item' as const,
+        key: `pair-${candidate.id}`,
+        label: `↳ ${candidate.label}`,
+        title: `把本文件挂到《${candidate.label}》下作为答案`,
+        onSelect: () => onSetFilePair(node.file.id, candidate.id),
+      })),
+    ]
+  const menuEntries: AppMenuEntry[] | null = groupMenuEntries === null && pairMenuEntries === null
+    ? null
+    : [...(groupMenuEntries ?? []), ...(pairMenuEntries === null ? [] : [{ kind: 'separator' as const, key: 'pair-sep' }, ...pairMenuEntries])]
   return (
     <li className="material-reader-tree-node">
       <div className="material-reader-tree-row">
@@ -559,13 +622,13 @@ function MaterialTreeNodeRow({
           {sourceLabel !== null && <small className="material-role-badge is-source">{sourceLabel}</small>}
           {hasChildren && <small>{node.children.length}</small>}
         </button>
-        {groupMenuEntries !== null && (
+        {menuEntries !== null && (
           <AppMenuButton
             label="⋯"
             buttonClassName="tree-group-menu-btn"
             align="right"
-            title="移动到分组"
-            entries={groupMenuEntries}
+            title="移动到分组 / 指定答案归属"
+            entries={menuEntries}
           />
         )}
         {!manageMode && canRemove && (
@@ -582,18 +645,54 @@ function MaterialTreeNodeRow({
       </div>
       {hasChildren && expanded && (
         <ul className="material-reader-tree-children">
-          {node.children.map((child) => (
-            <li key={child.id}>
-              <button
-                className={`material-reader-tree-file material-reader-tree-child${selectedFileId === child.id ? ' is-selected' : ''}`}
-                type="button"
-                onClick={() => onSelectFile(child.id)}
-              >
-                <span className="material-file-icon" aria-hidden="true">{fileIcon(child)}</span>
-                <span>{displayFileName(child.originalName)}</span>
-              </button>
-            </li>
-          ))}
+          {node.children.map((child) => {
+            // V1.15/D88：md 子（答案）保留菜单/移除入口；非 md 资源（图片/附件）维持简单行。
+            const childIsMarkdown = child.mimeType === 'text/markdown'
+            const childCanRemove = childIsMarkdown && onRemoveFile !== undefined
+              && (removableFileIds === null || removableFileIds.has(child.id))
+            return (
+              <li key={child.id}>
+                <div className="material-reader-tree-child-row">
+                  {manageMode && childIsMarkdown ? (
+                    <input
+                      aria-label={`勾选移除${child.originalName}`}
+                      type="checkbox"
+                      checked={manageSelectedIds.includes(child.id)}
+                      onChange={() => onToggleManageId?.(child.id)}
+                    />
+                  ) : null}
+                  <button
+                    className={`material-reader-tree-file material-reader-tree-child${selectedFileId === child.id ? ' is-selected' : ''}`}
+                    type="button"
+                    onClick={() => onSelectFile(child.id)}
+                  >
+                    <span className="material-file-icon" aria-hidden="true">{fileIcon(child)}</span>
+                    <span>{displayFileName(child.originalName)}</span>
+                  </button>
+                  {childIsMarkdown && onSetFilePair !== undefined && !manageMode && (
+                    <AppMenuButton
+                      label="⋯"
+                      buttonClassName="tree-group-menu-btn"
+                      align="right"
+                      title="答案归属"
+                      entries={[{ kind: 'item', key: 'detach', label: '↥ 解除归属', title: '不再作为本文件的答案，恢复到本组清单', onSelect: () => onSetFilePair(child.id, null) }]}
+                    />
+                  )}
+                  {!manageMode && childCanRemove && (
+                    <button
+                      className="material-reader-tree-remove"
+                      type="button"
+                      aria-label={`移除${child.originalName}`}
+                      title="从本课移除（素材库/外部原件不受影响）"
+                      onClick={() => onRemoveFile?.(child.id)}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </li>
+            )
+          })}
         </ul>
       )}
     </li>
@@ -776,10 +875,22 @@ function renderParagraphLines(
   return nodes
 }
 
+/**
+ * V1.16：思源导出残留的内联 HTML（`<span data-type="text" style="font-size:20px">` 等）。
+ * 渲染器是自研极简实现、不认 HTML，修复前这些标签连同属性原样显示在正文里。
+ * 只匹配白名单标签——正文里 `$0<x<10$` 这类数学比较号先被公式 token 吃掉，
+ * 不在白名单内的 `<` 一律按普通文字处理，避免改动数学内容。
+ */
+const INLINE_HTML_STRIP_TAGS = /^(?:span|u|em|strong|b|i|code|div|p|font)$/u
+
+/** 与既有行内 token 合并使用的总模式源串（每调用一次新建实例，避免共享 lastIndex 状态）。 */
+const INLINE_TOKEN_SOURCE = '(<sup[^>]*>[\\s\\S]*?<\\/sup>|<sub[^>]*>[\\s\\S]*?<\\/sub>|<br\\s*\\/?>|<\\/?(?:span|u|em|strong|b|i|code|div|p|font)[^>]*>|!\\[[^\\]]*\\]\\([^)]*\\)|\\[[^\\]]+\\]\\([^)]*\\)|`[^`]+`|\\\\\\([^\\n]+?\\\\\\)|\\\\\\[[^\\n]+?\\\\\\]|\\$\\$[^$]+?\\$\\$|\\$[^$\\n]+?\\$|\\*\\*[^*]+\\*\\*|__[^_]+__|\\*[^*]+\\*|_[^_]+_)'
+
 function renderInline(text: string, files: readonly ManagedFileRecord[], keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = []
   const normalizedText = normalizeInlineMarkdownText(text)
-  const pattern = /(!\[[^\]]*\]\([^)]*\)|\[[^\]]+\]\([^)]*\)|`[^`]+`|\\\([^\n]+?\\\)|\\\[[^\n]+?\\\]|\$\$[^$]+?\$\$|\$[^$\n]+?\$|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/gu
+  // 必须每次新建：pattern 带 g 且本函数会递归，共享实例会让 lastIndex 互相覆盖而死循环。
+  const pattern = new RegExp(INLINE_TOKEN_SOURCE, 'gu')
   let cursor = 0
   let match: RegExpExecArray | null
   let tokenIndex = 0
@@ -787,6 +898,31 @@ function renderInline(text: string, files: readonly ManagedFileRecord[], keyPref
     if (match.index > cursor) nodes.push(normalizedText.slice(cursor, match.index))
     const token = match[0]
     const key = `${keyPrefix}-${tokenIndex}`
+    if (token.startsWith('<')) {
+      // HTML 标签：<br> 换行；<sup>/<sub> 保留语义；其余剥标签留内容。
+      const lineBreak = /^<br\s*\/?>$/iu.exec(token)
+      const scriptTag = /^<(sup|sub)[^>]*>([\s\S]*?)<\/\1>$/iu.exec(token)
+      if (lineBreak !== null) {
+        nodes.push(<br key={key} />)
+      } else if (scriptTag !== null) {
+        const Tag = scriptTag[1].toLowerCase() === 'sup' ? 'sup' : 'sub'
+        nodes.push(<Tag key={key}>{renderInline(scriptTag[2], files, key)}</Tag>)
+      } else {
+        const tagName = /^<\/?([a-zA-Z][a-zA-Z0-9]*)/u.exec(token)?.[1].toLowerCase() ?? ''
+        const inner = token.startsWith('</') ? '' : token.replace(/^<[^>]*>/u, '').replace(/<\/[^>]*>$/u, '')
+        if (inner !== '') {
+          // 标签包裹的内容仍可能有 markdown（如 <span>**粗体**</span>），递归渲染。
+          nodes.push(...renderInline(inner, files, key))
+        } else if (INLINE_HTML_STRIP_TAGS.test(tagName) || token.startsWith('</')) {
+          // 单独的开关标签（无内容）直接丢弃，不产出文字。
+        } else {
+          nodes.push(token)
+        }
+      }
+      cursor = match.index + token.length
+      tokenIndex += 1
+      continue
+    }
     if (token.startsWith('![')) {
       const image = /^!\[([^\]]*)\]\(([^)]+)\)$/u.exec(token)
       const file = image === null ? undefined : findReferencedFile(files, image[2])

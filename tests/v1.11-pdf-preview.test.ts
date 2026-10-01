@@ -58,9 +58,13 @@ describe('V111-B PDF 应用内预览', () => {
 
   it('dependency whitelist: react-pdf and docx-preview added, nothing else beyond the frozen set', () => {
     const pkg = JSON.parse(source('../package.json')) as { dependencies: Record<string, string> }
+    // V1.17.1（D102）：新增 jszip（由 docx-preview 传递依赖提升为直接依赖，预处理直接用）
+    // 与 emf-converter（浏览器入口，WMF/EMF/EMF+ → SVG）。除此之外不得再增运行时依赖。
     expect(Object.keys(pkg.dependencies).sort()).toEqual([
       'better-sqlite3',
       'docx-preview',
+      'emf-converter',
+      'jszip',
       'katex',
       'officeparser',
       'react',
@@ -90,11 +94,14 @@ describe('V111-C Word(docx) 应用内预览', () => {
     // 渲染器边界：静态 import + 受控容器 + 卸载清空（textContent 置空），无落盘
     expect(component).toContain("import { renderAsync } from 'docx-preview'")
     expect(component).not.toContain('import(')
-    expect(component).toContain('renderAsync(dataUrlToUint8Array(dataUrl).buffer as ArrayBuffer, container')
     expect(component).toContain("container.textContent = ''")
     // V1.12（D72）：内嵌图片 data: URL 化——默认 blob: URL 被 CSP img-src 拦截（图片空白）
     expect(component).toContain('{ inWrapper: true, useBase64URL: true }')
     expect(component).not.toContain('{ inWrapper: true }')
+    // V1.17（D94）：渲染前先经 preprocessDocx 处理 WMF/EMF 与 w:object；
+    // 预处理自身保证失败即回落原始字节，故此处不需要额外的 try/catch 兜底分支。
+    expect(component).toContain('await preprocessDocx(')
+    expect(component).toContain('await renderAsync(prepared.bytes, container')
   })
 
   it('styles: docx preview container present with docx-wrapper sizing constraints', () => {
